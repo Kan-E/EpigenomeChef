@@ -12,18 +12,10 @@ Shiny framework
 - Yihui Xie, Joe Cheng and Xianying Tan (2022). DT: A Wrapper of the JavaScript
   Library 'DataTables'. R package version 0.23.
   https://CRAN.R-project.org/package=DT
-
-EBSeq (for ebseq)
-- Ning Leng and Christina Kendziorski (2020). EBSeq: An R package for gene and isoform
-  differential expression analysis of RNA-seq data. R package version 1.30.0.
   
 DESeq2 (for deseq2)
 - Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for
   RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)
-
-edgeR (for edger)
-- Robinson MD, McCarthy DJ and Smyth GK (2010). edgeR: a Bioconductor package for differential
-  expression analysis of digital gene expression data. Bioinformatics 26, 139-140
 
 IHW, Independent hypothesis weighting, and qvalue (for fdr control method of deseq2 and edger)
 - Nikolaos Ignatiadis, Bernd Klaus, Judith Zaugg and Wolfgang Huber (2016): Data-driven hypothesis
