@@ -1,1 +1,138 @@
 # EpigenomeChef
+EpigenomeChef, an Epigenetic data controller highlighting epigenetic features, is a web-based application ([https://imeg-ku.shinyapps.io/EpigenomeChef/](https://imeg-ku.shinyapps.io/EpigenomeChefChef/)) for automated, systematic, and integrated epigenetic analysis. EpigenomeChef is designed for wet-bench scientists with little computational programming skill to dissect multiple epigenetic datasets (such as ChIP-seq, ATAC-seq, Bisulfite-Seq) quickly. <br>
+
+# Reference
+Shiny framework
+- Winston Chang, Joe Cheng, JJ Allaire, Carson Sievert, Barret Schloerke, Yihui
+  Xie, Jeff Allen, Jonathan McPherson, Alan Dipert and Barbara Borges (2021).
+  shiny: Web Application Framework for R. R package version 1.7.1.
+  https://CRAN.R-project.org/package=shiny
+- Eric Bailey (2022). shinyBS: Twitter Bootstrap Components for Shiny. R package
+  version 0.61.1. https://CRAN.R-project.org/package=shinyBS
+- Yihui Xie, Joe Cheng and Xianying Tan (2022). DT: A Wrapper of the JavaScript
+  Library 'DataTables'. R package version 0.23.
+  https://CRAN.R-project.org/package=DT
+
+EBSeq (for ebseq)
+- Ning Leng and Christina Kendziorski (2020). EBSeq: An R package for gene and isoform
+  differential expression analysis of RNA-seq data. R package version 1.30.0.
+  
+DESeq2 (for deseq2)
+- Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for
+  RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)
+
+edgeR (for edger)
+- Robinson MD, McCarthy DJ and Smyth GK (2010). edgeR: a Bioconductor package for differential
+  expression analysis of digital gene expression data. Bioinformatics 26, 139-140
+
+IHW, Independent hypothesis weighting, and qvalue (for fdr control method of deseq2 and edger)
+- Nikolaos Ignatiadis, Bernd Klaus, Judith Zaugg and Wolfgang Huber (2016): Data-driven hypothesis
+  weighting increases detection power in genome-scale multiple testing. Nature Methods 13:577,
+  doi: 10.1038/nmeth.3885
+- John D. Storey, Andrew J. Bass, Alan Dabney and David Robinson (2021). qvalue: Q-value
+  estimation for false discovery rate control. R package version 2.26.0.
+  http://github.com/jdstorey/qvalue
+
+ggdendro (for dendrograms)
+- Andrie de Vries and Brian D. Ripley (2020). ggdendro: Create Dendrograms and Tree Diagrams Using 'ggplot2'. R package version 0.1.22. https://CRAN.R-project.org/package=ggdendro
+
+umap (for UMAP)
+- Konopka T (2022). _umap: Uniform Manifold Approximation and Projection_. R package
+  version 0.2.8.0, <https://CRAN.R-project.org/package=umap>.
+
+clusterProfiler, DOSE, msigdbr, dorothea (for enrichment analysis)
+- T Wu, E Hu, S Xu, M Chen, P Guo, Z Dai, T Feng, L Zhou, W Tang, L Zhan, X Fu, S Liu, X Bo, and G Yu. clusterProfiler 4.0: A universal enrichment tool for interpreting omics data. The Innovation. 2021, 2(3):100141
+- Guangchuang Yu, Li-Gen Wang, Guang-Rong Yan, Qing-Yu He. DOSE: an R/Bioconductor package for Disease Ontology Semantic and Enrichment analysis. Bioinformatics 2015 31(4):608-609
+- Dolgalev I (2022). _msigdbr: MSigDB Gene Sets for Multiple Organisms in a Tidy Data Format_. R
+  package version 7.5.1, <https://CRAN.R-project.org/package=msigdbr>.
+- Garcia-Alonso L, Holland CH, Ibrahim MM, Turei D, Saez-Rodriguez J. 'Benchmark and integration of resources for the estimation of human transcription factor activities.' Genome Research. 2019. DOI: 10.1101/gr.240663.118.
+
+AnnotationDbi,AnnotationHub, org.Hs.eg.db, org.Mm.eg.db, org.Rn.eg.db, org.Xl.eg.db, org.Dm.eg.db, org.Ce.eg.db, org.Bt.eg.db, org.Cf.eg.db, org.Dr.eg.db, org.Gg.eg.db, org.Mmu.eg.db, org.Pt.eg.db, org.Sc.sgd.db, and org.Ss.eg.db (for genome wide annotation)
+- Hervé Pagès, Marc Carlson, Seth Falcon and Nianhua Li (2020). AnnotationDbi: Manipulation of SQLite-based annotations in Bioconductor. R package version 1.52.0. https://bioconductor.org/packages/AnnotationDbi
+- Marc Carlson (2020). org.Hs.eg.db: Genome wide annotation for Human. R package version 3.12.0.
+- Marc Carlson (2020). org.Mm.eg.db: Genome wide annotation for Mouse. R package version 3.12.0.
+- Marc Carlson (2022). org.Rn.eg.db: Genome wide annotation for Rat. R package version 3.15.0.
+- Marc Carlson (2022). org.Xl.eg.db: Genome wide annotation for Xenopus. R package version 3.15.0.
+- Marc Carlson (2022). org.Dm.eg.db: Genome wide annotation for Fly. R package version 3.15.0.
+- Marc Carlson (2022). org.Ce.eg.db: Genome wide annotation for Worm. R package version 3.15.0.
+- Marc Carlson (2022). org.Bt.eg.db: Genome wide annotation for Bovine. R package version 3.15.0.
+- Marc Carlson (2022). org.Cf.eg.db: Genome wide annotation for Canine. R package version 3.15.0.
+- Marc Carlson (2022). org.Dr.eg.db: Genome wide annotation for Zebrafish. R package version 3.15.0.
+- Marc Carlson (2022). org.Gg.eg.db: Genome wide annotation for Chicken. R package version 3.15.0.
+- Marc Carlson (2022). org.Mmu.eg.db: Genome wide annotation for Rhesus. R package version 3.15.0.
+- Marc Carlson (2022). org.Pt.eg.db: Genome wide annotation for Chimp. R package version 3.15.0.
+- Marc Carlson (2022). org.Sc.sgd.db: Genome wide annotation for Yeast. R package version 3.15.0.
+- Marc Carlson (2022). org.Ss.eg.db: Genome wide annotation for Pig. R package version 3.15.0.
+- Morgan M, Shepherd L (2022). AnnotationHub: Client to access AnnotationHub resources. R package version 3.4.0.
+
+genefilter (for z-score normalization)
+- R. Gentleman, V. Carey, W. Huber and F. Hahne (2021). genefilter: methods for filtering genes from high-throughput experiments. R package version 1.72.1.
+
+ComplexHeatmap (for heatmap and k-means clustering)
+- Gu, Z. (2016) Complex heatmaps reveal patterns and correlations in multidimensional genomic data. Bioinformatics.
+
+ggplot2 and ggpubr (for boxplot and scater plot)
+- H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+- Alboukadel Kassambara (2020). ggpubr: 'ggplot2' Based Publication Ready Plots. R package version 0.4.0. https://CRAN.R-project.org/package=ggpubr
+
+DEGreport (for divisive clustering analysis)
+- Pantano L (2022). DEGreport: Report of DEG analysis. R package version 1.32.0, http://lpantano.github.io/DEGreport
+
+venn (for venn diagram analysis)
+- Adrian Dusa (2021). venn: Draw Venn Diagrams. R package version 1.10. https://CRAN.R-project.org/package=venn
+
+GenomicRanges, soGGi, ChIPQC,ChIPseeker,TxDb.Mmusculus.UCSC.mm10.knownGene, TxDb.Hsapiens.UCSC.hg19.knownGene, BSgenome.Mmusculus.UCSC.mm10, and BSgenome.Hsapiens.UCSC.hg19 (for manupilate genomic information and annotation)
+- Lawrence M, Huber W, Pag\`es H, Aboyoun P, Carlson M, et al. (2013) Software for Computing and Annotating Genomic Ranges. PLoS Comput Biol 9(8): e1003118. doi:10.1371/journal.pcbi.1003118"
+- Dharmalingam G, Carroll T (2015). _soGGi: Visualise ChIP-seq, MNase-seq and motif occurrence as aggregate plots Summarised Over Grouped Genomic Intervals_. R package version 1.10.4.
+- Thomas Samuel Carroll, Ziwei Liang, Rafik Salama, Rory Stark, Ines de Santiago: Impact of artefact removal on ChIP quality metrics in ChIP-seq and ChIP-exo data. Frontiers in Genetics, in press.
+- Guangchuang Yu, Li-Gen Wang, and Qing-Yu He. ChIPseeker: an R/Bioconductor package for ChIP peak annotation, comparison and visualization. Bioinformatics 2015, 31(14):2382-2383
+- Lihua J Zhu, Claude Gazin, Nathan D Lawson, Herve Pages, Simon M Lin, David S Lapointe and Michael R Green, ChIPpeakAnno: a Bioconductor package to annotate ChIP-seq and ChIP-chip data. BMC Bioinformatics. 2010, 11:237
+- Team BC, Maintainer BP (2019). _TxDb.Mmusculus.UCSC.mm10.knownGene: Annotation package for TxDb object(s)_. R package version 3.10.0.
+- Team TBD (2021). _BSgenome.Mmusculus.UCSC.mm10: Full genome sequences for Mus musculus (UCSC version mm10, based on GRCm38.p6)_. R package version 1.4.3.
+- Carlson M, Maintainer BP (2015). _TxDb.Hsapiens.UCSC.hg19.knownGene: Annotation package for TxDb object(s)_. R package version 3.2.2.
+- Team TBD (2020). _BSgenome.Hsapiens.UCSC.hg19: Full genome sequences for Homo sapiens (UCSC version hg19, based on GRCh37.p13)_. R package version 1.4.3.
+- Team BC, Maintainer BP (2022). _TxDb.Hsapiens.UCSC.hg38.knownGene: Annotation package for TxDb object(s)_. R package version 3.15.0.
+- Team TBD (2021). _BSgenome.Hsapiens.UCSC.hg38: Full genome sequences for Homo sapiens (UCSC version hg38, based on GRCh38.p13)_. R package version 1.4.4.
+
+monaLisa, TFBSTools, BiocParallel, SummarizedExperiment, and JASPAR2020 (for promoter motif analysis)
+- Machlab D, Burger L, Soneson C, Rijli FM, Schübeler D, Stadler MB. monaLisa: an R/Bioconductor package for identifying regulatory motifs. Bioinformatics (2022).
+- Tan, G., and Lenhard, B. (2016). TFBSTools: an R/bioconductor package for transcription factor binding site analysis. Bioinformatics 32, 1555-1556.
+- Morgan M, Wang J, Obenchain V, Lang M, Thompson R, Turaga N (2022). _BiocParallel:Bioconductor facilities for parallel evaluation_. R package version 1.30.3, <https://github.com/Bioconductor/BiocParallel>.
+- Morgan M, Obenchain V, Hester J, Pagès H (2022). _SummarizedExperiment:SummarizedExperiment container_. R package version 1.26.1, <https://bioconductor.org/packages/SummarizedExperiment>.
+- Baranasic D (2020). _JASPAR2020: Data package for JASPAR database (version 2020)_. R package version 0.99.10, <http://jaspar.genereg.net/>.
+
+dplyr and tidyr (for data manipulation)
+- Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2021). dplyr: A Grammar of Data Manipulation. R package version 1.0.7. https://CRAN.R-project.org/package=dplyr
+- Hadley Wickham (2021). tidyr: Tidy Messy Data. R package version 1.1.3. https://CRAN.R-project.org/package=tidyr
+
+- rtracklayer
+M. Lawrence, R. Gentleman, V. Carey: "rtracklayer: an {R}
+  package for interfacing with genome browsers".
+  Bioinformatics 25:1841-1842.
+
+# License
+This shiny code is licensed under the GPLv3. Please see the file [LICENSE.md](https://github.com/Kan-E/EpigenomeChef/blob/main/LICENSE.md) for information.<br>
+```
+EpigenomeChef, an epigenome data controller highlighting epigenetic features
+Shiny App for automated, systematic, and integrated epigenetic analysis
+Copyright (C) 2022  Kan Etoh
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+You may contact the author of this code, Kan Etoh, at <kaneto@kumamoto-u.ac.jp>
+```
+# Author
+
+Kan Etoh
+<[kaneto@kumamoto-u.ac.jp](mailto:kaneto@kumamoto-u.ac.jp)>
