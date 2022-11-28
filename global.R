@@ -47,7 +47,10 @@ library(soGGi) ##devtools::install_github("ColeWunderlich/soGGi")
 library(ChIPQC)
 library(ChIPseeker)
 library(ChIPpeakAnno)
+library(rGREAT)
+library(FindIT2)
 options(repos = BiocManager::repositories())
+options(rsconnect.max.bundle.size=3145728000)
 species_list <- c("not selected", "Mus musculus (mm10)","Homo sapiens (hg19)","Homo sapiens (hg38)")
 gene_set_list <- c("MSigDB Hallmark", "KEGG", "Reactome", "PID (Pathway Interaction Database)",
                    "BioCarta","WikiPathways", "GO biological process", 
@@ -96,14 +99,12 @@ Bigwig2count <- function(bw, promoter, Species, input_type = "Promoter"){
           "Homo sapiens (hg19)" = org <- org.Hs.eg.db,
           "Homo sapiens (hg38)" = org <- org.Hs.eg.db)
 bed1<-promoter
-if(input_type == "Promoter"){
 write.table(bed1,file = "bed.bed",sep = "\t")
 bed1 <- read.table("bed.bed",header = T)
 bed1 <- dplyr::arrange(bed1, seqnames)
 data <- as.data.frame(bed1)[,1:3]
 colnames(data)<-c("chr","start","end")
 bed<-with(data,GRanges(chr,IRanges(start,end)))
-}else bed <- bed1
 counts <- matrix(NA, nrow = length(bed), ncol = length(bw))
 colnames(counts) <- names(bw)
 chromnames=levels(seqnames(bed))
@@ -481,7 +482,7 @@ pwms <- function(Species){
   return(pwms_res)
 }
 
-MotifAnalysis <- function(df, anno_data =NULL, Species,pwms, type ="Genome-wide"){
+MotifAnalysis <- function(df, anno_data =NULL,Species,pwms, type ="Genome-wide",consensus = NULL){
   withProgress(message = "Motif analysis takes about 2 min per group",{
     library(TFBSTools)
     if(Species == "Mus musculus (mm10)"){
@@ -522,17 +523,27 @@ MotifAnalysis <- function(df, anno_data =NULL, Species,pwms, type ="Genome-wide"
         print(data)
         print(anno_data)
         y <- subset(anno_data, gene_id %in% data$ENTREZID)
-        print(y)
       }
       }else y<- df[[name]]
+      y <- reCenterPeaks(y, width=mean(as.data.frame(y)$width))
       seq <- getSeq(genome, y)
       print(seq)
       print(pwms)
+      if(type == "Promoter") {
+        genome.region = subset(anno_data, ! gene_id %in% data$ENTREZID)
+      }else{
+        if(!is.null(consensus)){
+          consensus_nega <- setdiff(consensus,y)
+          genome.region = reCenterPeaks(consensus_nega,width=mean(as.data.frame(y)$width))
+          print(genome.region)
+        }else genome.region = NULL
+      }
       se <- calcBinnedMotifEnrR(seqs = seq,
                                 pwmL = pwms,
                                 background = "genome",
                                 genome = genome,
                                 genome.oversample = 2,
+                                genome.regions = genome.region,
                                 BPPARAM = BiocParallel::SerialParam(RNGseed = 42),
                                 verbose = TRUE)
       res <- data.frame(motif.id = elementMetadata(se)$motif.id, motif.name = elementMetadata(se)$motif.name,
@@ -612,7 +623,7 @@ Motifplot <- function(df2, padj = 0.05){
   df <- data.frame(matrix(rep(NA, 11), nrow=1))[numeric(0), ]
   for(name in names(df2)){
     res <- df2[[name]]
-    res <- dplyr::filter(res, X1 > -log10(padj))
+    res <- dplyr::filter(res, X1.1 > -log10(padj))
     res <- res %>% dplyr::arrange(-X1.1)
     if(length(rownames(res)) > 5){
       res <- res[1:5,]
@@ -683,5 +694,201 @@ files2GRangelist <- function(files){
   return(Glist)
 }
 
+integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 1, 
+                                padj_threshold = 0.05) {
+  if ("GRanges" %in% class(result_geneRP)) {
+    stop("sorry, please use the the simplify result or metadata(fullRP_hit)$peakRP_gene", 
+         call. = FALSE)
+  }
+  merge_result <- dplyr::left_join(result_geneRP, result_geneDiff, 
+                                   by = "gene_id")
+  allGenes_N <- as.double(nrow(merge_result))
+  merge_result <- merge_result %>% dplyr::mutate(diff_rank = rank(padj, 
+                                                                  na.last = "keep"), diff_rank = dplyr::case_when(is.na(diff_rank) ~ 
+                                                                                                                    allGenes_N, TRUE ~ diff_rank), rankProduct = RP_rank * 
+                                                   diff_rank, rankOf_rankProduct = rank(rankProduct)) %>% 
+    dplyr::arrange(rankOf_rankProduct) %>% dplyr::mutate(gene_category = dplyr::case_when(log2FoldChange > 
+                                                                                            lfc_threshold & padj < padj_threshold ~ "up", log2FoldChange < 
+                                                                                            -lfc_threshold & padj < padj_threshold ~ "down", TRUE ~ 
+                                                                                            "static"), gene_category = factor(gene_category, levels = c("up", 
+                                                                                                                                                        "down", "static")))
+  upGenes_rank <- filter(merge_result, gene_category == "up")$RP_rank
+  downGenes_rank <- filter(merge_result, gene_category == "down")$RP_rank
+  staticGenes_rank <- filter(merge_result, gene_category == 
+                               "static")$RP_rank
+  if (length(upGenes_rank) == 0 & length(downGenes_rank) == 
+      0) {
+    warning("no significant genes, just returing rank product result", 
+            call. = FALSE)
+    return(merge_result)
+  }
+  else if (length(upGenes_rank) == 0) {
+    warning("no significant up genes, just returing rank product result", 
+            call. = FALSE)
+    return(merge_result)
+  }
+  else if (length(downGenes_rank) == 0) {
+    warning("no significant down genes, just returing rank product result", 
+            call. = FALSE)
+    return(merge_result)
+  }
+  up_static_pvalue <- suppressWarnings(ks.test(upGenes_rank, 
+                                               staticGenes_rank)$p.value)
+  down_static_pvalue <- suppressWarnings(ks.test(downGenes_rank, 
+                                                 staticGenes_rank)$p.value)
+  ks_test <- paste0("\n Kolmogorov-Smirnov Tests ", "\n pvalue of up vs static: ", 
+                    format(up_static_pvalue, digits = 3, scientific = TRUE), 
+                    "\n pvalue of down vs static: ", format(down_static_pvalue, 
+                                                            digits = 3, scientific = TRUE))
+  annotate_df <- data.frame(xpos = -Inf, ypos = Inf, annotateText = ks_test, 
+                            hjustvar = 0, vjustvar = 1)
+  p <- merge_result %>% ggplot2::ggplot(aes(x = RP_rank)) + 
+    ggplot2::stat_ecdf(aes(color = gene_category), geom = "line") + 
+    ggplot2::geom_text(data = annotate_df, aes(x = xpos, 
+                                               y = ypos, hjust = hjustvar, vjust = vjustvar, label = annotateText)) + 
+    ggplot2::xlab("Regulatory potential rank") + ggplot2::ylab("Cumulative Probability")+
+    ggplot2::scale_x_continuous(expand = c(0,0)) + ggplot2::theme_bw(base_size = 12)
+  return(p)
+}
 
+enrich_viewer_forMulti2 <- function(data3, Species, Gene_set, org, org_code, H_t2g){
+  if(!is.null(Gene_set)){
+    if(is.null(data3)){
+      return(NULL)
+    }else{
+      withProgress(message = "enrichment analysis",{
+        if(is.null(H_t2g)){
+          df <- NULL
+        }else{
+          H_t2g2 <- H_t2g %>% dplyr::select(gs_name, entrez_gene)
+          df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+          colnames(df) <- c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", " qvalue", "geneID", "Count", "Group")
+          for (name in unique(data3$Group)) {
+            sum <- length(data3$ENTREZID[data3$Group == name])
+            em <- enricher(data3$ENTREZID[data3$Group == name], TERM2GENE=H_t2g2, pvalueCutoff = 0.05)
+            if (length(as.data.frame(em)$ID) != 0) {
+              if(length(colnames(as.data.frame(em))) == 9){
+                cnet1 <- as.data.frame(setReadable(em, org, 'ENTREZID'))
+                cnet1$Group <- paste(name, "\n","(",sum, ")",sep = "")
+                df <- rbind(df, cnet1)
+              }
+            }
+          }
+        }
+        if(length(df$ID) !=0){
+          df$GeneRatio <- parse_ratio(df$GeneRatio)
+          return(df)
+        }else return(NULL)
+      })
+    }
+  } 
+}
 
+enrich_gene_list <- function(data, Gene_set, H_t2g, org){
+  if(!is.null(Gene_set)){
+    if(is.null(data)){
+      return(NULL)
+    }else{
+      if(is.null(H_t2g)){
+        df <- NULL
+      }else{
+        H_t2g2 <- H_t2g %>% dplyr::select(gs_name, entrez_gene)
+        df <- list()
+        for (name in unique(data$Group)) {
+          sum <- length(data$ENTREZID[data$Group == name])
+          em <- enricher(data$ENTREZID[data$Group == name], TERM2GENE=H_t2g2, pvalueCutoff = 0.05)
+          if (length(as.data.frame(em)$ID) != 0) {
+            if(length(colnames(as.data.frame(em))) == 9){
+              cnet1 <- setReadable(em, org, 'ENTREZID')
+              df[[name]] <- cnet1
+            }
+          }
+        }
+      }
+      return(df)
+    }
+  }
+}
+
+enrich_genelist <- function(data, enrich_gene_list, showCategory=5){
+  if(is.null(data) || is.null(enrich_gene_list)){
+    return(NULL)
+  }else{
+    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+    colnames(df) <- c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", " qvalue", "geneID", "Count", "Group")
+    for (name in names(enrich_gene_list)) {
+      sum <- length(data$ENTREZID[data$Group == name])
+      em <- enrich_gene_list[[name]]
+      if (length(as.data.frame(em)$ID) != 0) {
+        if(length(colnames(as.data.frame(em))) == 9){
+          cnet1 <- as.data.frame(em)
+          cnet1$Group <- paste(name, "\n","(",sum, ")",sep = "")
+          cnet1 <- cnet1[sort(cnet1$pvalue, decreasing = F, index=T)$ix,]
+          if (length(cnet1$pvalue) > showCategory){
+            cnet1 <- cnet1[1:showCategory,]
+          }
+          df <- rbind(df, cnet1)
+        }
+      }
+    }
+    if ((length(df$Description) == 0) || length(which(!is.na(unique(df$qvalue)))) == 0) {
+      p1 <- NULL
+    } else{
+      df$GeneRatio <- parse_ratio(df$GeneRatio)
+      df <- dplyr::filter(df, !is.na(qvalue))
+      df$Description <- gsub("_", " ", df$Description)
+      df <- dplyr::mutate(df, x = paste0(Group, 1/(-log10(eval(parse(text = "qvalue"))))))
+      df$x <- gsub(":","", df$x)
+      df <- dplyr::arrange(df, x)
+      idx <- order(df[["x"]], decreasing = FALSE)
+      df$Description <- factor(df$Description,
+                               levels=rev(unique(df$Description[idx])))
+      p1 <- as.grob(ggplot(df, aes(x = Group,y= Description,color=qvalue,size=GeneRatio))+
+                      geom_point() +
+                      scale_color_continuous(low="red", high="blue",
+                                             guide=guide_colorbar(reverse=TRUE)) +
+                      scale_size(range=c(1, 6))+ theme_dose(font.size=12)+ylab(NULL)+xlab(NULL)+
+                      scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
+      p <- plot_grid(p1)
+      return(p)
+    }
+  }
+}
+enrich_for_table <- function(data, H_t2g, Gene_set){
+  if(length(as.data.frame(data)$Description) == 0 || is.null(H_t2g)){
+    return(NULL)
+  }else{
+    colnames(data)[1] <- "gs_name"
+    H_t2g <- H_t2g %>% distinct(gs_name, .keep_all = T)
+    data2 <- left_join(data, H_t2g, by="gs_name")  %>% as.data.frame()
+    if(Gene_set == "DoRothEA regulon (activator)" || Gene_set == "DoRothEA regulon (repressor)"){
+      data3 <- data.frame(Group = data2$Group, Gene_set_name = data2$gs_name, Confidence = data2$confidence,
+                          Count = data2$Count, GeneRatio = data2$GeneRatio, BgRatio = data2$BgRatio, pvalue = data2$pvalue, 
+                          p.adjust = data2$p.adjust, qvalue = data2$qvalue, GeneSymbol = data2$geneID)
+    }else{
+      if(Gene_set == "Custom gene set"){
+        data3 <- data.frame(Group = data2$Group, Gene_set_name = data2$gs_name,
+                            Count = data2$Count, GeneRatio = data2$GeneRatio, BgRatio = data2$BgRatio, pvalue = data2$pvalue, 
+                            p.adjust = data2$p.adjust, qvalue = data2$qvalue, GeneSymbol = data2$geneID)
+      }else{
+        data3 <- data.frame(Group = data2$Group, Gene_set_name = data2$gs_name, ID = data2$gs_id, Description = data2$gs_description,
+                            Count = data2$Count, GeneRatio = data2$GeneRatio, BgRatio = data2$BgRatio, pvalue = data2$pvalue, 
+                            p.adjust = data2$p.adjust, qvalue = data2$qvalue, GeneSymbol = data2$geneID)
+        
+      }
+      return(data3) 
+    }
+  }
+}
+symbol2gene_id <- function(data,org){
+  my.symbols <- rownames(data)
+  gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
+                                  keytype = "SYMBOL",
+                                  columns = c("SYMBOL","ENTREZID"))
+  colnames(gene_IDs) <- c("SYMBOL","gene_id")
+  gene_IDs <- gene_IDs %>% distinct(SYMBOL, .keep_all = T) %>% na.omit()
+  gene_IDs <- data.frame(gene_id = gene_IDs$gene_id, row.names = gene_IDs$SYMBOL)
+  data <- merge(gene_IDs,data,by=0)
+  data <- data[,-1]
+  return(data)
+}

@@ -36,6 +36,14 @@ shinyUI(
                         h1(strong("EpigenomeChef"),align="center"),br(),
                         p("EpigenomeChef is a web-based application for automated, systematic, and integrated epigenetic analysis.",
                           align="center"),br(),br(),style={'background-color:mintcream;font-size: 16px;'},
+                 ),
+                 column(12,br(),
+                        h3(strong("Pair-wise DAR")),
+                        h4("Detects and visualizes differentially accessible regions"),br(),
+                        img(src="pair-wise_DAR.png", width = 1200,height = 800),br(),hr(),
+                        h3(strong("Venn diagram")),
+                        h4("Detects and visualizes the overlap between DARs from multiple datasets"),br(),
+                        img(src="Venn.png", width = 1200,height = 600),br(),hr(), 
                  )
                )
       ),
@@ -91,8 +99,8 @@ shinyUI(
                      column(12, selectInput("Species", "Species", species_list, selected = "not selected"))),
                    selectInput("FDR_method", "FDR method", c("BH", "Qvalue", "IHW"), selected = "BH"),
                    fluidRow(
-                     column(4, numericInput("fc", "Fold Change", min   = 1, max   = NA, value = 5)),
-                     column(4, numericInput("fdr", "FDR", min   = 0, max   = 1, value = 0.01, step = 0.005)),
+                     column(4, numericInput("fc", "Fold Change", min   = 1, max   = NA, value = 2)),
+                     column(4, numericInput("fdr", "FDR", min   = 0, max   = 1, value = 0.1, step = 0.005)),
                      column(4, numericInput("basemean", "Basemean", min   = 0, max   = NA, value = 0))
                    ),
                    
@@ -162,11 +170,10 @@ shinyUI(
                                                          value="Trackplot_panel",
                                                          fluidRow(
                                                            column(4, downloadButton("download_pair_trackplot", "Download trackplot")),
-                                                           column(4, htmlOutput("trackplot_additional"))
+                                                           column(8, htmlOutput("trackplot_additional"))
                                                          ),
                                                          fluidRow(
-                                                           column(4, htmlOutput("igv_uprange")),
-                                                           column(4, htmlOutput("igv_downrange")),
+                                                           column(8, htmlOutput("igv_uprange")),
                                                            column(4, htmlOutput("igv_ylim"))),
                                                          plotOutput("trackplot_goi")
                                          ),
@@ -176,6 +183,20 @@ shinyUI(
                                                            column(4, downloadButton("download_pair_DEG_result", "Download DEG result"))
                                                          ),
                                                          DTOutput("DEG_result")
+                                         ),
+                                         bsCollapsePanel(title="Up_peaks:",
+                                                         value="DEG_up_panel",
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_pair_DEG_up_result", "Download Up regions (.bed)"))
+                                                         ),
+                                                         DTOutput("DEG_up_result")
+                                         ),
+                                         bsCollapsePanel(title="Down_peaks:",
+                                                         value="DEG_down_panel",
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_pair_DEG_down_result", "Download Down regions (.bed)"))
+                                                         ),
+                                                         DTOutput("DEG_down_result")
                                          ),
                                          bsCollapsePanel(title="Normalized_Count_matrix:",
                                                          value="norm_panel",
@@ -286,6 +307,65 @@ shinyUI(
                                 column(4, downloadButton("download_region_gene_associations", "Download table data"))
                               ),
                               DTOutput('region_gene_associations')
+                     ),
+                     
+                     tabPanel("Regulatory potential",
+                              fluidRow(
+                                column(8, htmlOutput("pairRNAseqresult"))
+                              ),
+                              dataTableOutput('pair_DEG_result'),
+                              bsCollapse(id="input_collapse_pair_RP",open="KS_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="KS plot:",
+                                                         value="KS_panel",
+                                                         htmlOutput("peak_distance"),
+                                                         fluidRow(
+                                                           column(6, htmlOutput("DEG_fc")),
+                                                           column(6, htmlOutput("DEG_fdr"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(8, downloadButton("download_pairKSplot","Download plot"))
+                                                         ),
+                                                         plotOutput('ks_plot')
+                                         ),
+                                         bsCollapsePanel(title="Result table:",
+                                                         value="RP_panel",
+                                                         htmlOutput("RNAseqGroup"),
+                                                         htmlOutput("ChIPseqGroup"),
+                                                         fluidRow(
+                                                           column(6, downloadButton("download_RP_table","Download summary table")),
+                                                           column(6, downloadButton("download_selected_RP_table","Download selected table"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(6, downloadButton("download_selected_int_peak","Download selected peak file (bed)"))
+                                                         ),
+                                                         DTOutput('RP_table')
+                                         ),
+                                         bsCollapsePanel(title="Trackplot:",
+                                                         value="int_Trackplot_panel",
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_pair_int_trackplot", "Download trackplot")),
+                                                           column(8, htmlOutput("int_trackplot_additional"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(8, htmlOutput("int_igv_uprange")),
+                                                           column(4, htmlOutput("int_igv_ylim"))),
+                                                         plotOutput("int_trackplot_goi")
+                                         ),
+                                         bsCollapsePanel(title="Functional enrichment analysis:",
+                                                         value="function_panel",
+                                                         fluidRow(
+                                                           column(6, htmlOutput("intGroup")),
+                                                           column(6, htmlOutput("intGeneset"))
+                                                         ),
+                                                         downloadButton("download_pair_int_enrichment", "Download"),
+                                                         plotOutput('int_enrichment1'),
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_pair_int_enrichment_table", "Download enrichment result"))
+                                                         ),
+                                                         dataTableOutput("int_enrichment_result")
+                                         )
+                                         
+                              )
                      )
                    )
                  ) # main panel
@@ -381,8 +461,7 @@ shinyUI(
                                                            column(4, downloadButton("download_venn_trackplot", "Download trackplot"))
                                                          ),
                                                          fluidRow(
-                                                           column(4, htmlOutput("igv_venn_uprange")),
-                                                           column(4, htmlOutput("igv_venn_downrange")),
+                                                           column(8, htmlOutput("igv_venn_uprange")),
                                                            column(4, htmlOutput("igv_venn_ylim"))),
                                                          plotOutput("trackplot_venn_goi")
                                          ),

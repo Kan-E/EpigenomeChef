@@ -1,7 +1,7 @@
 popoverTempate <- 
   '<div class="popover popover-lg" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'
 shinyServer(function(input, output, session) {
-  options(shiny.maxRequestSize=10000*1024^2)
+  options(shiny.maxRequestSize=10000000*1024^2)
   # pair-wise ------------------------------------------------------------------------------
   output$Spe <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
@@ -506,15 +506,26 @@ shinyServer(function(input, output, session) {
     updateCollapse(session,id =  "input_collapse_pair_DEG", open="Trackplot_panel")
   }))
   observeEvent(input$DEG_result_rows_selected,({
-    updateNumericInput(session,"igv_uprange","upstream range:",value = 0,step = 100)
-    updateNumericInput(session,"igv_downrange","downstream range:",value = 0,step = 100)
+    if(!is.null(goi_gene_position()) && !is.null(goi_promoter_position())){
+    y <- goi_promoter_position()
+    gene_position <- goi_gene_position()
+    start_position <- min(c(y$start,gene_position$start))
+    end_position <- max(c(y$end,gene_position$end))
+    updateSliderInput(session,"igv_uprange","Range:",
+                       value = c(start_position,end_position),
+                      step = 100, min = start_position - 10000, max = end_position + 10000)
+    }
   }))
   
   output$igv_uprange <- renderUI({
-    numericInput("igv_uprange","upstream range:",value = 0,step = 100)
-  })
-  output$igv_downrange <- renderUI({
-    numericInput("igv_downrange","downstream range:",value = 0,step = 100)
+    if(!is.null(goi_gene_position()) && !is.null(goi_promoter_position())){
+      y <- goi_promoter_position()
+      gene_position <- goi_gene_position()
+      start_position <- min(c(y$start,gene_position$start))
+      end_position <- max(c(y$end,gene_position$end))
+    sliderInput("igv_uprange","Range:",value = c(start_position,end_position),
+                step = 100, min = start_position - 10000, max = end_position + 10000)
+    }
   })
   output$igv_ylim <- renderUI({
     numericInput("igv_ylim","peak range:", value = 10, min = 0)
@@ -584,7 +595,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  highlight_trackplot <- reactive({
+  data_track <- reactive({
     if(!is.null(input$DEG_result_rows_selected)){
       library(Gviz)
       y <- goi_promoter_position()
@@ -613,33 +624,53 @@ shinyServer(function(input, output, session) {
                                 fill.histogram = "darkblue",)
       }
       df[["grtrack"]] <- grtrack
+      return(df)
+    }
+  })
+  
+  highlight_trackplot <- reactive({
+    if(!is.null(input$DEG_result_rows_selected)){
+      library(Gviz)
+      y <- goi_promoter_position()
+      gene_position <- goi_gene_position()
+      chr <- gene_position$seqnames
+      df <- data_track()
+      if(y$start < input$igv_uprange[2] && y$end > input$igv_uprange[1]){
       withProgress(message = "Highlighting the selected region",{
         ht <- HighlightTrack(trackList = df,
                              start = y$start, width = y$width,
                              chromosome = chr)
       })
+      }else ht <- NULL
       return(ht)
     }
   })
   goi_trackplot <- reactive({
-    if(!is.null(input$DEG_result_rows_selected) && !is.null(highlight_trackplot()) &&
-       !is.null(goi_promoter_position()) && !is.null(goi_gene_position()) && !is.null(gtrack()) &&
-       !is.null(input$igv_uprange) && !is.null(input$igv_downrange)){
+    if(!is.null(input$DEG_result_rows_selected) &&
+       !is.null(goi_promoter_position()) && 
+       !is.null(goi_gene_position()) && 
+       !is.null(gtrack()) &&
+       !is.null(input$igv_uprange)){
       library(Gviz)
-      y <- goi_promoter_position()
-      gene_position <- goi_gene_position()
-      start_position <- min(c(y$start,gene_position$start))
-      end_position <- max(c(y$end,gene_position$end))
-      plot<- plotTracks(list(gtrack(), highlight_trackplot()),
-                        from = start_position-input$igv_uprange, 
-                        to = end_position+input$igv_downrange,ylim=c(0,input$igv_ylim),
-                        type="hist")
+      if(!is.null(highlight_trackplot())){
+        plot<- plotTracks(list(gtrack(), highlight_trackplot()),
+                          from = input$igv_uprange[1], 
+                          to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
+                          type="hist")
+      }else{
+        df <- data_track()
+        df[["gtrack"]] <- gtrack()
+        plot<- plotTracks(df,
+                          from = input$igv_uprange[1], 
+                          to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
+                          type="hist")
+      }
       return(plot)
     }
   })
   output$trackplot_goi <- renderPlot({
     withProgress(message = "Preparing trackplot",{
-      if(!is.null(input$DEG_result_rows_selected) && !is.null(highlight_trackplot())){
+      if(!is.null(input$DEG_result_rows_selected)){
         goi_trackplot()
       }
     })
@@ -693,6 +724,46 @@ shinyServer(function(input, output, session) {
       return(up_all)
     }
   })
+  data_degcount_up_bed <-reactive({
+    if(input$Genomic_region == "Genome-wide"){
+      data <- range_changer(data_degcount_up())
+      data2 <- data.frame(chr = data$chr, start = data$start, end = data$end)
+    }else{
+      up <- symbol2gene_id(data_degcount_up(),org1())
+      up2 <- subset(promoter_region(), gene_id %in% up$gene_id) %>% as.data.frame()
+      data2 <- data.frame(chr = up2$seqnames, start = up2$start, end = up2$end)
+    }
+    return(data2)
+  })
+  data_degcount_down_bed <-reactive({
+    if(input$Genomic_region == "Genome-wide"){
+      data <- range_changer(data_degcount_down())
+      data2 <- data.frame(chr = data$chr, start = data$start, end = data$end)
+    }else{
+      down <- symbol2gene_id(data_degcount_down(),org1())
+      down2 <- subset(promoter_region(), gene_id %in% down$gene_id) %>% as.data.frame()
+      data2 <- data.frame(chr = down2$seqnames, start = down2$start, end = down2$end)
+    }
+    return(data2)
+  })
+  output$DEG_up_result <- DT::renderDT({
+    data_degcount_up_bed()
+  })
+  output$DEG_down_result <- DT::renderDT({
+    data_degcount_down_bed()
+  })
+  output$download_pair_DEG_up_result = downloadHandler(
+    filename = function() {
+      paste0("Up-DAR",".bed")
+    },
+    content = function(file){write.table(data_degcount_up_bed(), file, row.names = F, col.names = F,sep = "\t", quote = F)}
+  )
+  output$download_pair_DEG_down_result = downloadHandler(
+    filename = function() {
+      paste0("Down-DAR",".bed")
+    },
+    content = function(file){write.table(data_degcount_down_bed(), file, row.names = F, col.names = F,sep = "\t", quote = F)}
+  )
   
   data_degcount_down <- reactive({
     data <- data_degcount()
@@ -1087,7 +1158,7 @@ shinyServer(function(input, output, session) {
        !is.null(preMotif_list())){
       if(input$Genomic_region == "Genome-wide"){
       return(MotifAnalysis(df= preMotif_list(), anno_data = deg_result_anno2(),
-                           Species = input$Species, pwms = pwms_motif()))
+                           Species = input$Species, pwms = pwms_motif(), consensus = promoter_region()))
       }else return(MotifAnalysis(df= data_degcount2(), anno_data = promoter_region(),
                                  Species = input$Species, pwms = pwms_motif(),
                                  type = "Promoter"))
@@ -1151,7 +1222,7 @@ shinyServer(function(input, output, session) {
   
   promoter_motif_region <- reactive({
     target_motif <- motif_table()[input$motif_result_rows_selected,]
-    if(input$motifButton > 0 && !is.null(input$motif_result_rows_selected)){
+    if(!is.null(input$motif_result_rows_selected)){
       if(input$Genomic_region == "Genome-wide"){
       res <- MotifRegion(df= preMotif_list(), anno_data = deg_result_anno2(),
                          target_motif = target_motif,Species = input$Species)  
@@ -1167,7 +1238,7 @@ shinyServer(function(input, output, session) {
   
   output$promoter_motif_region_table <- renderDataTable({
     target_motif <- motif_table()[input$motif_result_rows_selected,]
-    if(input$motifButton > 0 && !is.null(input$motif_result_rows_selected)){
+    if(!is.null(input$motif_result_rows_selected)){
       promoter_motif_region()
     }
   })
@@ -1184,9 +1255,10 @@ shinyServer(function(input, output, session) {
   
   ##peak distribution-------
   input_peak_list <- reactive({
+    if(input$Genomic_region == "Genome-wide"){
     files<-list()
     name <- c()
-    if(!is.null( peak_call_files())){
+    if(!is.null(peak_call_files())){
       a <- peak_call_files()
       Glist <- GRangesList()
       for(name in names(a)){
@@ -1206,10 +1278,11 @@ shinyServer(function(input, output, session) {
       Glist[["Consensus_region"]] <- promoter_region()
       return(Glist)
     }
+    }
   })
   output$input_peak_distribution <- renderPlot({
     withProgress(message = "Plot peak distribution for peak call files",{
-    if(!is.null(input_peak_list()) && !is.null(txdb())){
+    if(!is.null(input_peak_list()) && !is.null(txdb()) && input$Genomic_region == "Genome-wide"){
       print(input_peak_list())
       genomicElementDistribution(input_peak_list(), 
                                  TxDb = txdb()) 
@@ -1232,7 +1305,7 @@ shinyServer(function(input, output, session) {
   })  
   output$deg_peak_distribution <- renderPlot({
     withProgress(message = "Plot peak distribution for DAR",{
-      if(!is.null(deg_peak_list())){
+      if(!is.null(deg_peak_list()) && input$Genomic_region == "Genome-wide"){
         genomicElementDistribution(deg_peak_list(), 
                                    TxDb = txdb()) 
       }
@@ -1310,9 +1383,14 @@ shinyServer(function(input, output, session) {
     numericInput("peak_up_range","Heatmap y-axis range",value=10,step=2)
   })
 peak_up_grange <- reactive({
+  if(input$Genomic_region == "Genome-wide"){
   up <- range_changer(data_degcount_up())
   up2 <- with(up, GRanges(seqnames = chr,ranges = IRanges(start=start,end=end)))
-  return(up2)
+  }else{
+    up <- symbol2gene_id(data_degcount_up(),org1()) %>% distinct(gene_id, .keep_all = T)
+    up <- subset(promoter_region(), gene_id %in% up$gene_id) 
+  }
+  return(up)
 })
 peak_up_cvglists <-reactive({
   up2 <- peak_up_grange()
@@ -1421,9 +1499,14 @@ peak_up_cvglists <-reactive({
     numericInput("peak_down_range","Heatmap y-axis range",value=10,step=2)
   })
   peak_down_grange <- reactive({
-    down <- range_changer(data_degcount_down())
-    down2 <- with(down, GRanges(seqnames = chr,ranges = IRanges(start=start,end=end)))
-    return(down2)
+    if(input$Genomic_region == "Genome-wide"){
+      down <- range_changer(data_degcount_down())
+      down2 <- with(down, GRanges(seqnames = chr,ranges = IRanges(start=start,end=end)))
+    }else{
+      down <- symbol2gene_id(data_degcount_down(),org1()) %>% distinct(gene_id, .keep_all = T)
+      down <- subset(promoter_region(), gene_id %in% down$gene_id)
+    }
+    return(down)
   })
   peak_down_cvglists <-reactive({
     down2 <- peak_down_grange()
@@ -1519,6 +1602,458 @@ peak_up_cvglists <-reactive({
       })
     }
   )
+  
+  ##Regulatory potential------
+  output$pairRNAseqresult <- renderUI({
+    fileInput("pair_DEG_result",
+              "Select RNA-seq DEG result file",
+              accept = c("txt","csv","xlsx"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  RNAseqDEG <- reactive({
+    withProgress(message = "Importing row count matrix, please wait",{
+        tmp <- input$pair_DEG_result$datapath
+        if(is.null(input$pair_DEG_result) && input$goButton > 0 )  tmp = "data/RNAseq.txt"
+        if(is.null(tmp)) {
+          return(NULL)
+        }else{
+          if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+          if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
+          if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
+          rownames(df) = gsub("\"", "", rownames(df))
+          if(length(colnames(df)) != 0){
+            if(str_detect(colnames(df)[1], "^X\\.")){
+              colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+            }
+          }
+          return(df)
+        }
+    })
+  })
+  
+  output$pair_DEG_result <- renderDataTable({
+    RNAseqDEG()
+  })
+  
+  RNAseqDEG_anno <- reactive({
+    RNAdata <- RNAseqDEG()
+    RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
+    if(str_detect(rownames(RNAdata)[1], "ENS")){
+      my.symbols <- gsub("\\..*","", rownames(RNAdata))
+      gene_IDs<-AnnotationDbi::select(org1(),keys = my.symbols,
+                                      keytype = "ENSEMBL",
+                                      columns = c("ENSEMBL","SYMBOL","ENTREZID"))
+      colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
+      RNAdata$EnsemblID <- gsub("\\..*","", rownames(RNAdata))
+      gene_IDs <- gene_IDs %>% distinct(EnsemblID, .keep_all = T)
+    }else{
+      my.symbols <- rownames(RNAdata)
+      gene_IDs<-AnnotationDbi::select(org1(),keys = my.symbols,
+                                      keytype = "SYMBOL",
+                                      columns = c("SYMBOL", "ENTREZID"))
+      colnames(gene_IDs) <- c("Symbol", "gene_id")
+      gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T)
+      RNAdata$Symbol <- rownames(RNAdata) 
+    }
+    data <- merge(RNAdata, gene_IDs, by="Symbol")
+    return(data)
+  })
+  
+  mmAnno_up <- reactive({
+    up_peak <- peak_up_grange()
+    if(input$Genomic_region == "Promoter"){ 
+      up_peak <- up_peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
+      up_peak <- with(up_peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
+    }
+    range <- input$peak_distance * 1000
+    mcols(up_peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(up_peak))))
+    mmAnno_up <- mm_geneScan(up_peak, txdb(),upstream = range,downstream = range)
+    return(mmAnno_up)
+  })
+  mmAnno_down <- reactive({
+    down_peak <- peak_down_grange()
+    if(input$Genomic_region == "Promoter"){ 
+      down_peak <- down_peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
+      down_peak <- with(down_peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
+    }
+    range <- input$peak_distance * 1000
+    mcols(down_peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(down_peak))))
+    mmAnno_down <- mm_geneScan(down_peak, txdb(),upstream = range,downstream = range)
+    return(mmAnno_down)
+  })
+  
+  regulatory_potential <- reactive({
+    mmAnno_up <- mmAnno_up()
+    print(mmAnno_up)
+    result_geneRP_up <- calcRP_TFHit(mmAnno = mmAnno_up,Txdb = txdb())
+    mmAnno_down <- mmAnno_down()
+    result_geneRP_down <- calcRP_TFHit(mmAnno = mmAnno_down,Txdb = txdb())
+    colnames(result_geneRP_up)[2:4] <- paste0(colnames(result_geneRP_up)[2:4], "_up")
+    colnames(result_geneRP_down)[2:4] <- paste0(colnames(result_geneRP_down)[2:4], "_down")
+    result_geneRP <- merge(result_geneRP_up,result_geneRP_down,by="gene_id",all =T)
+    result_geneRP$sumRP <- apply(data.frame(result_geneRP$sumRP_up,
+                                            -result_geneRP$sumRP_down),1,sum,na.rm=TRUE)
+    result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
+    result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
+    merge_data <- integrate_ChIP_RNA(
+      result_geneRP = result_geneRP,
+      result_geneDiff = RNAseqDEG_anno(),lfc_threshold = log2(input$DEG_fc),padj_threshold = input$DEG_fdr
+    )
+    return(merge_data)
+  })
+  
+  output$ks_plot <- renderPlot({
+    if(!is.null(input$peak_distance)){
+    regulatory_potential()
+    }
+  })
+  output$DEG_fc <- renderUI({
+    numericInput("DEG_fc","Fold change cutoff for RNA-seq data",
+                min=0,max=NA,value=1.5,step = 0.5)
+  })
+  output$DEG_fdr <- renderUI({
+    numericInput("DEG_fdr","FDR cutoff for RNA-seq data",
+                min=0,max=1, value=0.05,step = 0.001)
+  })
+  output$peak_distance <- renderUI({
+    sliderInput("peak_distance","Regulatory range (distance (kb) from TSS)",
+                 min=0,max=1000,value=100,step = 10)
+  })
+  output$RNAseqGroup <- renderUI({
+    if(!is.null(RP_all_table())){
+      selectInput("RNAseqGroup","Group (RNAseq-Epigenome)",
+                  unique(RP_all_table()$Group),
+                  multiple = FALSE) 
+    }
+  })
+  RP_all_table <- reactive({
+    target_result <- regulatory_potential()$data
+    target_result$epigenome_category <- "up"
+    target_result$epigenome_category[target_result$sumRP < 0] <- "down"
+    table <- data.frame(Symbol = target_result$Symbol,
+                        Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
+                        RNA_log2FC = -target_result$log2FoldChange,
+                        RNA_padj = target_result$padj,
+                        regulatory_potential = target_result$sumRP,
+                        withUpPeakN = target_result$withPeakN_up,
+                        withDownPeakN = target_result$withPeakN_down,
+                        gene_id = target_result$gene_id)
+    return(table)
+  })
+  
+  RP_selected_table <- reactive({
+    table <- RP_all_table() %>% dplyr::filter(Group == input$RNAseqGroup)
+    return(table)
+  })
+  
+  output$RP_table <- renderDT({
+    if(!is.null(input$RNAseqGroup) && !is.null(input$peak_distance)){
+      RP_selected_table() %>%
+        datatable(
+          selection = "single",
+          filter = "top")
+    }
+  })
+  
+  output$download_pairKSplot = downloadHandler(
+    filename = function(){
+      paste0("KSplot",".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 5
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 5
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        regulatory_potential()
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$download_RP_table = downloadHandler(
+    filename = function() {
+      paste0("RP_summary_table.txt")
+    },
+    content = function(file){write.table(RP_all_table(), file, row.names = F, sep = "\t", quote = F)}
+  )
+    
+  output$download_selected_RP_table = downloadHandler(
+    filename = function() {
+      paste0("RP_",input$RNAseqGroup,"_table.txt")
+    },
+    content = function(file){write.table(RP_selected_table(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  observeEvent(input$pair_DEG_result, ({
+    updateCollapse(session,id =  "input_collapse_pair_RP", open="KS_panel")
+  }))
+
+  
+  
+  ##Integrative trackplot-------
+  observeEvent(input$RP_table_rows_selected, ({
+    updateCollapse(session,id =  "input_collapse_pair_RP", open="int_Trackplot_panel")
+  }))
+  output$int_igv_uprange <- renderUI({
+    if(!is.null(int_goi_gene_position()) && !is.null(int_goi_promoter_position())){
+      y <- int_goi_promoter_position()
+      gene_position <- int_goi_gene_position()
+      start_position <- min(c(y$start,gene_position$start))
+      end_position <- max(c(y$end,gene_position$end))
+      sliderInput("int_igv_uprange","Range:",value = c(start_position,end_position),
+                  step = 100, min = start_position - 10000, max = end_position + 10000)
+    }
+  })
+  output$int_igv_ylim <- renderUI({
+    numericInput("int_igv_ylim","peak range:", value = 10, min = 0)
+  })
+  
+  int_goi_promoter_position<- reactive({
+    if(!is.null(input$RP_table_rows_selected)){
+      library(Gviz)
+      gene <- RP_selected_table()[input$RP_table_rows_selected,]$gene_id
+      up_peak <- subset(mmAnno_up(), gene_id %in% gene)
+      down_peak <- subset(mmAnno_down(), gene_id %in% gene)
+      mcols(up_peak) <- DataFrame(Group = "up")
+      mcols(down_peak) <- DataFrame(Group = "down")
+      peak <- c(up_peak,down_peak)
+      y <- as.data.frame(peak)
+      print(y)
+      return(y)
+    }
+  })
+  
+  int_goi_gene_position <- reactive({
+    if(!is.null(input$RP_table_rows_selected)){
+      gene <- RP_selected_table()[input$RP_table_rows_selected,]$gene_id
+      gene_position <- as.data.frame(subset(gene_position(), gene_id %in% gene))
+      return(gene_position)
+    }
+  })
+  
+  output$int_trackplot_additional <- renderUI({
+    fileInput("int_trackplot_additional1",
+              "Select additional bigwig files",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  int_track_additional_files <-reactive({
+    if(!is.null(input$int_trackplot_additional1)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$int_trackplot_additional1[, 1])){
+        file <- input$int_trackplot_additional1[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1[nr,]$name))
+        print(name)
+        files <- c(files,file)
+      }
+      names(files)<-name
+      print(input$int_trackplot_additional1[[1, 'datapath']])
+      print(files)
+      return(files)
+    }
+  })
+  
+  int_data_track <- reactive({
+      if(!is.null(input$RP_table_rows_selected)){
+        library(Gviz)
+        y <- int_goi_promoter_position()
+        gene_position <- int_goi_gene_position()
+        chr <- gene_position$seqnames
+        gen <- ref()
+        txdb <- txdb()
+        grtrack <- GeneRegionTrack(txdb,
+                                   chromosome = chr, name = "UCSC known genes",
+                                   transcriptAnnotation = "tx_name",genome = gen,
+                                   background.title = "grey",cex = 1.25)
+        bw_files <- bws()
+        cond1 <- unique(gsub("\\_.+$", "", names(bw_files)))[1]
+        cond2 <- unique(gsub("\\_.+$", "", names(bw_files)))[2]
+        if(!is.null(int_track_additional_files())) bw_files <- c(bw_files, int_track_additional_files())
+        df <- list()
+        for(name in names(bw_files)){
+          cond <- gsub("\\_.+$", "", name)
+          if(cond == cond1) col = "black"
+          if(cond == cond2) col = "darkred"
+          if(cond != cond1 && cond != cond2) col = "darkblue"
+          df[[name]] <- DataTrack(range = bw_files[[name]], type = "l",genome = gen,
+                                  name = gsub("\\..+$", "", name), window = -1,
+                                  chromosome = chr, background.title = col,cex = 1.25,
+                                  col.histogram = "darkblue", 
+                                  fill.histogram = "darkblue",)
+        }
+        df[["grtrack"]] <- grtrack
+        return(df)
+      }
+  })
+  
+  int_highlight_trackplot <- reactive({
+    if(!is.null(input$RP_table_rows_selected) && !is.null(input$int_igv_uprange)){
+      library(Gviz)
+      y <- int_goi_promoter_position()
+      gene_position <- int_goi_gene_position()
+      chr <- gene_position$seqnames
+      df <- int_data_track()
+      start <-c()
+      width <- c()
+      col <- c()
+      fill <- c()
+      for(i in 1:length(rownames(y))){
+        if(y[i,]$start < input$int_igv_uprange[2] && y[i,]$end > input$int_igv_uprange[1]){
+        start <- c(start, y[i,]$start)
+        width <- c(width, y[i,]$width)
+        if(y[i,]$Group == "up") {
+          col <- c(col,"#E41A1C")
+          fill <- c(fill,"#FBB4AE")
+        }
+        if(y[i,]$Group == "down") {
+          col <- c(col,"#377EB8")
+          fill <- c(fill,"#B3CDE3")
+        }
+        }
+      }
+      if(length(start) != 0){
+        ht <- HighlightTrack(trackList = df,
+                             start = start, width = width,col = col,fill = fill,
+                             chromosome = chr) 
+      }else ht <- NULL
+      return(ht)
+    }
+  })
+  int_goi_trackplot <- reactive({
+    if(!is.null(input$RP_table_rows_selected) &&
+       !is.null(int_goi_promoter_position()) && 
+       !is.null(int_goi_gene_position()) && 
+       !is.null(gtrack()) &&
+       !is.null(input$int_igv_uprange)){
+      library(Gviz)
+      if(!is.null(int_highlight_trackplot())){
+        plot<- plotTracks(list(gtrack(), int_highlight_trackplot()),
+                          from = input$int_igv_uprange[1], 
+                          to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                          type="hist")
+      }else{
+        df <- int_data_track()
+        df[["gtrack"]] <- gtrack()
+        plot<- plotTracks(df,
+                          from = input$int_igv_uprange[1], 
+                          to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                          type="hist")
+      }
+      return(plot)
+    }
+  })
+  output$int_trackplot_goi <- renderPlot({
+    withProgress(message = "Preparing trackplot",{
+      if(!is.null(input$RP_table_rows_selected)){
+        int_goi_trackplot()
+      }
+    })
+  })
+  output$download_pair_int_trackplot = downloadHandler(
+    filename = "trackplot.pdf",
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 4
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        plotTracks(list(gtrack(), int_highlight_trackplot()),
+                   from = input$int_igv_uprange[1], 
+                   to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                   type="hist")
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  
+  #Integrative functional analysis--------
+  int_Hallmark_set <- reactive({
+    if(!is.null(input$intGeneset)){
+      return(GeneList_for_enrichment(Species = input$Species, Gene_set = input$intGeneset, org = org1()))
+    }
+  })
+  
+  output$intGroup <- renderUI({
+    if(!is.null(RP_all_table())){
+      selectInput("intGroup","Group (RNAseq-Epigenome)",unique(RP_all_table()$Group),multiple = T)
+    }
+  })
+  output$intGeneset <- renderUI({
+    selectInput('intGeneset', 'Gene Set', gene_set_list)
+  })
+  
+  selected_int_group <- reactive({
+    group <- input$intGroup
+    df <- data.frame(matrix(rep(NA, 2), nrow=1))[numeric(0), ]
+    colnames(df) <- c("ENTREZID","Group")
+    for(name in group){
+        table <- RP_all_table() %>% dplyr::filter(Group == name)
+        df2 <- data.frame(ENTREZID = table$gene_id, Group = table$Group)
+        df <- rbind(df,df2)
+    }
+    return(df)
+  })
+  int_enrich <- reactive({
+    return(enrich_viewer_forMulti2(data3 = selected_int_group(), Species = input$Species, org = org1(),
+                                   H_t2g = int_Hallmark_set(),Gene_set = input$intGeneset))
+  })
+  int_enrich_list <- reactive({
+    return(enrich_gene_list(data = selected_int_group(),
+                            Gene_set = input$intGeneset, org = org1(), H_t2g = int_Hallmark_set()))
+  })
+  int_enrich_plot <- reactive({
+    return(enrich_genelist(data = selected_int_group(),
+                           enrich_gene_list = int_enrich_list()))
+  })
+  output$int_enrichment1 <- renderPlot({
+    dotplot_for_output(data = int_enrich(),
+                       plot_genelist = int_enrich_plot(), Gene_set = input$intGeneset, 
+                       Species = input$Species)
+  })
+  int_enrich_table <- reactive({
+    return(enrich_for_table(data = as.data.frame(int_enrich()), H_t2g = int_Hallmark_set(), Gene_set = input$intGeneset))
+  })
+  output$int_enrichment_result <- DT::renderDataTable({
+    int_enrich_table()
+  })
+  output$download_pair_int_enrichment = downloadHandler(
+    filename = function(){
+      paste0("Enrichment-",input$intGeneset,".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 5
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 8
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        dotplot_for_output(data = int_enrich(),
+                           plot_genelist = int_enrich_plot(), Gene_set = input$intGeneset, 
+                           Species = input$Species)
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$download_pair_int_enrichment_table = downloadHandler(
+    filename = function() {
+      paste0("Enrichment_table-",input$intGeneset,".txt")
+    },
+    content = function(file){write.table(int_enrich_table(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  
   
   ##Venn diagram -----------
   txdb_venn <- reactive({
@@ -1828,15 +2363,25 @@ peak_up_cvglists <-reactive({
     updateCollapse(session,id =  "int_result_collapse_panel", open="Trackplot_venn_panel")
   }))
   observeEvent(input$selected_intersect_annotation_rows_selected,({
-    updateNumericInput(session,"igv_venn_uprange","upstream range:",value = 0,step = 100)
-    updateNumericInput(session,"igv_venn_downrange","downstream range:",value = 0,step = 100)
+    if(!is.null(goi_promoter_position_venn()) && !is.null(goi_gene_position_venn())){
+      y <- goi_promoter_position_venn()
+      gene_position <- goi_gene_position_venn()
+      start_position <- min(c(y$start,gene_position$start))
+      end_position <- max(c(y$end,gene_position$end))
+      updateSliderInput(session,"igv_venn_uprange","Range:",value = c(start_position,end_position),
+                        step = 100, min = start_position - 10000, max = end_position + 10000)
+    }
   }))
   
   output$igv_venn_uprange <- renderUI({
-    numericInput("igv_venn_uprange","upstream range:",value = 0,step = 100)
-  })
-  output$igv_venn_downrange <- renderUI({
-    numericInput("igv_venn_downrange","downstream range:",value = 0,step = 100)
+    if(!is.null(goi_promoter_position_venn()) && !is.null(goi_gene_position_venn())){
+    y <- goi_promoter_position_venn()
+    gene_position <- goi_gene_position_venn()
+    start_position <- min(c(y$start,gene_position$start))
+    end_position <- max(c(y$end,gene_position$end))
+    sliderInput("igv_venn_uprange","Range:",value = c(start_position,end_position),
+                step = 100, min = start_position - 10000, max = end_position + 10000)
+    }
   })
   output$igv_venn_ylim <- renderUI({
     numericInput("igv_venn_ylim","peak range:", value = 10, min = 0)
@@ -1871,7 +2416,7 @@ peak_up_cvglists <-reactive({
     }
   })
   
-  highlight_trackplot_venn <- reactive({
+  data_track_venn <-reactive({
       library(Gviz)
       y <- goi_promoter_position_venn()
       gene_position <- goi_gene_position_venn()
@@ -1893,27 +2438,45 @@ peak_up_cvglists <-reactive({
                                 fill.histogram = "darkblue",)
       }
       df[["grtrack"]] <- grtrack
-      withProgress(message = "Highlighting the selected region",{
-        ht <- HighlightTrack(trackList = df,
-                             start = y$start, width = y$width,
-                             chromosome = chr)
-      })
-      return(ht)
+      return(df)
   })
-  goi_trackplot_venn <- reactive({
-    if(!is.null(input$selected_intersect_annotation_rows_selected) &&
-       !is.null(input$igv_venn_uprange) && !is.null(input$igv_venn_downrange)){
+  
+  highlight_trackplot_venn <- reactive({
       library(Gviz)
       y <- goi_promoter_position_venn()
       gene_position <- goi_gene_position_venn()
-      start_position <- min(c(y$start,gene_position$start))
-      end_position <- max(c(y$end,gene_position$end))
-      plot<- plotTracks(list(gtrack_venn(), highlight_trackplot_venn()),
-                        from = start_position-input$igv_venn_uprange, 
-                        to = end_position+input$igv_venn_downrange,ylim=c(0,input$igv_venn_ylim),
-                        type="hist")
+      chr <- gene_position$seqnames
+      df <- data_track_venn()
+      if(y$start < input$igv_venn_uprange[2] && y$end > input$igv_venn_uprange[1]){
+        withProgress(message = "Highlighting the selected region",{
+          ht <- HighlightTrack(trackList = df,
+                               start = y$start, width = y$width,
+                               chromosome = chr)
+        })
+        }else ht <- NULL
+      return(ht)
+  })
+  goi_trackplot_venn <- reactive({
+    withProgress(message = "Trackplot",{
+    if(!is.null(input$selected_intersect_annotation_rows_selected) &&
+       !is.null(input$igv_venn_uprange)){
+      library(Gviz)
+      if(!is.null(highlight_trackplot_venn())){
+        plot<- plotTracks(list(gtrack_venn(), highlight_trackplot_venn()),
+                          from = input$igv_venn_uprange[1], 
+                          to = input$igv_venn_uprange[2],ylim=c(0,input$igv_venn_ylim),
+                          type="hist")
+      }else{
+        df <- data_track_venn()
+        df[["gtrack"]] <- gtrack_venn()
+        plot<- plotTracks(df,
+                          from = input$igv_venn_uprange[1], 
+                          to = input$igv_venn_uprange[2],ylim=c(0,input$igv_venn_ylim),
+                          type="hist") 
+      }
       return(plot)
     }
+    })
   })
   output$trackplot_venn_goi <- renderPlot({
     withProgress(message = "Preparing trackplot",{
@@ -1961,11 +2524,18 @@ peak_up_cvglists <-reactive({
     }
   })
   
+  venn_consensus <- reactive({
+    files <- Venn_peak_call_files()
+    consensus <- soGGi:::runConsensusRegions(GRangesList(files), "none")
+    return(consensus)
+  })
+  
   enrich_motif_venn <- reactive({
     if(input$motifButton_venn > 0 && !is.null(pwms_motif_venn()) && 
        !is.null(preMotif_list_venn())){
         return(MotifAnalysis(df= preMotif_list_venn(), 
-                             Species = input$Species_venn, pwms = pwms_motif_venn()))
+                             Species = input$Species_venn, pwms = pwms_motif_venn(),
+                             consensus = venn_consensus()))
     }
   })
   
@@ -2558,6 +3128,12 @@ peak_up_cvglists <-reactive({
     if(input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files())){
       return(pwms(Species = input$Species_enrich))
     }
+  })
+  
+  enrich_consensus <- reactive({
+    files <- Enrich_peak_call_files()
+    consensus <- soGGi:::runConsensusRegions(GRangesList(files), "none")
+    return(consensus)
   })
   
   enrich_motif_enrich <- reactive({
