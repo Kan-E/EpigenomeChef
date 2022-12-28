@@ -38,12 +38,12 @@ shinyUI(
                           align="center"),br(),br(),style={'background-color:mintcream;font-size: 16px;'},
                  ),
                  column(12,br(),
-                        h3(strong("Pair-wise DAR")),
-                        h4("Detects and visualizes differentially accessible regions"),br(),
-                        img(src="pair-wise_DAR.png", width = 1200,height = 800),br(),hr(),
-                        h3(strong("Venn diagram")),
-                        h4("Detects and visualizes the overlap between DARs from multiple datasets"),br(),
-                        img(src="Venn.png", width = 1200,height = 600),br(),hr(), 
+                        h3("Pair-wise DAR detects and visualizes differentially accessible regions"),br(),
+                        img(src="pair-wise_DAR.png", width = 1200,height = 1600),br(),br(),hr(),
+                        h3("Venn diagram detects and visualizes the overlap between DARs from multiple datasets"),br(),
+                        img(src="Venn.png", width = 1200,height = 700),br(),br(),hr(), 
+                        h3("Clustering identifies similar samples and DNA binding patterns by clustering methods"),br(),
+                        img(src="Clustering.png", width = 1000,height = 900),br(),hr(),
                  )
                )
       ),
@@ -54,8 +54,7 @@ shinyUI(
                  sidebarPanel(
                    radioButtons('data_file_type','Input:',
                                 c('BigWig files'="Row1",
-                                  'Option1: '="Row2",
-                                  'Option2: '="Row11"
+                                  'Bam files'="Row2"
                                 ),selected = "Row1"),
                    conditionalPanel(condition="input.data_file_type=='Row1'",
                                     fileInput("file1",
@@ -71,6 +70,26 @@ shinyUI(
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br><br>"), 
                                               placement = "right",options = list(container = "body")),
+                   ),
+                   conditionalPanel(condition="input.data_file_type=='Row2'",
+                                    fileInput("file_bam",
+                                              strong(
+                                                span("Select Bam files"),
+                                                span(icon("info-circle"), id = "icon_bam", 
+                                                     options = list(template = popoverTempate))
+                                              ),
+                                              accept = c("bam"),
+                                              multiple = TRUE,
+                                              width = "80%"),
+                                    bsPopover("icon1", "Bam files (bam):", 
+                                              content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
+                                                            strong("Do not use it for anything else"),".<br><br>"), 
+                                              placement = "right",options = list(container = "body")),
+                   ),
+                   conditionalPanel(condition="input.data_file_type=='Row2'",
+                                    radioButtons('Pair_or_single','Sequence type:',
+                                                 c('Paired-end'="Paired-end",
+                                                   'Single-end'="Single-end"),selected = "Paired-end"),         
                    ),
                    radioButtons('Genomic_region','Genomic region:',
                                 c('Genome-wide'="Genome-wide",
@@ -97,7 +116,9 @@ shinyUI(
                    ),
                    fluidRow(
                      column(12, selectInput("Species", "Species", species_list, selected = "not selected"))),
-                   selectInput("FDR_method", "FDR method", c("BH", "Qvalue", "IHW"), selected = "BH"),
+                   conditionalPanel(condition="input.data_file_type=='Row2'",
+                   selectInput("FDR_method", "FDR method", c("BH", "Qvalue", "IHW"), selected = "BH")
+                   ),
                    fluidRow(
                      column(4, numericInput("fc", "Fold Change", min   = 1, max   = NA, value = 2)),
                      column(4, numericInput("fdr", "FDR", min   = 0, max   = 1, value = 0.1, step = 0.005)),
@@ -130,7 +151,7 @@ shinyUI(
                      type = "tabs",
                      tabPanel("Input Data",
                               bsCollapse(id="input_collapse_panel",open="bw_files_panel",multiple = TRUE,
-                                         bsCollapsePanel(title="uploaded bigwig files:",
+                                         bsCollapsePanel(title="uploaded bigwig or bam files:",
                                                          value="bw_files_panel",
                                                          dataTableOutput('input_bw_files') 
                                          ),
@@ -156,7 +177,8 @@ shinyUI(
                               ),
                               plotOutput("PCA"),
                               fluidRow(
-                                column(4, downloadButton("download_pair_volcano", "Download volcano plot and heatmap"))
+                                column(4, downloadButton("download_pair_volcano", "Download volcano plot")),
+                                column(4, downloadButton("download_pair_heatmap", "Download heatmap"))
                               ),
                               fluidRow(
                                 column(6, htmlOutput("volcano_x")),
@@ -175,6 +197,11 @@ shinyUI(
                                                          fluidRow(
                                                            column(8, htmlOutput("igv_uprange")),
                                                            column(4, htmlOutput("igv_ylim"))),
+                                                         column(4, textOutput("Spe_track"),
+                                                                tags$head(tags$style("#Spe_track{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }"))),
                                                          plotOutput("trackplot_goi")
                                          ),
                                          bsCollapsePanel(title="DESeq2 result:",
@@ -214,46 +241,15 @@ shinyUI(
                                          )
                               )),
                      tabPanel("Peak distribution",
-                              downloadButton("download_input_peak_distribution", "Download input peak distribution"),
-                              plotOutput("input_peak_distribution"),
-                              downloadButton("download_deg_peak_distribution", "Download DAR peak distribution"),
-                              plotOutput("deg_peak_distribution"),
-                     ),
-                     tabPanel("Motif analysis",
-                              fluidRow(
-                                column(3, downloadButton("download_motif_plot", "Download motif plot"))
-                              ),
-                              fluidRow(
-                                column(4, actionButton("motifButton", "Start"),
-                                       tags$head(tags$style("#motifButton{color: red;
+                              downloadButton("download_input_peak_distribution", "Download Up DAR distribution"),
+                              textOutput("Spe_dist"),
+                                     tags$head(tags$style("#Spe_dist{color: red;
                                  font-size: 20px;
-                                 font-style: bold;
-                                 }"),
-                                                 tags$style("
-          body {
-            padding: 0 !important;
-          }"
-                                                 ))
-                                )
-                              ),
-                              plotOutput("motif_plot"),
-                              bsCollapse(id="Promoter_motif_collapse_panel",open="motif_result_table",multiple = TRUE,
-                                         bsCollapsePanel(title="Motif table:",
-                                                         value="motif_result_table",
-                                                         downloadButton("download_motif_table", "Download motif enrichment result"),
-                                                         DTOutput('motif_result')
-                                         ),
-                                         bsCollapsePanel(title= p(span("Motif region"),span(icon("info-circle"), id = "icon_promoter_motif_region", 
-                                                                                            options = list(template = popoverTempate))),
-                                                         bsPopover("icon_promoter_motif_region", "Motif region:", 
-                                                                   content=paste("Please select genes in", strong("k-means clustering result"),".<br><br>",
-                                                                                 img(src="enrich_motif.png", width = 450,height = 600)), 
-                                                                   placement = "right",options = list(container = "body")),
-                                                         value="Promoter_motif_region_panel",
-                                                         downloadButton("download_promoter_motif_region", "Download motif region"),
-                                                         dataTableOutput("promoter_motif_region_table")
-                                         )
-                              )
+            font-style: bold;
+            }")),
+                              plotOutput("input_peak_distribution"),
+                              downloadButton("download_deg_peak_distribution", "Download Down DAR distribution"),
+                              plotOutput("deg_peak_distribution"),
                      ),
                      tabPanel("Peak pattern",
                               fluidRow(
@@ -277,10 +273,10 @@ shinyUI(
                                 column(6,  plotOutput("peak_pattern_down_line"))
                               ),
                      ),
-                     tabPanel("Functional analysis",
+                     tabPanel("GREAT",
                               fluidRow(
-                                column(4, textOutput("Spe1"),
-                                       tags$head(tags$style("#Spe1{color: red;
+                                column(4, textOutput("Spe_GREAT"),
+                                       tags$head(tags$style("#Spe_GREAT{color: red;
                                  font-size: 20px;
             font-style: bold;
             }"))),
@@ -300,7 +296,7 @@ shinyUI(
                               fluidRow(
                                 column(4, htmlOutput("whichGenes"), 
                                        htmlOutput("whichGeneSet")),
-                                column(4, downloadButton("download_region_gene_associations_plot", "Download table data"))
+                                column(4, downloadButton("download_region_gene_associations_plot", "Download plot"))
                               ),
                               plotOutput('region_gene_associations_plot'),
                               fluidRow(
@@ -308,48 +304,105 @@ shinyUI(
                               ),
                               DTOutput('region_gene_associations')
                      ),
-                     
-                     tabPanel("Regulatory potential",
+                     tabPanel("HOMER",
+                              fluidRow(
+                                column(3, downloadButton("download_motif_plot", "Download motif plot")),
+                                column(3, downloadButton("download_homer_report", "Download homer report"),
+                                       tags$head(tags$style("#download_homer_report{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
+                              textOutput("Spe_motif"),
+                                     tags$head(tags$style("#Spe_motif{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              htmlOutput("homer_unknown"),
+                              fluidRow(
+                                column(4, htmlOutput("homer_size")),
+                                column(4, htmlOutput("homer_size2"))
+                              ),
+                              htmlOutput("homer_bg"),
+                              fluidRow(
+                                column(4, actionButton("motifButton", "Start"),
+                                       tags$head(tags$style("#motifButton{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                )
+                              ),
+                              htmlOutput("homer_showCategory"),
+                              plotOutput("motif_plot"),
+                              bsCollapse(id="Promoter_motif_collapse_panel",open="motif_result_table",multiple = TRUE,
+                                         bsCollapsePanel(title="Known motif",
+                                                         value="motif_result_table",
+                                                         downloadButton("download_motif_table", "Download motif enrichment result"),
+                                                         DTOutput('motif_result')
+                                         ),
+                                         bsCollapsePanel(title= "de_novo_motif",
+                                                         value="Promoter_motif_region_panel",
+                                                         downloadButton("download_denovo_motif_table", "Download de novo motif"),
+                                                         dataTableOutput("denovo_motif_result")
+                                         )
+                              )
+                     ),
+                     tabPanel("with RNA-seq",
                               fluidRow(
                                 column(8, htmlOutput("pairRNAseqresult"))
                               ),
                               dataTableOutput('pair_DEG_result'),
-                              bsCollapse(id="input_collapse_pair_RP",open="KS_panel",multiple = TRUE,
-                                         bsCollapsePanel(title="KS plot:",
-                                                         value="KS_panel",
-                                                         htmlOutput("peak_distance"),
+                              htmlOutput("peak_distance"),
+                              fluidRow(
+                                column(4, downloadButton("download_pairintbox","Download box plot"))
+                              ),
+                              textOutput("Spe_int"),
+                              tags$head(tags$style("#Spe_int{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              plotOutput("int_boxplot"),
+                              fluidRow(
+                                column(4, htmlOutput("DEG_fc")),
+                                column(4, htmlOutput("DEG_fdr"))
+                              ),
+                              fluidRow(
+                                column(4, downloadButton("download_pairintbar","Download bar plot")),
+                                column(4, downloadButton("download_pairKSplot","Download ks plot"))
+                              ),
+                              fluidRow(
+                                column(6,plotOutput("int_bar")),
+                                column(6,plotOutput('ks_plot'))
+                              ),
+                              bsCollapse(id="input_collapse_pair_RP",open="RP_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Trackplot:",
+                                                         value="int_Trackplot_panel",
                                                          fluidRow(
-                                                           column(6, htmlOutput("DEG_fc")),
-                                                           column(6, htmlOutput("DEG_fdr"))
+                                                           column(6, downloadButton("download_pair_int_trackplot", "Download trackplot")),
+                                                           column(6, htmlOutput("int_trackplot_additional"))
                                                          ),
                                                          fluidRow(
-                                                           column(8, downloadButton("download_pairKSplot","Download plot"))
-                                                         ),
-                                                         plotOutput('ks_plot')
+                                                           column(8, htmlOutput("int_igv_uprange")),
+                                                           column(4, htmlOutput("int_igv_ylim"))),
+                                                         plotOutput("int_trackplot_goi")
                                          ),
                                          bsCollapsePanel(title="Result table:",
                                                          value="RP_panel",
                                                          htmlOutput("RNAseqGroup"),
                                                          htmlOutput("ChIPseqGroup"),
                                                          fluidRow(
-                                                           column(6, downloadButton("download_RP_table","Download summary table")),
-                                                           column(6, downloadButton("download_selected_RP_table","Download selected table"))
+                                                           column(4, downloadButton("download_RP_table","Download summary table")),
+                                                           column(4, downloadButton("download_selected_RP_table","Download selected table"))
                                                          ),
                                                          fluidRow(
                                                            column(6, downloadButton("download_selected_int_peak","Download selected peak file (bed)"))
                                                          ),
                                                          DTOutput('RP_table')
-                                         ),
-                                         bsCollapsePanel(title="Trackplot:",
-                                                         value="int_Trackplot_panel",
-                                                         fluidRow(
-                                                           column(4, downloadButton("download_pair_int_trackplot", "Download trackplot")),
-                                                           column(8, htmlOutput("int_trackplot_additional"))
-                                                         ),
-                                                         fluidRow(
-                                                           column(8, htmlOutput("int_igv_uprange")),
-                                                           column(4, htmlOutput("int_igv_ylim"))),
-                                                         plotOutput("int_trackplot_goi")
                                          ),
                                          bsCollapsePanel(title="Functional enrichment analysis:",
                                                          value="function_panel",
@@ -436,8 +489,6 @@ shinyUI(
                                 column(4, downloadButton("download_vennplot", "Download venn diagram"))
                               ),
                               plotOutput("venn"),
-                              downloadButton("download_venn_result", "Download venn result"),
-                              dataTableOutput("venn_result")
                      ),
                      tabPanel("Peak pattern",
                               htmlOutput("select_file2"),
@@ -453,6 +504,11 @@ shinyUI(
                               fluidRow(
                                 column(4, downloadButton("download_venn_peak_distribution", "download peak distribution"))
                               ),
+                              textOutput("Spe_venn_distribution"),
+                              tags$head(tags$style("#Spe_venn_distribution{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
                               plotOutput("venn_peak_distribution"),
                               bsCollapse(id="int_result_collapse_panel",open="selected_intersect_annotation_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Trackplot:",
@@ -467,19 +523,33 @@ shinyUI(
                                          ),
                                          bsCollapsePanel(title="selected intersect data:",
                                                          value="selected_intersect_annotation_panel",
-                                                         fluidRow(
-                                                           column(4, downloadButton("download_selected_intersect_annotation_table", "Download selected intersection table (.txt)")),
-                                                           column(4, downloadButton("download_selected_intersect_annotation_table_bed", "Download selected intersection table (bed format)"))
-                                                         ),
-                                                         
+                                                         downloadButton("download_selected_intersect_annotation_table", "Download selected intersection table (.txt)"),
+                                                         downloadButton("download_selected_intersect_annotation_table_bed", "Download selected intersection table (.bed)"),
                                                          DTOutput("selected_intersect_annotation")
                                          )
                               )
                      ),
-                     tabPanel("Motif analysis",
+                     tabPanel("HOMER",
+                             fluidRow(
+                                column(3, downloadButton("download_motif_venn_plot", "Download motif plot")),
+                                column(3, downloadButton("download_homer_report_venn", "Download homer report"),
+                                       tags$head(tags$style("#download_homer_report_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
+                             fluidRow(
+                               column(8, htmlOutput("venn_whichGroup1"))
+                             ),
+                              textOutput("Spe_motif_venn"),
+                              tags$head(tags$style("#Spe_motif_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
                               fluidRow(
-                                column(8, htmlOutput("venn_whichGroup1")),
-                                column(4, downloadButton("download_motif_venn_plot", "Download motif plot"))
+                                column(4, htmlOutput("homer_unknown_venn")),
+                                column(4, htmlOutput("homer_size_venn")),
+                                column(4, htmlOutput("homer_size2_venn"))
                               ),
                               fluidRow(
                                 column(4, actionButton("motifButton_venn", "Start"),
@@ -494,26 +564,23 @@ shinyUI(
                                                  ))
                                 )
                               ),
+                             
+                              htmlOutput("homer_showCategory_venn"),
                               plotOutput("motif_venn_plot"),
                               bsCollapse(id="Promoter_motif_venn_collapse_panel",open="motif_venn_result_table",multiple = TRUE,
-                                         bsCollapsePanel(title="Motif table:",
+                                         bsCollapsePanel(title="Known motif",
                                                          value="motif_venn_result_table",
-                                                         downloadButton("download_motif_venn_table", "Download motif enrichment result"),
+                                                         downloadButton("download_motif_venn_table", "Download known motif result"),
                                                          DTOutput('motif_venn_result')
                                          ),
-                                         bsCollapsePanel(title= p(span("Motif region"),span(icon("info-circle"), id = "icon_promoter_motif_venn_region", 
-                                                                                            options = list(template = popoverTempate))),
-                                                         bsPopover("icon_promoter_motif_venn_region", "Motif region:", 
-                                                                   content=paste("Please select genes in", strong("k-means clustering result"),".<br><br>",
-                                                                                 img(src="enrich_motif.png", width = 450,height = 600)), 
-                                                                   placement = "right",options = list(container = "body")),
-                                                         value="Promoter_motif_region_venn_panel",
-                                                         downloadButton("download_promoter_motif_venn_region", "Download motif region"),
-                                                         dataTableOutput("promoter_motif_region_venn_table")
+                                         bsCollapsePanel(title= "de_novo_motif",
+                                                         value="Promoter_motif_region_panel",
+                                                         downloadButton("download_denovo_motif_venn_table", "Download motif region"),
+                                                         dataTableOutput("denovo_motif_venn_result")
                                          )
                               )
                      ),
-                     tabPanel("Functional analysis",
+                     tabPanel("GREAT",
                               fluidRow(
                                 column(4, htmlOutput("venn_whichGroup2")),
                                 column(4, htmlOutput("Gene_set_venn")),
@@ -539,10 +606,365 @@ shinyUI(
                                 column(4, downloadButton("download_venn_region_gene_associations", "Download table data"))
                               ),
                               DTOutput('region_gene_venn_associations')
+                     ),
+                     tabPanel("with RNA-seq",
+                              fluidRow(
+                                column(8, htmlOutput("vennRNAseqresult"))
+                              ),
+                              dataTableOutput('venn_DEG_result'),
+                              htmlOutput("venn_select_RNA"),
+                              tags$head(tags$style("#venn_select_RNA{color: black;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(4, htmlOutput("peak_distance_venn")),
+                                column(4, downloadButton("download_vennintbox","Download box plot"))
+                              ),
+                              plotOutput("int_box_venn"),
+                              fluidRow(
+                                column(4, htmlOutput("DEG_fc_venn")),
+                                column(4, htmlOutput("DEG_fdr_venn"))
+                              ),
+                              fluidRow(
+                                column(4, downloadButton("download_vennintbar","Download bar plot")),
+                                column(4, downloadButton("download_vennKSplot","Download ks plot"))
+                              ),
+                              textOutput("Spe_int_venn"),
+                              tags$head(tags$style("#Spe_int_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(6,plotOutput("int_bar_venn")),
+                                column(6,plotOutput('ks_plot_venn'))
+                              ),
+                              bsCollapse(id="input_collapse_venn_RP",open="RP_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Trackplot:",
+                                                         value="int_Trackplot_panel",
+                                                         fluidRow(
+                                                           column(6, downloadButton("download_venn_int_trackplot", "Download trackplot")),
+                                                           column(6, htmlOutput("int_trackplot_additional_venn"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(8, htmlOutput("int_igv_uprange_venn")),
+                                                           column(4, htmlOutput("int_igv_ylim_venn"))),
+                                                         plotOutput("int_trackplot_goi_venn")
+                                         ),
+                                         bsCollapsePanel(title="Result table:",
+                                                         value="RP_panel",
+                                                         htmlOutput("RNAseqGroup_venn"),
+                                                         htmlOutput("ChIPseqGroup_venn"),
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_RP_venn_table","Download summary table")),
+                                                           column(4, downloadButton("download_selected_RP_venn_table","Download selected table"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(6, downloadButton("download_selected_int_peak_venn","Download selected peak file (bed)"))
+                                                         ),
+                                                         DTOutput('RP_table_venn')
+                                         ),
+                                         bsCollapsePanel(title="Functional enrichment analysis:",
+                                                         value="function_panel",
+                                                         fluidRow(
+                                                           column(6, htmlOutput("intGroup_venn")),
+                                                           column(6, htmlOutput("intGeneset_venn"))
+                                                         ),
+                                                         downloadButton("download_venn_int_enrichment", "Download"),
+                                                         plotOutput('int_enrichment1_venn'),
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_venn_int_enrichment_venn_table", "Download enrichment result"))
+                                                         ),
+                                                         dataTableOutput("int_enrichment_result_venn")
+                                         )
+                                         
+                              )
                      )
                    )
                  ) #sidebarLayout
                ) #tabPanel
+      ),
+      # Clustering -------------------------------------
+      tabPanel("Clustering",
+               sidebarLayout(
+                 # Clustering---------------------------------
+                 sidebarPanel(
+                   radioButtons('data_file_type_clustering','Input:',
+                                c('BigWig files'="Row1",
+                                  'Bam files'="Row2"
+                                ),selected = "Row1"),
+                   conditionalPanel(condition="input.data_file_type_clustering=='Row1'",
+                                    fileInput("file1_clustering",
+                                              strong(
+                                                span("Select BigWig files"),
+                                                span(icon("info-circle"), id = "icon1_clustering", 
+                                                     options = list(template = popoverTempate))
+                                              ),
+                                              accept = c("bw","BigWig"),
+                                              multiple = TRUE,
+                                              width = "80%"),
+                                    bsPopover("icon1_clustering", "BigWig files (bw, BigWig):", 
+                                              content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
+                                                            strong("Do not use it for anything else"),".<br><br>"), 
+                                              placement = "right",options = list(container = "body")),
+                   ),
+                   conditionalPanel(condition="input.data_file_type_clustering=='Row2'",
+                                    fileInput("file_bam_clustering",
+                                              strong(
+                                                span("Select Bam files"),
+                                                span(icon("info-circle"), id = "icon_bam_clustering", 
+                                                     options = list(template = popoverTempate))
+                                              ),
+                                              accept = c("bam"),
+                                              multiple = TRUE,
+                                              width = "80%"),
+                                    bsPopover("icon1_clustering", "Bam files (bam):", 
+                                              content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
+                                                            strong("Do not use it for anything else"),".<br><br>"), 
+                                              placement = "right",options = list(container = "body")),
+                   ),
+                   conditionalPanel(condition="input.data_file_type_clustering=='Row2'",
+                                    radioButtons('Pair_or_single_clustering','Sequence type:',
+                                                 c('Paired-end'="Paired-end",
+                                                   'Single-end'="Single-end"),selected = "Paired-end"),         
+                   ),
+                   radioButtons('Genomic_region_clustering','Genomic region:',
+                                c('Genome-wide'="Genome-wide",
+                                  'Promoter'="Promoter"),selected = "Genome-wide"),
+                   conditionalPanel(condition="input.Genomic_region_clustering=='Promoter'",
+                                    fluidRow(
+                                      column(5, numericInput("upstream_clustering", "upstream", value = 500, min = 0)),
+                                      column(5, numericInput("downstream_clustering", "downstream", value = 500, min = 0))
+                                    )
+                   ),
+                   conditionalPanel(condition="input.Genomic_region_clustering=='Genome-wide'",
+                                    fileInput("peak_call_file1_clustering",
+                                              strong(
+                                                span("Select bed files"),
+                                                span(icon("info-circle"), id = "icon2_clustering", 
+                                                     options = list(template = popoverTempate))
+                                              ),
+                                              accept = c("bed","narrowPeak"),
+                                              multiple = TRUE,
+                                              width = "80%"),
+                                    bsPopover("icon2_clustering", "peak call files (bed, narrowPeak):", 
+                                              content=paste("File names must be the same as bigwig files.<br><br>"), 
+                                              placement = "right",options = list(container = "body")),
+                   ),
+                   fluidRow(
+                     column(12, selectInput("Species_clustering", "Species", species_list, selected = "not selected"))),
+                   fluidRow(
+                     column(5, numericInput("clustering_pdf_height", "pdf_height", value = 0, min = 0)),
+                     column(5, numericInput("clustering_pdf_width", "pdf_width", value = 0, min = 0))
+                   ),
+                   bsPopover("clustering_pdf_icon", "Output plot size setting for pdf (default: 0): ", 
+                             content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
+                                           "Default size: <br>","Dotplot:", "height = 5, width = 6.5 <br>", "cnet plot:","height = 6, width = 6 <br><br>"), trigger = "click"), 
+                   actionButton("goButton_clustering", "example data (mouse)"),
+                   tags$head(tags$style("#goButton_clustering{color: black;
+                                 font-size: 12px;
+                                 font-style: italic;
+                                 }"),
+                             tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                             )
+                   ) #sidebarPanel
+                 ),
+                 
+                 # Main Panel -------------------------------------
+                 mainPanel(
+                   tabsetPanel(
+                     type = "tabs",
+                     tabPanel("Input Data",
+                              bsCollapse(id="input_collapse_panel_clustering",open="bw_files_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="uploaded bigwig or bam files:",
+                                                         value="bw_files_panel",
+                                                         DTOutput('input_bw_files_clustering') 
+                                         ),
+                                         bsCollapsePanel(title="uploaded peak call files:",
+                                                         value="peak_call_files_panel",
+                                                         dataTableOutput('input_peak_call_files_clustering')
+                                         ),
+                                         bsCollapsePanel(title="Raw count data:",
+                                                         value="raw_count_panel",
+                                                         column(4, textOutput("Spe_clustering"),
+                                                                tags$head(tags$style("#Spe_clustering{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }"))),
+                                                         downloadButton("download_raw_count_clustering_table", "Download raw count table"),
+                                                         dataTableOutput('raw_count_table_clustering')
+                                         )
+                              )
+                     ),
+                     tabPanel("Result overview",
+                              fluidRow(
+                                column(4, downloadButton("download_clustering_PCA", "Download clustering analysis"))
+                              ),
+                              plotOutput("PCA_clustering"),
+                              fluidRow(
+                                column(6, htmlOutput("clustering_umap_n"),
+                                       downloadButton("download_clustering_umap", "Download umap"),
+                                       textOutput("clustering_umap_error"),
+                                       tags$head(tags$style("#clustering_umap_error{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")))
+                              ),
+                              downloadButton("download_clustering_corrplot", "Download correlation plot"),
+                              div(
+                                plotOutput("correlationplot", height = "100%"),
+                                style = "height: calc(75vh  - 75px)"
+                              ), 
+                              bsCollapse(id="input_collapse_clustering_DEG",open="PCA_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="PCA:",
+                                                         value="PCA_panel",
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_clustering_PCA_table", "Download PCA table"))
+                                                         ),
+                                                         dataTableOutput("clustering_PCA_data")
+                                         )
+                              )),
+                     tabPanel("k-means clustering",
+                              fluidRow(
+                                column(4, htmlOutput("clustering_kmeans_num"),
+                                       htmlOutput("kmeans_cv"),
+                                       downloadButton("download_clustering_kmeans_heatmap", "Download heatmap")),
+                                column(8, plotOutput("clustering_kmeans_heatmap"))
+                              ),
+                              htmlOutput("clustering_select_kmean"),
+                              tags$head(tags$style("#clustering_select_kmean{color: black;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(4, downloadButton("download_peak_pattern_kmeans_heatmap", "Download peak heatmap"),
+                                       htmlOutput("peak_pattern_kmeans_bw"),
+                                       htmlOutput("peak_pattern_kmeans_heat_range")),
+                                column(5, downloadButton("download_peak_pattern_kmeans_line", "Download peak aligned distribution"),
+                                       htmlOutput("peak_pattern_kmeans_additional")),
+                              ),
+                              fluidRow(
+                                column(6,  plotOutput("peak_pattern_kmeans_heatmap")),
+                                column(6,  plotOutput("peak_pattern_kmeans_line"))
+                              ),
+                              bsCollapse(id="clustering_kmeans_collapse_panel",open="clustering_kmeans_extract_count",multiple = TRUE,
+                                         bsCollapsePanel(title="selected cluster data:",
+                                                         value="clustering_kmeans_extract_count",
+                                                         downloadButton("download_clustering_kmeans_extract_count", "Download selected cluster"),
+                                                         downloadButton("download_clustering_kmeans_extract_count_bed","Download selected cluster(bed)"),
+                                                         DTOutput("clustering_kmeans_extract_table")
+                                         ),
+                                         bsCollapsePanel(title= p(span("Track plot"),span(icon("info-circle"), id = "icon_clustering_kmeans_boxplot", 
+                                                                                       options = list(template = popoverTempate))),
+                                                         bsPopover("icon_clustering_kmeans_boxplot", "Boxplot of GOI:", 
+                                                                   content=paste("Please select genes in", strong("k-means clustering result"),".<br><br>",
+                                                                                 img(src="clustering_GOIboxplot.png", width = 450,height = 640)), 
+                                                                   placement = "right",options = list(container = "body")),
+                                                         value="kmeans_track_panel",
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_clustering_trackplot", "Download trackplot")),
+                                                           column(8, htmlOutput("trackplot_additional_clustering"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(8, htmlOutput("igv_uprange_clustering")),
+                                                           column(4, htmlOutput("igv_ylim_clustering"))),
+                                                         column(4, textOutput("Spe_clustering_track"),
+                                                                tags$head(tags$style("#Spe_clustering_track{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }"))),
+                                                         div(
+                                                           plotOutput("trackplot_goi_clustering", height = "100%"),
+                                                           style = "height: calc(75vh  - 75px)"
+                                                         )      
+                                         )
+                              )
+                     ),
+                     tabPanel("with RNA-seq",
+                              htmlOutput("warning_kmeans_RNA"),
+                              tags$head(tags$style("#warning_kmeans_RNA{color: red;
+                                 font-size: 25px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(8, htmlOutput("clusteringRNAseqresult"))
+                              ),
+                              dataTableOutput('clustering_DEG_result'),
+                              htmlOutput("clustering_select_kmean_RNA"),
+                              tags$head(tags$style("#clustering_select_kmean_RNA{color: black;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(4, htmlOutput("peak_distance_clustering")),
+                                column(4, downloadButton("download_clusteringintbox","Download box plot"))
+                              ),
+                              plotOutput("int_box_clustering"),
+                              fluidRow(
+                                column(4, htmlOutput("DEG_fc_clustering")),
+                                column(4, htmlOutput("DEG_fdr_clustering"))
+                              ),
+                              fluidRow(
+                                column(4, downloadButton("download_clusteringintbar","Download bar plot")),
+                                column(4, downloadButton("download_clusteringKSplot","Download ks plot"))
+                              ),
+                              textOutput("Spe_int_clustering"),
+                              tags$head(tags$style("#Spe_int_clustering{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(6,plotOutput("int_bar_clustering")),
+                                column(6,plotOutput('ks_plot_clustering'))
+                              ),
+                              bsCollapse(id="input_collapse_clustering_RP",open="RP_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Trackplot:",
+                                                         value="int_Trackplot_panel",
+                                                         fluidRow(
+                                                           column(6, downloadButton("download_clustering_int_trackplot", "Download trackplot")),
+                                                           column(6, htmlOutput("int_trackplot_additional_clustering"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(8, htmlOutput("int_igv_uprange_clustering")),
+                                                           column(4, htmlOutput("int_igv_ylim_clustering"))),
+                                                         plotOutput("int_trackplot_goi_clustering")
+                                         ),
+                                         bsCollapsePanel(title="Result table:",
+                                                         value="RP_panel",
+                                                         htmlOutput("RNAseqGroup_clustering"),
+                                                         htmlOutput("ChIPseqGroup_clustering"),
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_RP_clustering_table","Download summary table")),
+                                                           column(4, downloadButton("download_selected_RP_clustering_table","Download selected table"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(6, downloadButton("download_selected_int_peak_clustering","Download selected peak file (bed)"))
+                                                         ),
+                                                         DTOutput('RP_table_clustering')
+                                         ),
+                                         bsCollapsePanel(title="Functional enrichment analysis:",
+                                                         value="function_panel",
+                                                         fluidRow(
+                                                           column(6, htmlOutput("intGroup_clustering")),
+                                                           column(6, htmlOutput("intGeneset_clustering"))
+                                                         ),
+                                                         downloadButton("download_clustering_int_enrichment", "Download"),
+                                                         plotOutput('int_enrichment1_clustering'),
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_clustering_int_enrichment_clustering_table", "Download enrichment result"))
+                                                         ),
+                                                         dataTableOutput("int_enrichment_result_clustering")
+                                         )
+                                         
+                              )
+                     )
+                   )
+                 ),
+
+               ) #sidebarLayout
       ),
       # enrichment viewer -------------------------------------
       tabPanel("Enrichment viewer",
@@ -595,7 +1017,7 @@ shinyUI(
                      tabPanel("Input list",
                               dataTableOutput('enrichment_input')
                      ),
-                     tabPanel("Functional analysis",
+                     tabPanel("GREAT",
                               fluidRow(
                                 column(4, htmlOutput("Gene_set_enrich")),
                                 column(4, downloadButton("download_enrich_enrichment", "Download"))
@@ -621,9 +1043,24 @@ shinyUI(
                               ),
                               DTOutput('region_gene_enrich_associations')
                      ),
-                     tabPanel("Motif analysis",
+                     tabPanel("HOMER",
                               fluidRow(
-                                column(4, downloadButton("download_motif_enrich_plot", "Download motif plot"))
+                                column(3, downloadButton("download_motif_enrich_plot", "Download motif plot")),
+                                column(3, downloadButton("download_homer_report_enrich", "Download homer report"),
+                                       tags$head(tags$style("#download_homer_report_enrich{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
+                              textOutput("Spe_motif_enrich"),
+                              tags$head(tags$style("#Spe_motif_enrich{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(4, htmlOutput("homer_unknown_enrich")),
+                                column(4, htmlOutput("homer_size_enrich")),
+                                column(4, htmlOutput("homer_size2_enrich"))
                               ),
                               fluidRow(
                                 column(4, actionButton("motifButton_enrich", "Start"),
@@ -638,22 +1075,18 @@ shinyUI(
                                                  ))
                                 )
                               ),
+                              htmlOutput("homer_fdr_enrich"),
                               plotOutput("motif_enrich_plot"),
                               bsCollapse(id="Promoter_motif_enrich_collapse_panel",open="motif_enrich_result_table",multiple = TRUE,
-                                         bsCollapsePanel(title="Motif table:",
+                                         bsCollapsePanel(title="Known motif",
                                                          value="motif_enrich_result_table",
-                                                         downloadButton("download_motif_enrich_table", "Download motif enrichment result"),
+                                                         downloadButton("download_motif_enrich_table", "Download known motif result"),
                                                          DTOutput('motif_enrich_result')
                                          ),
-                                         bsCollapsePanel(title= p(span("Motif region"),span(icon("info-circle"), id = "icon_promoter_motif_enrich_region", 
-                                                                                            options = list(template = popoverTempate))),
-                                                         bsPopover("icon_promoter_motif_enrich_region", "Motif region:", 
-                                                                   content=paste("Please select genes in", strong("k-means clustering result"),".<br><br>",
-                                                                                 img(src="enrich_motif.png", width = 450,height = 600)), 
-                                                                   placement = "right",options = list(container = "body")),
-                                                         value="Promoter_motif_region_enrich_panel",
-                                                         downloadButton("download_promoter_motif_enrich_region", "Download motif region"),
-                                                         dataTableOutput("promoter_motif_region_enrich_table")
+                                         bsCollapsePanel(title= "de_novo_motif",
+                                                         value="Promoter_motif_region_panel",
+                                                         downloadButton("download_denovo_motif_enrich_table", "Download de novo motif"),
+                                                         dataTableOutput("denovo_motif_enrich_result")
                                          )
                               )
                      ),
@@ -663,6 +1096,99 @@ shinyUI(
       ),
       #Instruction--------------------------
       navbarMenu("More",
+                 tabPanel("Bedtools",
+                          sidebarLayout(
+                            # Bedtools---------------------------------
+                            sidebarPanel(
+                              radioButtons('data_file_type_bed','Function:',
+                                           choiceNames = list(
+                                             tagList(
+                                               tags$span("Merge intervals"),
+                                               tags$span(icon("info-circle"), id = "icon_bedtool1", style = "color: black;")
+                                             ), 
+                                             tagList(
+                                               tags$span("Intersect"),
+                                               tags$span(icon("info-circle"), id = "icon_bedtool2", style = "color: black;")
+                                             ),
+                                             tagList(
+                                               tags$span("Subtract"),
+                                               tags$span(icon("info-circle"), id = "icon_bedtool3", style = "color: black;")
+                                             )
+                                           ),
+                                           choiceValues = c("type1","type3","type2"),
+                                           selected="type1"),
+                              bsPopover("icon_bedtool1", "Merge interval:", 
+                                        content=paste("This function can fill the gap sequence.<br>", 
+                                                      img(src="merge_interval.png", width = 400,height = 180))), 
+                              bsPopover("icon_bedtool3", "Subtract:", 
+                                        content=paste("This function searches for features in B that overlap A.<br>", 
+                                                      "If an overlapping feature is found in B, the overlapping portion is removed from A and the remaining portion of A is reported.",
+                                                      img(src="subtract.png", width = 400,height = 180))), 
+                              bsPopover("icon_bedtool2", "Intersect:", 
+                                        content=paste("By ",strong("default"),", if an overlap is found, this function reports the shared interval between the two overlapping features.<br>", 
+                                                      "The ",strong("wa"), " option reports the original entry in A for each overlap.<br>",
+                                                      "The ",strong("v"), " option only reports those entries in A that have no overlap in B.<br>",
+                                                      img(src="intersect.png", width = 400,height = 180))), 
+                              fileInput("bed_data_file",
+                                        strong(
+                                          span("A: Select bed files (bed, narrowPeak)",style="color: red")
+                                        ),
+                                        accept = c("bed", "narrowPeak"),
+                                        multiple = FALSE,
+                                        width = "80%"),
+                              conditionalPanel(condition="input.data_file_type_bed=='type1'",
+                              htmlOutput("bed_merge_dist")
+                              ),
+                              conditionalPanel(condition="input.data_file_type_bed=='type2' || input.data_file_type_bed=='type3'",
+                                               fileInput("bed_data_file2",
+                                                         strong(
+                                                           span("B :Select bed files  (bed, narrowPeak)",style="color: blue")
+                                                         ),
+                                                         accept = c("bed", "narrowPeak"),
+                                                         multiple = FALSE,
+                                                         width = "80%"),
+                              ),
+                              conditionalPanel(condition="input.data_file_type_bed=='type3'",
+                                               radioButtons('intersect_bed','Mode:',
+                                                            c('default'="default",
+                                                              'wa'="wa",
+                                                              'v'="exclude"
+                                                            ),selected = "default"),           
+                              ),
+                              actionButton("goButton_bed", "example data (mouse)"),
+                              tags$head(tags$style("#goButton_bed{color: black;
+                                 font-size: 12px;
+                                 font-style: italic;
+                                 }"),
+                                        tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                        )
+                              ) 
+                            ),
+                            
+                            # Main Panel -------------------------------------
+                            mainPanel(
+                              textOutput("bed_file1_warning"),
+                              tags$head(tags$style("#bed_file1_warning{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              textOutput("bed_file2_warning"),
+                              tags$head(tags$style("#bed_file2_warning{color: blue;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                                       dataTableOutput('bed_input'),
+                                       downloadButton("download_bed", "Download processed bed files"),
+                              tags$head(tags$style("#download_bed{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                            )
+                          ) #sidebarLayout
+                 ),
                  tabPanel("Reference",
                           fluidRow(
                             column(12,

@@ -1,4 +1,6 @@
 library(rtracklayer) 
+library(Rsubread)
+library(Rsamtools)
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 library(TxDb.Mmusculus.UCSC.mm10.knownGene)
@@ -38,17 +40,26 @@ library(clusterProfiler.dplyr)
 library(dorothea)
 library(umap)
 library(biomaRt)
-library(monaLisa)
 library(GenomicRanges)
 library(BiocParallel)
 library(SummarizedExperiment)
-library(JASPAR2020)
 library(soGGi) ##devtools::install_github("ColeWunderlich/soGGi")
 library(ChIPQC)
 library(ChIPseeker)
 library(ChIPpeakAnno)
 library(rGREAT)
 library(FindIT2)
+library(limma)
+library(edgeR)
+library(ggseqlogo)
+library(marge)
+library(plotmics)
+library(colorspace)
+library(ggcorrplot)
+library(RColorBrewer)
+library(bedtorch)
+options('homer_path' = "/Users/kanetoh/miniconda3")
+check_homer()
 options(repos = BiocManager::repositories())
 options(rsconnect.max.bundle.size=3145728000)
 species_list <- c("not selected", "Mus musculus (mm10)","Homo sapiens (hg19)","Homo sapiens (hg38)")
@@ -80,7 +91,7 @@ txdb_function <- function(Species){
   return(txdb)
 }
 
-promoter <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL){
+promoter <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM){
   if(input_type == "Promoter"){
   return(promoters(genes(txdb),upstream = upstream, downstream = downstream))
   }else{
@@ -90,14 +101,19 @@ promoter <- function(txdb, upstream, downstream,input_type = "Promoter",files = 
     consensusToCount <- consensusToCount[occurrences >= 2, ]
     return(consensusToCount)
   }
+}
+promoter_clustering <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM){
+  if(input_type == "Promoter"){
+    return(promoters(genes(txdb),upstream = upstream, downstream = downstream))
+  }else{
+    if(length(names(files)) > 1){
+    consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files), "none")
+    }else consensusToCount <- files[[1]]
+    return(consensusToCount)
   }
+}
 
 Bigwig2count <- function(bw, promoter, Species, input_type = "Promoter"){
-
-  switch (Species,
-          "Mus musculus (mm10)" = org <- org.Mm.eg.db,
-          "Homo sapiens (hg19)" = org <- org.Hs.eg.db,
-          "Homo sapiens (hg38)" = org <- org.Hs.eg.db)
 bed1<-promoter
 write.table(bed1,file = "bed.bed",sep = "\t")
 bed1 <- read.table("bed.bed",header = T)
@@ -130,6 +146,10 @@ for(i in seq_len(length(bw))) {
 }
 })
 if(input_type == "Promoter"){
+  switch (Species,
+          "Mus musculus (mm10)" = org <- org.Mm.eg.db,
+          "Homo sapiens (hg19)" = org <- org.Hs.eg.db,
+          "Homo sapiens (hg38)" = org <- org.Hs.eg.db)
   rownames(counts) <- bed1$gene_id
 my.symbols <- rownames(counts)
 gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
@@ -147,8 +167,8 @@ counts <- data2[,-1:-2]
   rownames(counts) <- Row.name
 }
 return(counts)
-
 }
+
 
 
 PCAplot <- function(data, plot){
@@ -212,6 +232,17 @@ PCAplot <- function(data, plot){
   p2 <- plot_grid(g1, g2, g3, nrow = 1)
   return(p2)
   }else return(pca$rotation)
+}
+umap_plot <- function(data, n_neighbors){
+  umap <- umap::umap(t(data),n_neighbors = n_neighbors, random_state = 123)
+  data2 <- umap$layout %>% as.data.frame()
+  label<- colnames(data)
+  label<- gsub("\\_.+$", "", label)
+  p<- ggplot(data2, mapping = aes(V1,V2, color = label, label = colnames(data)))+
+    geom_point()+geom_text_repel()+ xlab("UMAP_1") + ylab("UMAP_2")+
+    theme(panel.background =element_rect(fill=NA,color=NA),panel.border = element_rect(fill = NA),
+          aspect.ratio=1)
+  return(p)
 }
 
 GOIheatmap <- function(data.z, show_row_names = TRUE){
@@ -457,224 +488,234 @@ enrich_for_table <- function(data, H_t2g, Gene_set){
   }
 }
 
-pwms <- function(Species){
-  library(TFBSTools)
-  if(Species == "Mus musculus (mm10)"){
-    library(BSgenome.Mmusculus.UCSC.mm10)
-    genome = BSgenome.Mmusculus.UCSC.mm10
-    tax <- 10090
+read_known_results<-function (path, homer_dir = TRUE) {
+  if (homer_dir == TRUE) {
+    path <- paste0(path, "/knownResults.txt")
   }
-  if(Species == "Homo sapiens (hg19)"){
-    library(BSgenome.Hsapiens.UCSC.hg19)
-    genome = BSgenome.Hsapiens.UCSC.hg19
-    tax <- 9606
+  if (!file.exists(path)) {
+    warning(paste("File", path, "does not exist"))
+    return(NULL)
   }
-  if(Species == "Homo sapiens (hg38)"){
-    library(BSgenome.Hsapiens.UCSC.hg38)
-    genome = BSgenome.Hsapiens.UCSC.hg38
-    tax <- 9606
-  }
-  pwms_res <- getMatrixSet(JASPAR2020,
-                       opts = list(matrixtype = "PWM",
-                                   tax_group = "vertebrates",
-                                   species = tax
-                       ))
-  return(pwms_res)
+  col_spec <- readr::cols("c", "c", "d", "-", "d", "d", "c", 
+                          "d", "c")
+  raw <- readr::read_tsv(path, col_types = col_spec)
+  colnames(raw) <- c("motif_name", "consensus", "log_p_value", 
+                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct")
+  tmp <- raw %>% tidyr::separate_("motif_name", c("motif_name", 
+                                                  "experiment", "database"), "/", extra = "drop")
+  parsed <- .parse_homer_subfields(tmp) %>% dplyr::mutate_at(vars(contains("pct")), 
+                                                             .parse_pcts)
+  known <- .append_known_pwm(parsed)
+  names(known$motif_pwm) <- known$motif_name
+  return(known)
 }
-
-MotifAnalysis <- function(df, anno_data =NULL,Species,pwms, type ="Genome-wide",consensus = NULL){
-  withProgress(message = "Motif analysis takes about 2 min per group",{
-    library(TFBSTools)
-    if(Species == "Mus musculus (mm10)"){
-      library(BSgenome.Mmusculus.UCSC.mm10)
-      genome = BSgenome.Mmusculus.UCSC.mm10
-      tax <- 10090
+.parse_homer_subfields <- function(motif_tbl) {
+  cond <- stringr::str_detect(motif_tbl$motif_name, "/") %>%
+    sum(., na.rm = TRUE) > 0
+  if (cond == TRUE) {
+    motif_tbl <- motif_tbl %>%
+      tidyr::separate_('motif_name',
+                       c('motif_name', 'experiment', 'database'),
+                       '/', extra = "drop", fill = "right")
+  }
+  
+  ## Detect if parentheses are present in motif_name
+  ## to break apart into motif_name vs. motif_family
+  cond <- stringr::str_detect(motif_tbl$motif_name, '\\(') %>%
+    sum(., na.rm = TRUE) > 0
+  if (cond == TRUE) {
+    motif_tbl <- motif_tbl %>%
+      tidyr::separate_('motif_name',
+                       c('motif_name', 'motif_family'),
+                       '\\(', extra = "drop", fill = "right")
+    motif_tbl$motif_family <- stringr::str_replace(motif_tbl$motif_family, '\\)', '')
+  }
+  
+  ## Detect If parentheses are present in experiment
+  ## to break apart into experiment vs. accession
+  if ("experiment" %in% colnames(motif_tbl)) {
+    cond <- stringr::str_detect(motif_tbl$experiment, '\\(') %>%
+      sum(., na.rm = TRUE) > 0
+    if (cond == TRUE) {
+      motif_tbl <- motif_tbl %>%
+        tidyr::separate_('experiment',
+                         c('experiment', 'accession'),
+                         '\\(', extra = "drop", fill = "right")
+      motif_tbl$accession <- stringr::str_replace(motif_tbl$accession, '\\)', '')
     }
-    if(Species == "Homo sapiens (hg19)"){
-      library(BSgenome.Hsapiens.UCSC.hg19)
-      genome = BSgenome.Hsapiens.UCSC.hg19
-      tax <- 9606
-    }
-    if(Species == "Homo sapiens (hg38)"){
-      library(BSgenome.Hsapiens.UCSC.hg38)
-      genome = BSgenome.Hsapiens.UCSC.hg38
-      tax <- 9606
-    }
-    
-    perc <- 0
-    df2 <- list()
+  }
+  
+  return(motif_tbl)
+}
+.parse_pcts <- function(x) {
+  stringr::str_replace(x, "%", "") %>%
+    as.numeric() * 0.01
+}
+.append_known_pwm <- function(known_results) {
+  data(HOMER_motifs, envir = environment())
+  hm <- HOMER_motifs %>%
+    ##        dplyr::filter(rlang::UQ(rlang::sym('log_odds_detection')) > 0) %>%
+    dplyr::select("motif_name", "motif_family", "experiment", "accession",
+                  "motif_pwm", "log_odds_detection")
+  dplyr::inner_join(known_results, hm, 
+                    by = c("motif_name", "motif_family", "experiment", "accession"))
+}   
+findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,size,back="random",bw_count=NULL){
+    switch(Species,
+           "Mus musculus (mm10)" = ref <- "mm10",
+           "Homo sapiens (hg19)" = ref <- "hg19",
+           "Homo sapiens (hg38)" = ref <- "hg38")
+    switch(motif,
+           "known motif" = time <- "10 ~ 20",
+           "known and de novo motifs" = time <- "20 ~ 30")
+  withProgress(message = paste0("Motif analysis takes about ",time," min per group"),{
     if(type == "Genome-wide") {
       group_name <- names(df)
       group_file <- length(names(df))
     }else{
-    group_name <- unique(df$group)
-    group_file <- length(unique(df$group))
+      group_name <- unique(df$group)
+      group_file <- length(unique(df$group))
     }
+    perc <- 0
+    df2 <- list()
+    path <- format(Sys.time(), "%Y%m%d_%H%M_homer")
+    dir.create(path = path)
     for(name in group_name){
+      group_dir <- paste0(path, "/",name)
+      dir.create(path = group_dir)
       perc <- perc + 1
       if(!is.null(anno_data)){
-      if(type == "Genome-wide"){
-        data <- df[[name]]
-      data2 <- anno_data %>% dplyr::filter(locus %in% rownames(data))
-      y <- with(data2, GRanges(seqnames = seqnames, 
-                           ranges = IRanges(start,end)))
-      }else{
-        data <- dplyr::filter(df, group == name)
-        print(data)
-        print(anno_data)
-        y <- subset(anno_data, gene_id %in% data$ENTREZID)
-      }
+        if(type == "Genome-wide"){
+          data <- df[[name]]
+          data2 <- anno_data %>% dplyr::filter(locus %in% rownames(data))
+          y <- with(data2, GRanges(seqnames = seqnames, 
+                                   ranges = IRanges(start,end)))
+        }else{
+          data <- dplyr::filter(df, group == name)
+          y <- subset(anno_data, gene_id %in% data$ENTREZID)
+          y <- as.data.frame(y)
+          y <- with(y, GRanges(seqnames = seqnames, 
+                                   ranges = IRanges(start,end)))
+        }
       }else y<- df[[name]]
-      y <- reCenterPeaks(y, width=mean(as.data.frame(y)$width))
-      seq <- getSeq(genome, y)
-      print(seq)
-      print(pwms)
-      if(type == "Promoter") {
-        genome.region = subset(anno_data, ! gene_id %in% data$ENTREZID)
-      }else{
-        if(!is.null(consensus)){
-          consensus_nega <- setdiff(consensus,y)
-          genome.region = reCenterPeaks(consensus_nega,width=mean(as.data.frame(y)$width))
-          print(genome.region)
-        }else genome.region = NULL
+      y <- as.data.frame(y)
+      if(dim(y)[1] != 0){
+        if(type=="Genome-wide"){
+        if(back == "random"){
+          bg <-'automatic'
+        }else{
+          data <- anno_data %>% dplyr::filter(! locus %in% rownames(data))
+          data2 <- range_changer(data)
+          bg <- data.frame(seqnames = data2$chr,start=data2$start,end=data2$end)
+        }
+          }
+        if(type== "Promoter") {
+          bg <- subset(anno_data, ! gene_id %in% data$ENTREZID) 
+          bg <- as.data.frame(bg)
+          bg <- with(bg, GRanges(seqnames = seqnames, 
+                              ranges = IRanges(start,end)))
+          bg <- as.data.frame(bg)
+        }
+        print(head(bg))
+      switch(motif,
+             "known motif" = motif_type <- TRUE,
+             "known and de novo motifs" = motif_type <- FALSE)
+      find_motifs_genome(
+        y,
+        path = group_dir,
+        genome = ref, 
+        motif_length = c(8,10,12),
+        scan_size = size,
+        optimize_count = 25,
+        background = bg,
+        local_background = FALSE,
+        only_known = motif_type, only_denovo = FALSE,
+        cores = 2, cache = 500,
+        overwrite = TRUE, keep_minimal = FALSE
+      )
+      df2[[name]] <- group_dir
       }
-      se <- calcBinnedMotifEnrR(seqs = seq,
-                                pwmL = pwms,
-                                background = "genome",
-                                genome = genome,
-                                genome.oversample = 2,
-                                genome.regions = genome.region,
-                                BPPARAM = BiocParallel::SerialParam(RNGseed = 42),
-                                verbose = TRUE)
-      res <- data.frame(motif.id = elementMetadata(se)$motif.id, motif.name = elementMetadata(se)$motif.name,
-                        motif.percentGC = elementMetadata(se)$motif.percentGC,
-                        negLog10P = assay(se,"negLog10P"),negLog10Padj = assay(se,"negLog10Padj"), 
-                        log2enr = assay(se,"log2enr"),pearsonResid = assay(se,"pearsonResid"),
-                        expForegroundWgtWithHits = assay(se,"expForegroundWgtWithHits"),
-                        sumForegroundWgtWithHits = assay(se,"sumForegroundWgtWithHits"),
-                        sumBackgroundWgtWithHits = assay(se,"sumBackgroundWgtWithHits"),
-                        Group = name)
-      df2[[name]] <- res
       incProgress(1/group_file, message = paste("Finish motif analysis of Group '", name, "', ", perc, "/", group_file,sep = ""))
     }
     return(df2)
   })
 }
 
-MotifRegion <- function(df, anno_data =NULL, target_motif, Species, type="Genome-wide"){
-  if(Species == "Mus musculus (mm10)"){
-    genome = BSgenome.Mmusculus.UCSC.mm10
+known_motif <- function(df){
+  df2 <- data.frame(matrix(rep(NA, 14), nrow=1))[numeric(0), ]
+  colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
+                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct", "log_odds_detection","Group")
+  for(name in names(df)){
+    if(file.exists(paste0(df[[name]],"/knownResults.txt")) == TRUE){
+    known <-  as.data.frame(read_known_results(path = df[[name]]))[,-13]
+    known$Group <- name
+    df2 <- rbind(df2,known)
+    }
   }
-  if(Species == "Homo sapiens (hg19)"){
-    genome = BSgenome.Hsapiens.UCSC.hg19
-  }
-  if(Species == "Homo sapiens (hg38)"){
-    genome = BSgenome.Hsapiens.UCSC.hg38
-  }
-  name <- gsub("\\\n.+$", "", target_motif$Group)
-  if(!is.null(anno_data)){
-  if(type == "Genome-wide"){
-    data <- df[[name]]
-  data2 <- anno_data %>% dplyr::filter(locus %in% rownames(data))
-  y <- with(data2, GRanges(seqnames = seqnames, 
-                           ranges = IRanges(start,end),
-                           locus = locus))
-  }else{
-    data <- dplyr::filter(df, group == name)
-    y <- subset(anno_data, gene_id %in% data$ENTREZID)
-  }
-  }else y <- df[[name]]
-  if(length(rownames(as.data.frame(y))) == 0) stop("Incorrect species")
-  seq <- getSeq(genome, y)
-  if(!is.null(anno_data)){
-  if(type == "Genome-wide") names(seq)<- y$locus
-  }else{
-    anno <- as.data.frame(y)
-    Row.name <- paste0(anno$seqnames,":",anno$start,"-",anno$end)
-    rownames(seq) <- Row.name
-    rownames(anno) <- Row.name
-  }
-  print(seq)
-  pfm <- getMatrixByID(JASPAR2020,target_motif$motif.id)
-  pwm <- toPWM(pfm)
-  res <- findMotifHits(query = pwm,
-                       subject = seq,
-                       min.score = 6.0,
-                       method = "matchPWM",
-                       BPPARAM = BiocParallel::SerialParam()) %>% as.data.frame()
-  print(res)
-  if(!is.null(anno_data)){
-  if(type == "Genome-wide"){
-  anno <- data.frame(seqnames = data2$locus, NearestGene = data2$NearestGene)
-  }else anno <- data.frame(Gene = data$Row.names, seqnames = data$ENTREZID)
-  res2<-merge(anno,res,by="seqnames")
-  if(type == "Genome-wide"){
-  colnames(res2)[1] <-"locus"
-  start <- data2$start + res2$start
-  end <- data2$start + res2$end
-  res2$start<- start
-  res2$end <- end
-  }
-  }else res2 <- res
-  return(res2)
+  colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
+                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct", "log_odds_detection","Group")
+  return(df2)
 }
 
-Motifplot <- function(df2, padj = 0.05){
-  df <- data.frame(matrix(rep(NA, 11), nrow=1))[numeric(0), ]
-  for(name in names(df2)){
-    res <- df2[[name]]
-    res <- dplyr::filter(res, X1.1 > -log10(padj))
-    res <- res %>% dplyr::arrange(-X1.1)
-    if(length(rownames(res)) > 5){
-      res <- res[1:5,]
+denovo_motif <- function(df){
+  df2 <- data.frame(matrix(rep(NA, 18), nrow=1))[numeric(0), ]
+  colnames(df2) <- c("consensus","motif_name", "log_odds_detection","motif_id",  "log_p_value_detection", 
+                     "tgt_num", "tgt_pct", "bgd_num", "bgd_pct"," log_p_value","fdr","tgt_pos","tgt_std","bgd_pos","bgd_std","strand_bias","multiplicity", "Group")
+  for(name in names(df)){
+    if(file.exists(paste0(df[[name]],"/homerResults.html")) == TRUE){
+      known <-  as.data.frame(read_denovo_results(path = df[[name]]))[,-5]
+      known$Group <- name
+      df2 <- rbind(df2,known)
     }
-    df <- rbind(df, res)
   }
-  colnames(df) <- c("motif.id", "motif.name","motif.percentGC", "negLog10P", "negLog10Padj", "log2enr",
-                    "pearsonResid", "expForegroundWgtWithHits", "sumForegroundWgtWithHits", "sumBackgroundWgtWithHits",
-                    "Group")
-  if(length(df$motif.id) == 0){
+  return(df2)
+}
+
+
+homer_Motifplot <- function(df, showCategory=5){
+  df2 <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
+
+  for(name in names(df)){
+    print(file.exists(paste0(df[[name]],"/knownResults.txt")))
+    
+    if(file.exists(paste0(df[[name]],"/knownResults.txt")) == TRUE){
+    res <- as.data.frame(as.data.frame(read_known_results(path = df[[name]])))
+    if(length(res$motif_name) != 0){
+    res$Group <- name
+    if(length(rownames(res)) > showCategory){
+      res <- res[1:showCategory,]
+    }
+    df2 <- rbind(df2, res)
+    }
+    }
+  }
+  if(length(df2$motif_name) == 0){
     return(NULL)
   }else{
-    df$padj <- 10^(-df$negLog10Padj)
-    df <- dplyr::mutate(df, x = paste0(Group, 1/-log10(eval(parse(text = "padj")))))
-    df$x <- gsub(":","", df$x)
-    df <- dplyr::arrange(df, x)
-    idx <- order(df[["x"]], decreasing = FALSE)
-    df$motif.name <- factor(df$motif.name,
-                            levels=rev(unique(df$motif.name[idx])))
-    d <- ggplot(df, aes(x = Group,y= motif.name,color=padj,size=log2enr))+
+    colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
+                       "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct","motif_pwm","log_odds_detection","Group")
+    df2 <- dplyr::mutate(df2, x = paste0(Group, 1/-log10(eval(parse(text = "p_value")))))
+    df2$x <- gsub(":","", df2$x)
+    df2 <- dplyr::arrange(df2, x)
+    idx <- order(df2[["x"]], decreasing = FALSE)
+    df2$motif_name <- factor(df2$motif_name,
+                             levels=rev(unique(df2$motif_name[idx])))
+    d <- ggplot(df2, aes(x = Group,y= motif_name,color=p_value,size=log_odds_detection))+
       geom_point() +
       scale_color_continuous(low="red", high="blue",
                              guide=guide_colorbar(reverse=TRUE)) +
       scale_size(range=c(1, 6))+ theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
       scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top")+
       theme(plot.margin=margin(l=-0.75,unit="cm"))
-    
-    df <- df %>% distinct(motif.id, .keep_all = T)
-    width.seqlogo = 2
-    highlight <- NULL
-    clres <- FALSE
-    optsL <- list(ID = df$motif.id)
-    pfm1 <- TFBSTools::getMatrixSet(JASPAR2020, opts = optsL)
-    maxwidth <- max(vapply(TFBSTools::Matrix(pfm1), ncol, 0L))
-    grobL <- lapply(pfm1, seqLogoGrob, xmax = maxwidth, xjust = "center")
-    hmSeqlogo <- HeatmapAnnotation(logo = annoSeqlogo(grobL = grobL, 
-                                                      which = "row", space = unit(1, "mm"),
-                                                      width = unit(width.seqlogo, "inch")), 
-                                   show_legend = FALSE, show_annotation_name = FALSE, 
-                                   which = "row")
-    tmp <- matrix(rep(NA, length(df$motif.id)),ncol = 1, 
-                  dimnames = list(df$motif.name, NULL))
-    
-    hmMotifs <- Heatmap(matrix = tmp, name = "names", width = unit(0, "inch"), 
-                        na_col = NA, col = c(`TRUE` = "green3",`FALSE` = "white"), 
-                        cluster_rows = clres, show_row_dend = show_dendrogram, 
-                        cluster_columns = FALSE, show_row_names = TRUE, row_names_side = "left", 
-                        show_column_names = FALSE, show_heatmap_legend = FALSE,
-                        left_annotation = hmSeqlogo)
-    h <- grid.grabExpr(print(hmMotifs),wrap.grobs=TRUE)
-    p <- plot_grid(plot_grid(NULL, h, ncol = 1, rel_heights = c(0.05:10)),as.grob(d))
+    df2 <- df2 %>% distinct(motif_name, .keep_all = T)
+    pfm <- df2$motif_pwm
+    pfm1 <- list()
+    for(name in names(pfm)){
+      pfm1[[name]] <- t(pfm[[name]])
+    }
+    Seqlogo <- as.grob(ggseqlogo(pfm1,ncol = 1)+
+                         theme_void()) 
+    p <- plot_grid(plot_grid(NULL, Seqlogo, ncol = 1, rel_heights = c(0.05:10)),as.grob(d))
     
     return(p)
   }
@@ -710,12 +751,12 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
     dplyr::arrange(rankOf_rankProduct) %>% dplyr::mutate(gene_category = dplyr::case_when(log2FoldChange > 
                                                                                             lfc_threshold & padj < padj_threshold ~ "up", log2FoldChange < 
                                                                                             -lfc_threshold & padj < padj_threshold ~ "down", TRUE ~ 
-                                                                                            "static"), gene_category = factor(gene_category, levels = c("up", 
-                                                                                                                                                        "down", "static")))
+                                                                                            "NS"), gene_category = factor(gene_category, levels = c("up", 
+                                                                                                                                                        "down", "NS")))
   upGenes_rank <- filter(merge_result, gene_category == "up")$RP_rank
   downGenes_rank <- filter(merge_result, gene_category == "down")$RP_rank
   staticGenes_rank <- filter(merge_result, gene_category == 
-                               "static")$RP_rank
+                               "NS")$RP_rank
   if (length(upGenes_rank) == 0 & length(downGenes_rank) == 
       0) {
     warning("no significant genes, just returing rank product result", 
@@ -736,9 +777,9 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
                                                staticGenes_rank)$p.value)
   down_static_pvalue <- suppressWarnings(ks.test(downGenes_rank, 
                                                  staticGenes_rank)$p.value)
-  ks_test <- paste0("\n Kolmogorov-Smirnov Tests ", "\n pvalue of up vs static: ", 
+  ks_test <- paste0("\n Kolmogorov-Smirnov Tests ", "\n pvalue of up vs NS: ", 
                     format(up_static_pvalue, digits = 3, scientific = TRUE), 
-                    "\n pvalue of down vs static: ", format(down_static_pvalue, 
+                    "\n pvalue of down vs NS: ", format(down_static_pvalue, 
                                                             digits = 3, scientific = TRUE))
   annotate_df <- data.frame(xpos = -Inf, ypos = Inf, annotateText = ks_test, 
                             hjustvar = 0, vjustvar = 1)
@@ -747,7 +788,8 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
     ggplot2::geom_text(data = annotate_df, aes(x = xpos, 
                                                y = ypos, hjust = hjustvar, vjust = vjustvar, label = annotateText)) + 
     ggplot2::xlab("Regulatory potential rank") + ggplot2::ylab("Cumulative Probability")+
-    ggplot2::scale_x_continuous(expand = c(0,0)) + ggplot2::theme_bw(base_size = 12)
+    ggplot2::scale_x_continuous(expand = c(0,0)) + ggplot2::theme_bw(base_size = 15) + 
+    ggplot2::scale_color_manual(breaks = c("up","down","NS"),values = c("#F8766D","#00BFC4","grey"))
   return(p)
 }
 
@@ -891,4 +933,125 @@ symbol2gene_id <- function(data,org){
   data <- merge(gene_IDs,data,by=0)
   data <- data[,-1]
   return(data)
+}
+
+data_trac <- function(y,gene_position,gen,txdb,org,filetype=NULL,bw_files,
+                      bam_files,track_additional_files){
+  chr <- gene_position$seqnames
+  grtrack <- GeneRegionTrack(txdb,
+                             chromosome = chr, name = "UCSC known genes",geneSymbol = TRUE,
+                             transcriptAnnotation = "symbol",genome = gen,
+                             background.title = "grey",cex = 1.25)
+  symbols <- unlist(mapIds(org, gene(grtrack), "SYMBOL", "ENTREZID", multiVals = "first"))
+  symbol(grtrack) <- symbols[gene(grtrack)]
+  displayPars(grtrack) <- list(fontsize = 15)
+  if(!is.null(filetype)){
+  switch(filetype,
+         "Row1" = bw_files <- bw_files,
+         "Row2" = bw_files <- bam_files)
+  }
+  if(!is.null(track_additional_files)) bw_files <- c(bw_files, track_additional_files)
+  df <- list()
+  c <- 0
+  unique <- unique(gsub("\\_.+$", "", names(bw_files)))
+  num <- length(unique)
+  col <- list()
+  col_count = num + 1
+  for(name in unique){
+    col_count <- col_count - 1
+    col[[name]] <- rainbow_hcl(num,c = 100)[col_count]
+  }
+  for(name in names(bw_files)){
+    c <- c + 1
+    if(!is.null(filetype)){
+    if(filetype == "Row2"){ 
+      bai <- file.exists(paste0(bw_files[[name]],".bai"))
+      if(bai == FALSE) a <- indexBam(bw_files[[name]])
+    }}
+    name2 <- gsub("\\_.+$", "", name)
+    df[[name]] <- DataTrack(range = bw_files[[name]], type = "l",genome = gen,
+                            name = gsub("\\..+$", "", name), window = -1,
+                            chromosome = chr, background.title = col[[name2]],cex = 0.8,
+                            col.histogram = col[[name2]], cex.axis=0.8,cex.main=0.8, cex.title = 0.8,
+                            fill.histogram = col[[name2]])
+  }
+  df[["grtrack"]] <- grtrack
+  return(df)
+}
+
+RNAseqDEGimport <- function(tmp,exampleButton){
+  withProgress(message = "Importing an RNA-seq DEG regult file, please wait",{
+    if(is.null(tmp) && exampleButton > 0 )  tmp = "data/RNAseq.txt"
+    if(is.null(tmp)) {
+      return(NULL)
+    }else{
+      if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+      if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
+      if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
+      rownames(df) = gsub("\"", "", rownames(df))
+      if(length(colnames(df)) != 0){
+        if(str_detect(colnames(df)[1], "^X\\.")){
+          colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+        }
+      }
+      return(df)
+    }
+  })
+}
+RNAseqDEG_ann <- function(RNAdata,org){
+  RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
+  if(str_detect(rownames(RNAdata)[1], "ENS")){
+    my.symbols <- gsub("\\..*","", rownames(RNAdata))
+    gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
+                                    keytype = "ENSEMBL",
+                                    columns = c("ENSEMBL","SYMBOL","ENTREZID"))
+    colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
+    RNAdata$EnsemblID <- gsub("\\..*","", rownames(RNAdata))
+    gene_IDs <- gene_IDs %>% distinct(EnsemblID, .keep_all = T)
+  }else{
+    my.symbols <- rownames(RNAdata)
+    gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
+                                    keytype = "SYMBOL",
+                                    columns = c("SYMBOL", "ENTREZID"))
+    colnames(gene_IDs) <- c("Symbol", "gene_id")
+    gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T)
+    RNAdata$Symbol <- rownames(RNAdata) 
+  }
+  data <- merge(RNAdata, gene_IDs, by="Symbol")
+  return(data)
+}
+mmAnno <- function(peak,genomic_region=NULL,txdb,peak_distance){
+  if(!is.null(peak)){
+    if(!is.null(genomic_region)){
+    if(genomic_region == "Promoter"){ 
+      peak <- peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
+      peak <- with(peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
+    }}
+    range <- peak_distance * 1000
+    mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
+    if(length(as.data.frame(peak)$seqnames) != 0){
+      mmAnno_up <- mm_geneScan(peak, txdb,upstream = range,downstream = range)
+    }else mmAnno_up <- NULL
+    return(mmAnno_up)
+  }else return(NULL)
+}
+RP_f <- function(mmAnno,txdb){
+  if(!is.null(mmAnno)) {
+    result_geneRP_up <- calcRP_TFHit(mmAnno = mmAnno,Txdb = txdb)
+  }else result_geneRP_up <- NULL
+  if(!is.null(result_geneRP_up)) {
+    result_geneRP <-result_geneRP_up
+    result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
+    result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
+    return(result_geneRP)
+  }else return(NULL)
+}
+regulatory_potential_f <- function(species,data,result_geneRP,DEG_fc,DEG_fdr){
+  if(species != "not selected"){
+    merge_data <- integrate_ChIP_RNA(
+      result_geneRP = result_geneRP,
+      result_geneDiff = data,lfc_threshold = log(DEG_fc,2),padj_threshold = DEG_fdr
+    )
+    return(merge_data)
+  }
 }
