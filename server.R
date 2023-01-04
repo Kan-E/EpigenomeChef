@@ -60,10 +60,10 @@ shinyServer(function(input, output, session) {
       if(is.null(input$file1)){
         if(input$goButton > 0 ){
           df<-list()
-          df[["Ctrl_1"]] <- "data/bigwig/Growing-p53_1.BigWig"
-          df[["Ctrl_2"]] <- "data/bigwig/Growing-p53_2.BigWig"
-          df[["Sen_1"]] <- "data/bigwig/OIS-p53_1.BigWig"
-          df[["Sen_2"]] <- "data/bigwig/OIS-p53_2.BigWig"
+          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
+          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
+          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
+          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
           return(df)
         }
         return(NULL)
@@ -85,10 +85,10 @@ shinyServer(function(input, output, session) {
       if(is.null(input$file_bam)){
         if(input$goButton > 0 ){
           df<-list()
-          df[["Ctrl_1"]] <- "data/bigwig/Growing-p53_1.BigWig"
-          df[["Ctrl_2"]] <- "data/bigwig/Growing-p53_2.BigWig"
-          df[["Sen_1"]] <- "data/bigwig/OIS-p53_1.BigWig"
-          df[["Sen_2"]] <- "data/bigwig/OIS-p53_2.BigWig"
+          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
+          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
+          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
+          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
           return(df)
         }
         return(NULL)
@@ -111,12 +111,12 @@ shinyServer(function(input, output, session) {
       if(is.null(input$peak_call_file1)){
         if(input$goButton > 0 ){
           df <- list()
-          df[["Ctrl_1"]] <- "data/peakcall/Growing-p53_1_peaks.narrowPeak"
-          df[["Ctrl_2"]] <- "data/peakcall/Growing-p53_2_peaks.narrowPeak"
-          df[["Sen_1"]] <- "data/peakcall/OIS-p53_1_peaks.narrowPeak"
-          df[["Sen_2"]] <- "data/peakcall/OIS-p53_2_peaks.narrowPeak"
-          name <- c("Ctrl_1","Ctrl_2","Sen_1","Sen_2")
-          files2 <- lapply(df, ChIPQC:::GetGRanges, simple = TRUE)
+          df[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+          df[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+          df[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
+          df[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+          name <- c("A_1","A_2","B_1","B_2")
+          files2 <- lapply(df, GetGRanges, simple = TRUE)
           names(files2)<-name
           return(files2)
         }
@@ -129,7 +129,7 @@ shinyServer(function(input, output, session) {
           name <- c(name, gsub("\\..+$", "", input$peak_call_file1[nr,]$name))
           files <- c(files,file)
         }
-        files2 <- lapply(files, ChIPQC:::GetGRanges, simple = TRUE)
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
         names(files2)<-name
         print(files2)
         return(files2)
@@ -259,15 +259,6 @@ shinyServer(function(input, output, session) {
       dds <- dds()
       contrast <- c("con", unique(collist))
       res <- results(dds,  contrast = contrast)
-      if(input$FDR_method == "IHW") {
-        ihw_res <- ihw(pvalue ~ baseMean,  data=as.data.frame(res), alpha = 0.1)
-        res$padj <- IHW::as.data.frame(ihw_res)$adj_pvalue
-      }
-      if(input$FDR_method == "Qvalue") {
-        res <- results(dds,  contrast = contrast)
-        qvalue <- qvalue::qvalue(res$pvalue)
-        res$padj <- qvalue$qvalues
-      }
       res <- as.data.frame(res)
       }
       if(input$data_file_type == "Row1"){
@@ -1424,10 +1415,10 @@ shinyServer(function(input, output, session) {
         return(Glist)
       }else{
         if(input$goButton > 0 ){
-          files[["data/peakcall/Growing-p53_1_peaks.narrowPeak"]] <- "data/peakcall/Growing-p53_1_peaks.narrowPeak"
-          files[["data/peakcall/Growing-p53_2_peaks.narrowPeak"]] <- "data/peakcall/Growing-p53_2_peaks.narrowPeak"
-          files[["data/peakcall/OIS-p53_1_peaks.narrowPeak"]] <- "data/peakcall/OIS-p53_1_peaks.narrowPeak"
-          files[["data/peakcall/OIS-p53_2_peaks.narrowPeak"]] <- "data/peakcall/OIS-p53_2_peaks.narrowPeak"
+          files[["data/peakcall/A_1_peaks.narrowPeak"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+          files[["data/peakcall/A_2_peaks.narrowPeak"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+          files[["data/peakcall/B_1_peaks.narrowPeak"]] <- "data/peakcall/B_1_peaks.narrowPeak"
+          files[["data/peakcall/B_2_peaks.narrowPeak"]] <- "data/peakcall/B_2_peaks.narrowPeak"
           print(files)
           Glist <- files2GRangelist(files)
           Glist[["Consensus_region"]] <- promoter_region()
@@ -2492,9 +2483,9 @@ shinyServer(function(input, output, session) {
     if(is.null(input$peak_call_file_venn1)){
       if(input$goButton_venn > 0 ){
         files <- list()
-        files[["Growing-p53_1"]] <- "data/peakcall/Growing-p53_1_peaks.narrowPeak"
-        files[["Growing-p53_2"]] <- "data/peakcall/Growing-p53_2_peaks.narrowPeak"
-        files2 <- lapply(files, ChIPQC:::GetGRanges, simple = TRUE)
+        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
       return(NULL)
@@ -2506,7 +2497,7 @@ shinyServer(function(input, output, session) {
         name <- c(name, gsub("\\..+$", "", input$peak_call_file_venn1[nr,]$name))
         files <- c(files,file)
       }
-      files2 <- lapply(files, ChIPQC:::GetGRanges, simple = TRUE)
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
       print(files2)
       return(files2)
@@ -2517,10 +2508,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$file_venn1)){
       if(input$goButton_venn > 0 ){
         df<-list()
-        df[["Ctrl_1"]] <- "data/bigwig/Growing-p53_1.BigWig"
-        df[["Ctrl_2"]] <- "data/bigwig/Growing-p53_2.BigWig"
-        df[["Sen_1"]] <- "data/bigwig/OIS-p53_1.BigWig"
-        df[["Sen_2"]] <- "data/bigwig/OIS-p53_2.BigWig"
+        df[["A_1"]] <- "data/bigwig/A_1.BigWig"
+        df[["A_2"]] <- "data/bigwig/A_2.BigWig"
+        df[["B_1"]] <- "data/bigwig/B_1.BigWig"
+        df[["B_2"]] <- "data/bigwig/B_2.BigWig"
         return(df)
       }
       return(NULL)
@@ -3291,9 +3282,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   )
   #Venn regulatory potential------
   output$venn_select_RNA <- renderUI({
+    if(!is.null(Venn_peak_call_files())){
     selectInput("intersect_RNA", "Select intersect",
                 c("not_selected",names(venn_overlap()$peaklist)),
                 selected = "not_selected",multiple = F)
+    }
   })
 
   peak_venn_grange_RNA  <- reactive({
@@ -3880,10 +3873,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       if(is.null(input$file1_clustering)){
         if(input$goButton_clustering > 0 ){
           df<-list()
-          df[["Ctrl_1"]] <- "data/bigwig/Growing-p53_1.BigWig"
-          df[["Ctrl_2"]] <- "data/bigwig/Growing-p53_2.BigWig"
-          df[["Sen_1"]] <- "data/bigwig/OIS-p53_1.BigWig"
-          df[["Sen_2"]] <- "data/bigwig/OIS-p53_2.BigWig"
+          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
+          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
+          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
+          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
           return(df)
         }
         return(NULL)
@@ -3905,10 +3898,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       if(is.null(input$file_bam_clustering)){
         if(input$goButton_clustering > 0 ){
           df<-list()
-          df[["Ctrl_1"]] <- "data/bigwig/Growing-p53_1.BigWig"
-          df[["Ctrl_2"]] <- "data/bigwig/Growing-p53_2.BigWig"
-          df[["Sen_1"]] <- "data/bigwig/OIS-p53_1.BigWig"
-          df[["Sen_2"]] <- "data/bigwig/OIS-p53_2.BigWig"
+          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
+          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
+          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
+          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
           return(df)
         }
         return(NULL)
@@ -3931,12 +3924,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       if(is.null(input$peak_call_file1_clustering)){
         if(input$goButton_clustering > 0 ){
           df <- list()
-          df[["Ctrl_1"]] <- "data/peakcall/Growing-p53_1_peaks.narrowPeak"
-          df[["Ctrl_2"]] <- "data/peakcall/Growing-p53_2_peaks.narrowPeak"
-          df[["Sen_1"]] <- "data/peakcall/OIS-p53_1_peaks.narrowPeak"
-          df[["Sen_2"]] <- "data/peakcall/OIS-p53_2_peaks.narrowPeak"
+          df[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+          df[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+          df[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
+          df[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
           name <- c("Ctrl_1","Ctrl_2","Sen_1","Sen_2")
-          files2 <- lapply(df, ChIPQC:::GetGRanges, simple = TRUE)
+          files2 <- lapply(df, GetGRanges, simple = TRUE)
           names(files2)<-name
           return(files2)
         }
@@ -3949,7 +3942,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           name <- c(name, gsub("\\..+$", "", input$peak_call_file1_clustering[nr,]$name))
           files <- c(files,file)
         }
-        files2 <- lapply(files, ChIPQC:::GetGRanges, simple = TRUE)
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
         names(files2)<-name
         print(files2)
         return(files2)
@@ -4049,7 +4042,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   }))
   
   # clustering PCA ------------------------------------------------------------------------------
-  output$download_clustering_PCA = downloadHandler(
+  output$clustering_pca_error <- renderText({
+    p <- length(colnames(bw_count_clustering()))
+    if(p < 3){
+        print("PCA: The sample number must be > 2")
+    }else return(NULL)
+  })
+   output$download_clustering_PCA = downloadHandler(
     filename = "PCA-MDS-dendrogram.pdf",
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -4072,7 +4071,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       if(is.null(bw_count_clustering())){
         return(NULL)
       }else{
-        print(PCAplot(data = bw_count_clustering(),plot=TRUE))
+        p <- length(colnames(bw_count_clustering()))
+        if(p > 2){
+          print(PCAplot(data = bw_count_clustering(),plot=TRUE))
+        }
       }
     })
   })
@@ -4152,9 +4154,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   #Clustering correlation plot-----
   corrplot <-reactive({
     data <- bw_count_clustering()
-    mcor <- cor(data, method = "spearman")
+    mcor <- cor(data)
     p <- ggcorrplot(corr = mcor, hc.order = TRUE, method = "square",
                     colors = c("#4b61ba", "white", "red"), lab = TRUE)
+    p <- p + scale_fill_gradient2(limit = c(0,1), low = "#4b61ba", high =  "red", mid = "white", midpoint = 0.5)
     return(p)
   })
   output$correlationplot <- renderPlot({
@@ -4508,12 +4511,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
-        if(input$pair_pdf_height == 0){
+        if(input$clustering_pdf_height == 0){
           pdf_height <- 6
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
+        }else pdf_height <- input$clustering_pdf_height
+        if(input$clustering_pdf_width == 0){
           pdf_width <- 6
-        }else pdf_width <- input$pair_pdf_width
+        }else pdf_width <- input$clustering_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(plot_grid(peak_kmeans_alinedHeatmap()))
         dev.off()
@@ -4527,12 +4530,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
-        if(input$pair_pdf_height == 0){
+        if(input$clustering_pdf_height == 0){
           pdf_height <- 5
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
+        }else pdf_height <- input$clustering_pdf_height
+        if(input$clustering_pdf_width == 0){
           pdf_width <- 5
-        }else pdf_width <- input$pair_pdf_width
+        }else pdf_width <- input$clustering_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         featureAlignedDistribution(peak_kmeans_sig(), peak_kmeans_feature_center(),
                                    upstream=2000, downstream=2000,
@@ -5357,11 +5360,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(is.null(input$enrich_data_file)){
       if(input$goButton_enrich > 0 ){
         files <- list()
-        files[["Growing_1"]] <- "data/peakcall/Growing-p53_1_peaks.narrowPeak"
-        files[["Growing_2"]] <- "data/peakcall/Growing-p53_2_peaks.narrowPeak"
-        files[["OIS_1"]] <- "data/peakcall/OIS-p53_1_peaks.narrowPeak"
-        files[["OIS_2"]] <- "data/peakcall/OIS-p53_2_peaks.narrowPeak"
-        files2 <- lapply(files, ChIPQC:::GetGRanges, simple = TRUE)
+        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+        files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
+        files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
       return(NULL)
@@ -5373,7 +5376,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         name <- c(name, gsub("\\..+$", "", input$enrich_data_file[nr,]$name))
         files <- c(files,file)
       }
-      files2 <- lapply(files, ChIPQC:::GetGRanges, simple = TRUE)
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
       print(files2)
       return(files2)
@@ -5491,7 +5494,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_height <- 5
         }else pdf_height <- input$enrich_pdf_height
         if(input$enrich_pdf_width == 0){
-          pdf_width <- 5
+          pdf_width <- 6
         }else pdf_width <- input$enrich_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(plot_grid(p1))
@@ -5652,7 +5655,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_height <- 6
         }else pdf_height <- input$enrich_pdf_height
         if(input$enrich_pdf_width == 0){
-          pdf_width <- 6
+          pdf_width <- 7
         }else pdf_width <- input$enrich_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(p1)
@@ -5737,10 +5740,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(is.null(input$bed_data_file)){
       if(input$goButton_bed > 0 ){
         files <- list()
-        files[["Growing_1"]] <- "data/peakcall/Growing-p53_1_peaks.narrowPeak"
-        files[["Growing_2"]] <- "data/peakcall/Growing-p53_2_peaks.narrowPeak"
-        files[["OIS_1"]] <- "data/peakcall/OIS-p53_1_peaks.narrowPeak"
-        files[["OIS_2"]] <- "data/peakcall/OIS-p53_2_peaks.narrowPeak"
+        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+        files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
+        files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
         files2 <- lapply(files, read_bed, use_gr = FALSE)
         return(files2)
       }
@@ -5763,10 +5766,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(is.null(input$bed_data_file2)){
       if(input$goButton_bed > 0 ){
         files <- list()
-        files[["Growing_1"]] <- "data/peakcall/Growing-p53_1_peaks.narrowPeak"
-        files[["Growing_2"]] <- "data/peakcall/Growing-p53_2_peaks.narrowPeak"
-        files[["OIS_1"]] <- "data/peakcall/OIS-p53_1_peaks.narrowPeak"
-        files[["OIS_2"]] <- "data/peakcall/OIS-p53_2_peaks.narrowPeak"
+        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+        files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
+        files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
         files2 <- lapply(files, read_bed, use_gr = FALSE)
         return(files2)
       }

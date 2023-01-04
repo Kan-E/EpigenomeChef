@@ -68,7 +68,7 @@ shinyUI(
                                               width = "80%"),
                                     bsPopover("icon1", "BigWig files (bw, BigWig):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
-                                                            strong("Do not use it for anything else"),".<br><br>"), 
+                                                            strong("Do not use it for anything else"),".<br>Short names are recommended for file names."), 
                                               placement = "right",options = list(container = "body")),
                    ),
                    conditionalPanel(condition="input.data_file_type=='Row2'",
@@ -83,7 +83,7 @@ shinyUI(
                                               width = "80%"),
                                     bsPopover("icon1", "Bam files (bam):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
-                                                            strong("Do not use it for anything else"),".<br><br>"), 
+                                                            strong("Do not use it for anything else"),".<br>Short names are recommended for file names.<br>"), 
                                               placement = "right",options = list(container = "body")),
                    ),
                    conditionalPanel(condition="input.data_file_type=='Row2'",
@@ -110,29 +110,45 @@ shinyUI(
                                               accept = c("bed","narrowPeak"),
                                               multiple = TRUE,
                                               width = "80%"),
+                                    
                                     bsPopover("icon2", "peak call files (bed, narrowPeak):", 
-                                              content=paste("File names must be the same as bigwig files.<br><br>"), 
-                                              placement = "right",options = list(container = "body")),
+                                              content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
+                                                            "The second column is start position on the chromosome.<br>",
+                                                            "The third column is end position on the chromosome.<br>",
+                                                            strong("Multiple peak call files are required for the filteration.<br>"),
+                                                            img(src="pair_peakcallfilter.png", width = 200,height = 400)),
+                                              placement = "right",options = list(container = "body"))
                    ),
                    fluidRow(
                      column(12, selectInput("Species", "Species", species_list, selected = "not selected"))),
-                   conditionalPanel(condition="input.data_file_type=='Row2'",
-                   selectInput("FDR_method", "FDR method", c("BH", "Qvalue", "IHW"), selected = "BH")
-                   ),
                    fluidRow(
                      column(4, numericInput("fc", "Fold Change", min   = 1, max   = NA, value = 2)),
                      column(4, numericInput("fdr", "FDR", min   = 0, max   = 1, value = 0.1, step = 0.005)),
                      column(4, numericInput("basemean", "Basemean", min   = 0, max   = NA, value = 0))
                    ),
-                   
+                   strong(span("Output plot size setting for pdf (0: default)"),
+                          span(icon("info-circle"), id = "pair_pdf_icon", 
+                               options = list(template = popoverTempate))),
                    fluidRow(
                      column(5, numericInput("pair_pdf_height", "pdf_height", value = 0, min = 0)),
                      column(5, numericInput("pair_pdf_width", "pdf_width", value = 0, min = 0))
                    ),
                    bsPopover("pair_pdf_icon", "Output plot size setting for pdf (default: 0): ", 
                              content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
-                                           "Default size: <br>",strong("Clustering:"), "height = 3.5, width = 9<br>", strong("MA-plot:"), "height = 4, width = 7 <br>",strong("Volcano plot:"), "height = 5, width = 5 <br>",pdfSize_for_GOI,
-                                           strong("Enrichment analysis:"), "height = 10, width = 12 <br>"),trigger = "click"), 
+                                           "Default size: <br>",strong("Clustering:"), "height = 3.5, width = 9<br>", 
+                                           strong("Volcano-plot:"), "height = 4, width = 4 <br>",
+                                           strong("Heatmap:"), "height = 4, width = 3 <br>",
+                                           strong("Trackplot:"), "height = 4, width = 7 <br>",
+                                           strong("Peak distribution:"), "height = 6, width = 10 <br>",
+                                           strong("Peak pattern heatmap:"), "height = 6, width = 6 <br>",
+                                           strong("Peak pattern line plot:"), "height = 5, width = 5 <br>",
+                                           strong("Dotplot (GREAT):"), "height = 5, width = 6 <br>",
+                                           strong("Region gene associations plot (GREAT):"), "height = 5, width = 12 <br>",
+                                           strong("Motif dot plot:"), "height = 6, width = 7 <br>",
+                                           strong("Boxplot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("Barplot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>"),trigger = "click"), 
                    actionButton("goButton", "example data (hg19)"),
                    tags$head(tags$style("#goButton{color: black;
                                  font-size: 12px;
@@ -353,10 +369,22 @@ shinyUI(
                               )
                      ),
                      tabPanel("with RNA-seq",
-                              fluidRow(
-                                column(8, htmlOutput("pairRNAseqresult"))
-                              ),
-                              dataTableOutput('pair_DEG_result'),
+                              bsCollapse(id="RNAseqresult_pair_panel",open="RNAseqresult_pair_table",
+                              bsCollapsePanel(title= p(span("RNA-seq result"),span(icon("info-circle"), id = "RNAseqresult_pair", 
+                                                                               options = list(template = popoverTempate))),
+                                              bsPopover("RNAseqresult_pair", "RNA-seq result file:", 
+                                                        content=paste("You can use a pair-wise RNA-seq DEG result file as input.<br>",
+                                                                      "First column must be gene name (Gene symbol or ENSEMBL ID).<br>", 
+                                                                      "The file must contain", strong("log2FoldChange"), "and", strong("padj"), "columns.<br>",
+                                                                      "<br>", 
+                                                                      img(src="input_format_volcano.png", width = 500,height = 230)), 
+                                                        placement = "right",options = list(container = "body")),
+                                              value="RNAseqresult_pair_table",
+                                              fluidRow(
+                                                column(8, htmlOutput("pairRNAseqresult"))
+                                              ),
+                                              dataTableOutput('pair_DEG_result')
+                              )),
                               htmlOutput("peak_distance"),
                               fluidRow(
                                 column(4, downloadButton("download_pairintbox","Download box plot"))
@@ -438,7 +466,10 @@ shinyUI(
                              multiple = TRUE,
                              width = "80%"),
                    bsPopover("icon_venn1", "peak call files (bed, narrowPeak):", 
-                             content=paste(""), 
+                             content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
+                                           "The second column is start position on the chromosome.<br>",
+                                           "The third column is end position on the chromosome.<br>",
+                                           strong("Short names are recommended for file names.")), 
                              placement = "right",options = list(container = "body")),
                    fileInput("file_venn1",
                              strong(
@@ -450,8 +481,7 @@ shinyUI(
                              multiple = TRUE,
                              width = "80%"),
                    bsPopover("icon_venn2", "BigWig files (bw, BigWig):", 
-                             content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
-                                           strong("Do not use it for anything else"),".<br><br>"), 
+                             content=paste(strong("Short names are recommended for file names.")), 
                              placement = "right",options = list(container = "body")),
                    fluidRow(
                      column(12, selectInput("Species_venn", "Species", species_list, selected = "not selected")),
@@ -465,10 +495,20 @@ shinyUI(
                    ),
                    bsPopover("venn_pdf_icon", "Output plot size setting for pdf (default: 0): ", 
                              content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
-                                           "Default size: <br>",strong("Venn diagram:"), "height = 3.5, width = 9<br>", strong("Integrated heatmap:"), "height = 8, width = 8 <br>",
-                                           strong("Enrichment analysis:"), "height = 6, width = 8 <br>",strong("cnet plot:"), "height = 6, width = 6 <br>"),trigger = "click"), 
-                   actionButton("goButton_venn", "example data"),
-                   tags$head(tags$style("#goButton{color: black;
+                                           "Default size: <br>",strong("Venn diagram:"), "height = 6, width = 6<br>", 
+                                           strong("Peak distribution:"), "height = 4.5, width = 6 <br>",
+                                           strong("Peak pattern heatmap:"), "height = 6, width = 6 <br>",
+                                           strong("Peak pattern line plot:"), "height = 5, width = 5 <br>",
+                                           strong("Track plot:"), "height = 4, width = 7 <br>",
+                                           strong("Dotplot (GREAT):"), "height = 6, width = 8 <br>",
+                                           strong("Region gene associations plot (GREAT):"), "height = 5, width = 12 <br>",
+                                           strong("Motif Dotplot:"), "height = 6, width = 8 <br>",
+                                           strong("Barplot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("Boxplot (with RNAseq):"), "height = 5, width = 6 <br>",
+                                           strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>"),trigger = "click"), 
+                   actionButton("goButton_venn", "example data (hg19)"),
+                   tags$head(tags$style("#goButton_venn{color: black;
                                  font-size: 12px;
                                  font-style: italic;
                                  }"),
@@ -608,10 +648,22 @@ shinyUI(
                               DTOutput('region_gene_venn_associations')
                      ),
                      tabPanel("with RNA-seq",
+                              bsCollapse(id="RNAseqresult_venn_panel",open="RNAseqresult_venn_table",
+                                         bsCollapsePanel(title= p(span("RNA-seq result"),span(icon("info-circle"), id = "RNAseqresult_venn", 
+                                                                                              options = list(template = popoverTempate))),
+                                                         bsPopover("RNAseqresult_venn", "RNA-seq result file:", 
+                                                                   content=paste("You can use a pair-wise RNA-seq DEG result file as input.<br>",
+                                                                                 "First column must be gene name (Gene symbol or ENSEMBL ID).<br>", 
+                                                                                 "The file must contain", strong("log2FoldChange"), "and", strong("padj"), "columns.<br>",
+                                                                                 "<br>", 
+                                                                                 img(src="input_format_volcano.png", width = 500,height = 230)), 
+                                                                   placement = "right",options = list(container = "body")),
+                                                         value="RNAseqresult_venn_table",
                               fluidRow(
                                 column(8, htmlOutput("vennRNAseqresult"))
                               ),
-                              dataTableOutput('venn_DEG_result'),
+                              dataTableOutput('venn_DEG_result')
+                                         )),
                               htmlOutput("venn_select_RNA"),
                               tags$head(tags$style("#venn_select_RNA{color: black;
                                  font-size: 20px;
@@ -705,7 +757,8 @@ shinyUI(
                                               width = "80%"),
                                     bsPopover("icon1_clustering", "BigWig files (bw, BigWig):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
-                                                            strong("Do not use it for anything else"),".<br><br>"), 
+                                                            strong("Do not use it for anything else"),".<br>",
+                                                            strong("Short names are recommended for file names.")), 
                                               placement = "right",options = list(container = "body")),
                    ),
                    conditionalPanel(condition="input.data_file_type_clustering=='Row2'",
@@ -720,7 +773,8 @@ shinyUI(
                                               width = "80%"),
                                     bsPopover("icon1_clustering", "Bam files (bam):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
-                                                            strong("Do not use it for anything else"),".<br><br>"), 
+                                                            strong("Do not use it for anything else"),".<br>",
+                                                            strong("Short names are recommended for file names.")), 
                                               placement = "right",options = list(container = "body")),
                    ),
                    conditionalPanel(condition="input.data_file_type_clustering=='Row2'",
@@ -747,20 +801,39 @@ shinyUI(
                                               accept = c("bed","narrowPeak"),
                                               multiple = TRUE,
                                               width = "80%"),
-                                    bsPopover("icon2_clustering", "peak call files (bed, narrowPeak):", 
-                                              content=paste("File names must be the same as bigwig files.<br><br>"), 
+                                    bsPopover("icon2_clustering", "peak call file (bed, narrowPeak):", 
+                                              content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
+                                                            "The second column is start position on the chromosome.<br>",
+                                                            "The third column is end position on the chromosome.<br>"), 
                                               placement = "right",options = list(container = "body")),
                    ),
                    fluidRow(
                      column(12, selectInput("Species_clustering", "Species", species_list, selected = "not selected"))),
+                   strong(span("Output plot size setting for pdf (0: default)"),
+                          span(icon("info-circle"), id = "clustering_pdf_icon", 
+                               options = list(template = popoverTempate))),
                    fluidRow(
                      column(5, numericInput("clustering_pdf_height", "pdf_height", value = 0, min = 0)),
                      column(5, numericInput("clustering_pdf_width", "pdf_width", value = 0, min = 0))
                    ),
                    bsPopover("clustering_pdf_icon", "Output plot size setting for pdf (default: 0): ", 
                              content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
-                                           "Default size: <br>","Dotplot:", "height = 5, width = 6.5 <br>", "cnet plot:","height = 6, width = 6 <br><br>"), trigger = "click"), 
-                   actionButton("goButton_clustering", "example data (mouse)"),
+                                           "Default size: <br>", 
+                                           strong("Clustering:"), "height = 3.5, width = 9<br>", 
+                                           strong("Correlation plot:"), "height = 5, width = 7<br>", 
+                                           strong("Heatmap:"), "height = 10, width = 7<br>", 
+                                           strong("Trackplot:"), "height = 4, width = 7 <br>",
+                                           strong("Peak distribution:"), "height = 6, width = 10 <br>",
+                                           strong("Peak pattern heatmap:"), "height = 6, width = 6 <br>",
+                                           strong("Peak pattern line plot:"), "height = 5, width = 5 <br>",
+                                           strong("Dotplot (GREAT):"), "height = 5, width = 6 <br>",
+                                           strong("Region gene associations plot (GREAT):"), "height = 5, width = 12 <br>",
+                                           strong("Motif dot plot:"), "height = 6, width = 7 <br>",
+                                           strong("Boxplot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("Barplot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
+                                           strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>"),trigger = "click"), 
+                   actionButton("goButton_clustering", "example data (hg19)"),
                    tags$head(tags$style("#goButton_clustering{color: black;
                                  font-size: 12px;
                                  font-style: italic;
@@ -803,16 +876,12 @@ shinyUI(
                               fluidRow(
                                 column(4, downloadButton("download_clustering_PCA", "Download clustering analysis"))
                               ),
-                              plotOutput("PCA_clustering"),
-                              fluidRow(
-                                column(6, htmlOutput("clustering_umap_n"),
-                                       downloadButton("download_clustering_umap", "Download umap"),
-                                       textOutput("clustering_umap_error"),
-                                       tags$head(tags$style("#clustering_umap_error{color: red;
+                              textOutput("clustering_pca_error"),
+                              tags$head(tags$style("#clustering_pca_error{color: red;
                                  font-size: 20px;
             font-style: bold;
-            }")))
-                              ),
+            }")),
+                              plotOutput("PCA_clustering"),
                               downloadButton("download_clustering_corrplot", "Download correlation plot"),
                               div(
                                 plotOutput("correlationplot", height = "100%"),
@@ -857,12 +926,7 @@ shinyUI(
                                                          downloadButton("download_clustering_kmeans_extract_count_bed","Download selected cluster(bed)"),
                                                          DTOutput("clustering_kmeans_extract_table")
                                          ),
-                                         bsCollapsePanel(title= p(span("Track plot"),span(icon("info-circle"), id = "icon_clustering_kmeans_boxplot", 
-                                                                                       options = list(template = popoverTempate))),
-                                                         bsPopover("icon_clustering_kmeans_boxplot", "Boxplot of GOI:", 
-                                                                   content=paste("Please select genes in", strong("k-means clustering result"),".<br><br>",
-                                                                                 img(src="clustering_GOIboxplot.png", width = 450,height = 640)), 
-                                                                   placement = "right",options = list(container = "body")),
+                                         bsCollapsePanel(title= "Trackplot:",
                                                          value="kmeans_track_panel",
                                                          fluidRow(
                                                            column(4, downloadButton("download_clustering_trackplot", "Download trackplot")),
@@ -889,10 +953,22 @@ shinyUI(
                                  font-size: 25px;
             font-style: bold;
             }")),
+                              bsCollapse(id="RNAseqresult_clustering_panel",open="RNAseqresult_clustering_table",
+                                         bsCollapsePanel(title= p(span("RNA-seq result"),span(icon("info-circle"), id = "RNAseqresult_clustering", 
+                                                                                              options = list(template = popoverTempate))),
+                                                         bsPopover("RNAseqresult_clustering", "RNA-seq result file:", 
+                                                                   content=paste("You can use a pair-wise RNA-seq DEG result file as input.<br>",
+                                                                                 "First column must be gene name (Gene symbol or ENSEMBL ID).<br>", 
+                                                                                 "The file must contain", strong("log2FoldChange"), "and", strong("padj"), "columns.<br>",
+                                                                                 "<br>", 
+                                                                                 img(src="input_format_volcano.png", width = 500,height = 230)), 
+                                                                   placement = "right",options = list(container = "body")),
+                                                         value="RNAseqresult_clustering_table",
                               fluidRow(
                                 column(8, htmlOutput("clusteringRNAseqresult"))
                               ),
-                              dataTableOutput('clustering_DEG_result'),
+                              dataTableOutput('clustering_DEG_result')
+                                         )),
                               htmlOutput("clustering_select_kmean_RNA"),
                               tags$head(tags$style("#clustering_select_kmean_RNA{color: black;
                                  font-size: 20px;
@@ -981,7 +1057,10 @@ shinyUI(
                              multiple = FALSE,
                              width = "80%"),
                    bsPopover("icon_enrich1", "Uploaded file format (bed, narrowPeak): ", 
-                             content=paste("File names do not use `.` other than the extension.<br><br>"), 
+                             content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
+                                           strong("Do not use it for anything else"),".<br>",
+                                           strong("Short names are recommended for file names."),".<br>",
+                                           "File names do not use `.` other than the extension.<br><br>"), 
                              placement = "right",options = list(container = "body")),
                    fluidRow(
                      column(12, selectInput("Species_enrich", "Species", species_list, selected = "not selected"))),
@@ -996,8 +1075,10 @@ shinyUI(
                    ),
                    bsPopover("enrich_pdf_icon", "Output plot size setting for pdf (default: 0): ", 
                              content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
-                                           "Default size: <br>","Dotplot:", "height = 5, width = 6.5 <br>", "cnet plot:","height = 6, width = 6 <br><br>"), trigger = "click"), 
-                   actionButton("goButton_enrich", "example data (mouse)"),
+                                           "Default size: <br>",
+                                           "Dotplot:", "height = 5, width = 6.5 <br>", 
+                                           "cnet plot:","height = 6, width = 6 <br><br>"), trigger = "click"), 
+                   actionButton("goButton_enrich", "example data (hg19)"),
                    tags$head(tags$style("#goButton_enrich{color: black;
                                  font-size: 12px;
                                  font-style: italic;
@@ -1155,7 +1236,7 @@ shinyUI(
                                                               'v'="exclude"
                                                             ),selected = "default"),           
                               ),
-                              actionButton("goButton_bed", "example data (mouse)"),
+                              actionButton("goButton_bed", "example data (hg19)"),
                               tags$head(tags$style("#goButton_bed{color: black;
                                  font-size: 12px;
                                  font-style: italic;
@@ -1194,70 +1275,45 @@ shinyUI(
                             column(12,
                                    h2("Reference:"),
                                    "- Winston Chang, Joe Cheng, JJ Allaire, Carson Sievert, Barret Schloerke, Yihui Xie, Jeff Allen, Jonathan McPherson, Alan Dipert and Barbara Borges (2021). shiny: Web Application Framework for R. R package version 1.7.1. https://CRAN.R-project.org/package=shiny",br(),
-                                   "- Ning Leng and Christina Kendziorski (2020). EBSeq: An R package for gene and isoform
-  differential expression analysis of RNA-seq data. R package version 1.30.0.",br(),
-                                   "- Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for
-  RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)",br(),
-                                   "- Robinson MD, McCarthy DJ and Smyth GK (2010). edgeR: a Bioconductor package for differential
-  expression analysis of digital gene expression data. Bioinformatics 26, 139-140",br(),
-                                   "- Nikolaos Ignatiadis, Bernd Klaus, Judith Zaugg and Wolfgang Huber (2016): Data-driven hypothesis
-  weighting increases detection power in genome-scale multiple testing. Nature Methods 13:577,
-  doi: 10.1038/nmeth.3885",br(),
-                                   "- John D. Storey, Andrew J. Bass, Alan Dabney and David Robinson (2021). qvalue: Q-value
-  estimation for false discovery rate control. R package version 2.26.0.
-  http://github.com/jdstorey/qvalue",br(),
-                                   "- Pantano L (2022). DEGreport: Report of DEG analysis. R package version 1.32.0, http://lpantano.github.io/DEGreport", br(),
+                                   "- Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)",br(),
                                    "- Andrie de Vries and Brian D. Ripley (2020). ggdendro: Create Dendrograms and Tree Diagrams Using 'ggplot2'. R package version 0.1.22. https://CRAN.R-project.org/package=ggdendro",br(),
-                                   "- Konopka T (2022). _umap: Uniform Manifold Approximation and Projection_. R package version 0.2.8.0, <https://CRAN.R-project.org/package=umap>.", br(),
                                    "- T Wu, E Hu, S Xu, M Chen, P Guo, Z Dai, T Feng, L Zhou, W Tang, L Zhan, X Fu, S Liu, X Bo, and G Yu. clusterProfiler 4.0: A universal enrichment tool for interpreting omics data. The Innovation. 2021, 2(3):100141",br(),
                                    "- Guangchuang Yu, Li-Gen Wang, Guang-Rong Yan, Qing-Yu He. DOSE: an R/Bioconductor package for Disease Ontology Semantic and Enrichment analysis. Bioinformatics 2015 31(4):608-609",br(),
-                                   "- Dolgalev I (2022). _msigdbr: MSigDB Gene Sets for Multiple Organisms in a Tidy Data Format_. R
-  package version 7.5.1, <https://CRAN.R-project.org/package=msigdbr>.", br(),
-                                   "- Garcia-Alonso L, Holland CH, Ibrahim MM, Turei D, Saez-Rodriguez J. 'Benchmark and integration of resources for the estimation of human
-  transcription factor activities.' Genome Research. 2019. DOI: 10.1101/gr.240663.118.", br(),
+                                   "- Dolgalev I (2022). _msigdbr: MSigDB Gene Sets for Multiple Organisms in a Tidy Data Format_. R package version 7.5.1, <https://CRAN.R-project.org/package=msigdbr>.", br(),
+                                   "- Garcia-Alonso L, Holland CH, Ibrahim MM, Turei D, Saez-Rodriguez J. 'Benchmark and integration of resources for the estimation of human transcription factor activities.' Genome Research. 2019. DOI: 10.1101/gr.240663.118.", br(),
                                    "- Hervé Pagès, Marc Carlson, Seth Falcon and Nianhua Li (2020). AnnotationDbi: Manipulation of SQLite-based annotations in Bioconductor. R package version 1.52.0. https://bioconductor.org/packages/AnnotationDbi",br(),
                                    "- Marc Carlson (2020). org.Hs.eg.db: Genome wide annotation for Human. R package version 3.12.0.",br(),
                                    "- Marc Carlson (2020). org.Mm.eg.db: Genome wide annotation for Mouse. R package version 3.12.0.",br(),
-                                   "- Marc Carlson (2020). org.Rn.eg.db: Genome wide annotation for Rat. R package version 3.12.0.",br(),
-                                   "- Marc Carlson (2020). org.Xl.eg.db: Genome wide annotation for Xenopus. R package version 3.12.0.",br(),
-                                   "- Marc Carlson (2020). org.Dm.eg.db: Genome wide annotation for Fly. R package version 3.12.0.",br(),
-                                   "- Marc Carlson (2020). org.Ce.eg.db: Genome wide annotation for Worm. R package version 3.12.0.",br(),
-                                   "- Marc Carlson (2022). org.Bt.eg.db: Genome wide annotation for Bovine. R package version 3.15.0.",br(),
-                                   "- Marc Carlson (2022). org.Cf.eg.db: Genome wide annotation for Canine. R package version 3.15.0.",br(),
-                                   "- Marc Carlson (2022). org.Dr.eg.db: Genome wide annotation for Zebrafish. R package version 3.15.0.",br(),
-                                   "- Marc Carlson (2022). org.Gg.eg.db: Genome wide annotation for Chicken. R package version 3.15.0.",br(),
-                                   "- Marc Carlson (2022). org.Mmu.eg.db: Genome wide annotation for Rhesus. R package version 3.15.0.",br(),
-                                   "- Marc Carlson (2022). org.Pt.eg.db: Genome wide annotation for Chimp. R package version 3.15.0.",br(),
-                                   "- Marc Carlson (2022). org.Sc.sgd.db: Genome wide annotation for Yeast. R package version 3.15.0.",br(),
-                                   "- Marc Carlson (2022). org.Ss.eg.db: Genome wide annotation for Pig. R package version 3.15.0.",br(),
-                                   "- Morgan M, Shepherd L (2022). AnnotationHub: Client to access AnnotationHub resources. R package version 3.4.0.",br(),
                                    "- R. Gentleman, V. Carey, W. Huber and F. Hahne (2021). genefilter: methods for filtering genes from high-throughput experiments. R package version 1.72.1.",br(),
                                    "- Gu, Z. (2016) Complex heatmaps reveal patterns and correlations in multidimensional genomic data. Bioinformatics.",br(),
                                    "- H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.", br(),
                                    "- Alboukadel Kassambara (2020). ggpubr: 'ggplot2' Based Publication Ready Plots. R package version 0.4.0. https://CRAN.R-project.org/package=ggpubr",br(),
-                                   "- Adrian Dusa (2021). venn: Draw Venn Diagrams. R package version 1.10. https://CRAN.R-project.org/package=venn",br(),
+                                   "- Mitjavila-Ventura A (2022). _plotmics: Visualization of Omics And Sequencing Data In R_. https://amitjavilaventura.github.io/plotmics/index.html,
+  https://github.com/amitjavilaventura/plotmics.",br(),
                                    "- Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2021). dplyr: A Grammar of Data Manipulation. R package version 1.0.7. https://CRAN.R-project.org/package=dplyr",br(),
                                    "- Hadley Wickham (2021). tidyr: Tidy Messy Data. R package version 1.1.3. https://CRAN.R-project.org/package=tidyr",br(),
-                                   "- Machlab D, Burger L, Soneson C, Rijli FM, Schübeler D, Stadler MB. monaLisa: an R/Bioconductor package for identifying regulatory motifs. Bioinformatics (2022).",br(),
                                    "- Lawrence M, Huber W, Pag\`es H, Aboyoun P, Carlson M, et al. (2013) Software for Computing and Annotating Genomic Ranges. PLoS Comput Biol 9(8): e1003118. doi:10.1371/journal.pcbi.1003118",br(),
-                                   "- Morgan M, Wang J, Obenchain V, Lang M, Thompson R, Turaga N (2022). _BiocParallel:
-  Bioconductor facilities for parallel evaluation_. R package version 1.30.3,
-  <https://github.com/Bioconductor/BiocParallel>.",br(),
-                                   "- Morgan M, Obenchain V, Hester J, Pagès H (2022). _SummarizedExperiment:
-  SummarizedExperiment container_. R package version 1.26.1,
-  <https://bioconductor.org/packages/SummarizedExperiment>.",br(),
-                                   "- Baranasic D (2020). _JASPAR2020: Data package for JASPAR database (version 2020)_. R
-  package version 0.99.10, <http://jaspar.genereg.net/>.",br(),
-                                   "- Team BC, Maintainer BP (2019). _TxDb.Mmusculus.UCSC.mm10.knownGene: Annotation package
-  for TxDb object(s)_. R package version 3.10.0.",br(),
-                                   "- Team TBD (2021). _BSgenome.Mmusculus.UCSC.mm10: Full genome sequences for Mus musculus
-  (UCSC version mm10, based on GRCm38.p6)_. R package version 1.4.3.",br(),
-                                   "- Carlson M, Maintainer BP (2015). _TxDb.Hsapiens.UCSC.hg19.knownGene: Annotation package
-  for TxDb object(s)_. R package version 3.2.2.",br(),
-                                   "- Team TBD (2020). _BSgenome.Hsapiens.UCSC.hg19: Full genome sequences for Homo sapiens
-  (UCSC version hg19, based on GRCh37.p13)_. R package version 1.4.3.",br(),
-                                   "Tan, G., and Lenhard, B. (2016). TFBSTools: an R/bioconductor package for transcription factor
-  binding site analysis. Bioinformatics 32, 1555-1556.",br(),
+                                   "- Team BC, Maintainer BP (2019). _TxDb.Mmusculus.UCSC.mm10.knownGene: Annotation package for TxDb object(s)_. R package version 3.10.0.",br(),
+                                   "- Carlson M, Maintainer BP (2015). _TxDb.Hsapiens.UCSC.hg19.knownGene: Annotation package for TxDb object(s)_. R package version 3.2.2.",br(),
+                                   "- Ritchie, M.E., Phipson, B., Wu, D., Hu, Y., Law, C.W., Shi, W., and Smyth, G.K. (2015). limma powers differential expression analyses for RNA-sequencing
+  and microarray studies. Nucleic Acids Research 43(7), e47.",br(),
+                                   "- Liao Y, Smyth GK and Shi W (2019). The R package Rsubread is easier, faster, cheaper and better for alignment and quantification of RNA sequencing reads.
+  Nucleic Acids Research 47(8), e47.",br(),
+                                   "- Morgan M, Pagès H, Obenchain V, Hayden N (2022). _Rsamtools: Binary alignment (BAM), FASTA, variant call (BCF), and tabix file import_. R package version
+  2.12.0, <https://bioconductor.org/packages/Rsamtools>.",br(),
+                                   "- Gu Z (2022). _rGREAT: GREAT Analysis - Functional Enrichment on Genomic Regions_. https://github.com/jokergoo/rGREAT,
+  http://great.stanford.edu/public/html/.",br(),
+                                   "- - Shang, G.-D., Xu, Z.-G., Wan, M.-C., Wang, F.-X. & Wang, J.-W.  FindIT2: an R/Bioconductor package to identify influential transcription factor and
+  targets based on multi-omics data.  BMC Genomics 23, 272 (2022)",br(),
+                                   "- Wagih O (2017). _ggseqlogo: A 'ggplot2' Extension for Drawing Publication-Ready Sequence Logos_. R package version 0.1,
+  <https://CRAN.R-project.org/package=ggseqlogo>.",br(),
+                                   "- Amezquita R (2022). _marge: API for HOMER in R for Genomic Analysis using Tidy Conventions_. R package version 0.0.4.9999.",br(),
+                                   "- Zeileis A, Hornik K, Murrell P (2009). Escaping RGBland: Selecting Colors for Statistical Graphics. _Computational Statistics \& Data Analysis_,
+  *53*(9), 3259-3270. doi:10.1016/j.csda.2008.11.033 <https://doi.org/10.1016/j.csda.2008.11.033>.",br(),
+                                   "- Kassambara A (2022). _ggcorrplot: Visualization of a Correlation Matrix using 'ggplot2'_. R package version 0.1.4,
+  <https://CRAN.R-project.org/package=ggcorrplot>.",br(),
+                                   "- Zheng H (2021). _bedtorch: R package for fast BED-file manipulation_. R package version 0.1.12.12, <https://github.com/haizi-zh/bedtorch>.",br(),
+                                   "- Hahne F, Ivanek R. Visualizing Genomic Data Using Gviz and Bioconductor. Methods Mol Biol. 1418:335-51 (2016).",br()
                             )
                           )
                  )

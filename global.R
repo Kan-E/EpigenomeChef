@@ -14,7 +14,6 @@ library(multcomp)
 library(tidyverse)
 library(tools)
 library(ggpubr)
-library(venn)
 library(ggrepel)
 library(ggdendro)
 library(ggplotify)
@@ -22,9 +21,6 @@ library(gridExtra)
 library(cowplot)
 library(DESeq2)
 library(ggnewscale)
-library(IHW)
-library(qvalue)
-library(DEGreport)
 library(AnnotationDbi)
 library(clusterProfiler)
 library(enrichplot)
@@ -38,19 +34,13 @@ library('shinyjs', verbose = FALSE)
 library(BiocManager)
 library(clusterProfiler.dplyr)
 library(dorothea)
-library(umap)
-library(biomaRt)
 library(GenomicRanges)
-library(BiocParallel)
-library(SummarizedExperiment)
 library(soGGi) ##devtools::install_github("ColeWunderlich/soGGi")
-library(ChIPQC)
 library(ChIPseeker)
 library(ChIPpeakAnno)
 library(rGREAT)
 library(FindIT2)
 library(limma)
-library(edgeR)
 library(ggseqlogo)
 library(marge)
 library(plotmics)
@@ -1054,4 +1044,37 @@ regulatory_potential_f <- function(species,data,result_geneRP,DEG_fc,DEG_fdr){
     )
     return(merge_data)
   }
+}
+
+GetGRanges <- function (LoadFile, simple = FALSE,sepr = "\t", simplify = FALSE) {
+    if (sum(class(LoadFile) == "character")) {
+      RangesTable <- read.delim(LoadFile, sep = sepr, header = FALSE, 
+                                comment.char = "#")
+      if(str_detect(RangesTable[1,2], "tart") == TRUE) {
+        RangesTable <- RangesTable[-1]
+      }else RangesTable <- RangesTable
+    }
+    Chromosomes <- as.vector(RangesTable[, 1])
+    Start <- as.numeric(as.vector(RangesTable[, 2]))
+    End <- as.numeric(as.vector(RangesTable[, 3]))
+    RegionRanges <- GRanges(seqnames = Chromosomes, ranges = IRanges(start = Start, 
+                                                                     end = End))
+    if (simple == FALSE) {
+      if (ncol(RangesTable) > 4) {
+        ID <- as.vector(RangesTable[, 4])
+        Score <- as.vector(RangesTable[, 5])
+        if (ncol(RangesTable) > 6) {
+          Strand <- rep("*", nrow(RangesTable))
+          RemainderColumn <- as.data.frame(RangesTable[, 
+                                                       -c(1:6)])
+          elementMetadata(RegionRanges) <- cbind(ID, 
+                                                 Score, Strand, RemainderColumn)
+        }
+        else {
+          elementMetadata(RegionRanges) <- cbind(ID, 
+                                                 Score)
+        }
+      }
+    }
+  return(RegionRanges)
 }
