@@ -5744,7 +5744,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
         files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
         files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
-        files2 <- lapply(files, read_bed, use_gr = FALSE)
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
       return(NULL)
@@ -5756,7 +5756,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         name <- c(name, gsub("\\..+$", "", input$bed_data_file[nr,]$name))
         files <- c(files,file)
       }
-      files2 <- lapply(files, read_bed, use_gr = FALSE)
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
       print(files2)
       return(files2)
@@ -5770,7 +5770,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
         files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
         files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
-        files2 <- lapply(files, read_bed, use_gr = FALSE)
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
       return(NULL)
@@ -5782,7 +5782,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         name <- c(name, gsub("\\..+$", "", input$bed_data_file2[nr,]$name))
         files <- c(files,file)
       }
-      files2 <- lapply(files, read_bed, use_gr = FALSE)
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
       print(files2)
       return(files2)
