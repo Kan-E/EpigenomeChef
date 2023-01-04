@@ -68,7 +68,9 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     cd /usr/local/homer && \
     wget http://homer.ucsd.edu/homer/configureHomer.pl && \
     perl configureHomer.pl -install && \
-    perl configureHomer.pl -install hg19
+    perl configureHomer.pl -install hg19 && \
+    perl configureHomer.pl -install hg38 && \
+    perl configureHomer.pl -install mm10
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/
