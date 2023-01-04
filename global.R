@@ -50,7 +50,6 @@ library(RColorBrewer)
 library(bedtorch)
 options('homer_path' = "/Users/kanetoh/miniconda3")
 check_homer()
-options(repos = BiocManager::repositories())
 options(rsconnect.max.bundle.size=3145728000)
 species_list <- c("not selected", "Mus musculus (mm10)","Homo sapiens (hg19)","Homo sapiens (hg38)")
 gene_set_list <- c("MSigDB Hallmark", "KEGG", "Reactome", "PID (Pathway Interaction Database)",
