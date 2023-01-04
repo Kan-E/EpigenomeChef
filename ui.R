@@ -1308,7 +1308,7 @@ shinyUI(
                                    "- Wagih O (2017). _ggseqlogo: A 'ggplot2' Extension for Drawing Publication-Ready Sequence Logos_. R package version 0.1,
   <https://CRAN.R-project.org/package=ggseqlogo>.",br(),
                                    "- Amezquita R (2022). _marge: API for HOMER in R for Genomic Analysis using Tidy Conventions_. R package version 0.0.4.9999.",br(),
-                                   "- Zeileis A, Hornik K, Murrell P (2009). Escaping RGBland: Selecting Colors for Statistical Graphics. _Computational Statistics \& Data Analysis_,
+                                   "- Zeileis A, Hornik K, Murrell P (2009). Escaping RGBland: Selecting Colors for Statistical Graphics. _Computational Statistics & Data Analysis_,
   *53*(9), 3259-3270. doi:10.1016/j.csda.2008.11.033 <https://doi.org/10.1016/j.csda.2008.11.033>.",br(),
                                    "- Kassambara A (2022). _ggcorrplot: Visualization of a Correlation Matrix using 'ggplot2'_. R package version 0.1.4,
   <https://CRAN.R-project.org/package=ggcorrplot>.",br(),
