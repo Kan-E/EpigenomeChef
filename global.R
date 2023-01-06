@@ -50,7 +50,7 @@ library(RColorBrewer)
 library(bedtorch)
 options('homer_path' = "/usr/local/homer")
 check_homer()
-options(rsconnect.max.bundle.size=3145728000)
+options(rsconnect.max.bundle.size=31457280000000000000)
 species_list <- c("not selected", "Mus musculus (mm10)","Homo sapiens (hg19)","Homo sapiens (hg38)")
 gene_set_list <- c("MSigDB Hallmark", "KEGG", "Reactome", "PID (Pathway Interaction Database)",
                    "BioCarta","WikiPathways", "GO biological process", 

@@ -220,7 +220,7 @@ shinyUI(
             }"))),
                                                          plotOutput("trackplot_goi")
                                          ),
-                                         bsCollapsePanel(title="DESeq2 result:",
+                                         bsCollapsePanel(title="DAR result:",
                                                          value="DEG_panel",
                                                          fluidRow(
                                                            column(4, downloadButton("download_pair_DEG_result", "Download DEG result"))
@@ -742,8 +742,7 @@ shinyUI(
                  # Clustering---------------------------------
                  sidebarPanel(
                    radioButtons('data_file_type_clustering','Input:',
-                                c('BigWig files'="Row1",
-                                  'Bam files'="Row2"
+                                c('BigWig files'="Row1"
                                 ),selected = "Row1"),
                    conditionalPanel(condition="input.data_file_type_clustering=='Row1'",
                                     fileInput("file1_clustering",
@@ -771,7 +770,7 @@ shinyUI(
                                               accept = c("bam"),
                                               multiple = TRUE,
                                               width = "80%"),
-                                    bsPopover("icon1_clustering", "Bam files (bam):", 
+                                    bsPopover("icon_bam_clustering", "Bam files (bam):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>",
                                                             strong("Short names are recommended for file names.")), 
@@ -801,7 +800,7 @@ shinyUI(
                                               accept = c("bed","narrowPeak"),
                                               multiple = TRUE,
                                               width = "80%"),
-                                    bsPopover("icon2_clustering", "peak call file (bed, narrowPeak):", 
+                                    bsPopover("icon2_clustering", "Bed files (bed, narrowPeak):", 
                                               content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
                                                             "The second column is start position on the chromosome.<br>",
                                                             "The third column is end position on the chromosome.<br>"), 
