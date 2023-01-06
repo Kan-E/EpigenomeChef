@@ -477,19 +477,28 @@ shinyServer(function(input, output, session) {
   )
   ###GOI----------------------
   output$volcano_x <- renderUI({
-    withProgress(message = "Preparing volcano plot",{
-    sliderInput("xrange","X_axis range:",min = -100,
-                max=100, step = 1,
-                value = c(-5, 5))
+      if(!is.null(data_degcount())){
+      withProgress(message = "Preparing volcano plot",{
+        data <- as.data.frame(data_degcount())
+        min <- floor(min(data$log2FoldChange))
+        max <- ceiling(max(data$log2FoldChange))
+    sliderInput("xrange","X_axis range:",min = min-1,
+                max=max+1, step = 1,
+                value = c(min, max))
     })
+      }
   })
   output$volcano_y <- renderUI({
-    sliderInput("yrange","Y_axis range:",min = 0, max= 300, step = 1,
-                value = 10)
+    if(!is.null(data_degcount())){
+      data <- as.data.frame(data_degcount())
+    max <- ceiling(max(-log10(data$padj)))
+    sliderInput("yrange","Y_axis range:",min = 0, max= max+1, step = 1,
+                value = max)
+    }
   })
   
   pair_volcano <- reactive({
-    if(!is.null(input$xrange)){
+    if(!is.null(input$xrange) && !is.null(input$yrange)){
       withProgress(message = "volcano plot",{
         data <- as.data.frame(data_degcount())
         count <- deg_norm_count()
