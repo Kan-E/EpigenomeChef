@@ -549,7 +549,7 @@ read_known_results<-function (path, homer_dir = TRUE) {
   dplyr::inner_join(known_results, hm, 
                     by = c("motif_name", "motif_family", "experiment", "accession"))
 }   
-findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,size,back="random",bw_count=NULL){
+findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,size,back="random",bw_count=NULL,other_data=NULL){
     switch(Species,
            "Mus musculus (mm10)" = ref <- "mm10",
            "Homo sapiens (hg19)" = ref <- "hg19",
@@ -558,7 +558,7 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
            "known motif" = time <- "10 ~ 20",
            "known and de novo motifs" = time <- "20 ~ 30")
   withProgress(message = paste0("Motif analysis takes about ",time," min per group"),{
-    if(type == "Genome-wide") {
+    if(type == "Genome-wide" || type == "Other") {
       group_name <- names(df)
       group_file <- length(names(df))
     }else{
@@ -569,6 +569,7 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
     df2 <- list()
     path <- format(Sys.time(), "%Y%m%d_%H%M_homer")
     dir.create(path = path)
+    print(group_name)
     for(name in group_name){
       group_dir <- paste0(path, "/",name)
       dir.create(path = group_dir)
@@ -588,6 +589,7 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
         }
       }else y<- df[[name]]
       y <- as.data.frame(y)
+      print(head(y))
       if(dim(y)[1] != 0){
         if(type=="Genome-wide"){
         if(back == "random"){
@@ -605,6 +607,16 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
                               ranges = IRanges(start,end)))
           bg <- as.data.frame(bg)
         }
+        if(type=="Other"){
+          if(back == "random"){
+            bg <-'automatic'
+          }else{
+            z <- with(y, GRanges(seqnames = seqnames, 
+                                 ranges = IRanges(start,end)))
+            bg <- exclude_bed(other_data,z)
+            bg <- as.data.frame(bg)
+          }
+            }
         print(head(bg))
       switch(motif,
              "known motif" = motif_type <- TRUE,

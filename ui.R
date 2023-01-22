@@ -29,12 +29,12 @@ shinyUI(
       ),
       "",
       id='navBar',
-      tabPanel("EpigenomeChef" ,value='Title', icon = icon("utensils"),
+      tabPanel("NGSblender" ,value='Title', icon = icon("blender"),
                fluidRow(
                  column(12,
                         br(),br(),
-                        h1(strong("EpigenomeChef"),align="center"),br(),
-                        p("EpigenomeChef is a web-based application for automated, systematic, and integrated epigenetic analysis.",
+                        h1(strong("NGSblender"),align="center"),br(),
+                        p("NGSblender is a web-based application for highlighting the differential epigenome-transcriptome interaction.",
                           align="center"),br(),br(),style={'background-color:mintcream;font-size: 16px;'},
                  ),
                  column(12,br(),
@@ -458,14 +458,14 @@ shinyUI(
                  sidebarPanel(
                    fileInput("peak_call_file_venn1",
                              strong(
-                               span("Select peak call files"),
+                               span("Select bed files"),
                                span(icon("info-circle"), id = "icon_venn1", 
                                     options = list(template = popoverTempate))
                              ),
                              accept = c("bed","narrowPeak"),
                              multiple = TRUE,
                              width = "80%"),
-                   bsPopover("icon_venn1", "peak call files (bed, narrowPeak):", 
+                   bsPopover("icon_venn1", "Bed files (bed, narrowPeak):", 
                              content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
                                            "The second column is start position on the chromosome.<br>",
                                            "The third column is end position on the chromosome.<br>",
@@ -569,57 +569,6 @@ shinyUI(
                                          )
                               )
                      ),
-                     tabPanel("HOMER",
-                             fluidRow(
-                                column(3, downloadButton("download_motif_venn_plot", "Download motif plot")),
-                                column(3, downloadButton("download_homer_report_venn", "Download homer report"),
-                                       tags$head(tags$style("#download_homer_report_venn{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),)
-                              ),
-                             fluidRow(
-                               column(8, htmlOutput("venn_whichGroup1"))
-                             ),
-                              textOutput("Spe_motif_venn"),
-                              tags$head(tags$style("#Spe_motif_venn{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),
-                              fluidRow(
-                                column(4, htmlOutput("homer_unknown_venn")),
-                                column(4, htmlOutput("homer_size_venn")),
-                                column(4, htmlOutput("homer_size2_venn"))
-                              ),
-                              fluidRow(
-                                column(4, actionButton("motifButton_venn", "Start"),
-                                       tags$head(tags$style("#motifButton_venn{color: red;
-                                 font-size: 20px;
-                                 font-style: bold;
-                                 }"),
-                                                 tags$style("
-          body {
-            padding: 0 !important;
-          }"
-                                                 ))
-                                )
-                              ),
-                             
-                              htmlOutput("homer_showCategory_venn"),
-                              plotOutput("motif_venn_plot"),
-                              bsCollapse(id="Promoter_motif_venn_collapse_panel",open="motif_venn_result_table",multiple = TRUE,
-                                         bsCollapsePanel(title="Known motif",
-                                                         value="motif_venn_result_table",
-                                                         downloadButton("download_motif_venn_table", "Download known motif result"),
-                                                         DTOutput('motif_venn_result')
-                                         ),
-                                         bsCollapsePanel(title= "de_novo_motif",
-                                                         value="Promoter_motif_region_panel",
-                                                         downloadButton("download_denovo_motif_venn_table", "Download motif region"),
-                                                         dataTableOutput("denovo_motif_venn_result")
-                                         )
-                              )
-                     ),
                      tabPanel("GREAT",
                               fluidRow(
                                 column(4, htmlOutput("venn_whichGroup2")),
@@ -646,6 +595,61 @@ shinyUI(
                                 column(4, downloadButton("download_venn_region_gene_associations", "Download table data"))
                               ),
                               DTOutput('region_gene_venn_associations')
+                     ),
+                     tabPanel("HOMER",
+                              fluidRow(
+                                column(3, downloadButton("download_motif_venn_plot", "Download motif plot")),
+                                column(3, downloadButton("download_homer_report_venn", "Download homer report"),
+                                       tags$head(tags$style("#download_homer_report_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
+                              fluidRow(
+                                column(8, htmlOutput("venn_whichGroup1"))
+                              ),
+                              textOutput("Spe_motif_venn"),
+                              tags$head(tags$style("#Spe_motif_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(4, htmlOutput("homer_unknown_venn")),
+                                column(4, htmlOutput("homer_size_venn")),
+                                column(4, htmlOutput("homer_size2_venn"))
+                              ),
+                              fluidRow(
+                                column(4, htmlOutput("homer_bg_venn")),
+                                column(4, htmlOutput("homer_bg2_venn"))
+                              ),
+                              fluidRow(
+                                column(4, actionButton("motifButton_venn", "Start"),
+                                       tags$head(tags$style("#motifButton_venn{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                )
+                              ),
+                              
+                              htmlOutput("homer_showCategory_venn"),
+                              plotOutput("motif_venn_plot"),
+                              bsCollapse(id="Promoter_motif_venn_collapse_panel",open="motif_venn_result_table",multiple = TRUE,
+                                         bsCollapsePanel(title="Known motif",
+                                                         value="motif_venn_result_table",
+                                                         downloadButton("download_motif_venn_table", "Download known motif result"),
+                                                         DTOutput('motif_venn_result')
+                                         ),
+                                         bsCollapsePanel(title= "de_novo_motif",
+                                                         value="Promoter_motif_region_panel",
+                                                         downloadButton("download_denovo_motif_venn_table", "Download motif region"),
+                                                         dataTableOutput("denovo_motif_venn_result")
+                                         )
+                              )
                      ),
                      tabPanel("with RNA-seq",
                               bsCollapse(id="RNAseqresult_venn_panel",open="RNAseqresult_venn_table",
@@ -851,7 +855,7 @@ shinyUI(
                      type = "tabs",
                      tabPanel("Input Data",
                               bsCollapse(id="input_collapse_panel_clustering",open="bw_files_panel",multiple = TRUE,
-                                         bsCollapsePanel(title="uploaded bigwig or bam files:",
+                                         bsCollapsePanel(title="uploaded bigwig files:",
                                                          value="bw_files_panel",
                                                          DTOutput('input_bw_files_clustering') 
                                          ),
@@ -1141,6 +1145,10 @@ shinyUI(
                                 column(4, htmlOutput("homer_unknown_enrich")),
                                 column(4, htmlOutput("homer_size_enrich")),
                                 column(4, htmlOutput("homer_size2_enrich"))
+                              ),
+                              fluidRow(
+                                column(4, htmlOutput("homer_bg_enrich")),
+                                column(4, htmlOutput("homer_bg2_enrich"))
                               ),
                               fluidRow(
                                 column(4, actionButton("motifButton_enrich", "Start"),

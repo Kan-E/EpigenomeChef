@@ -1279,14 +1279,14 @@ shinyServer(function(input, output, session) {
     sliderInput("homer_showCategory","Most significant motifs", value=5, min=1,max=20)
   })
   output$homer_size <- renderUI({
-    radioButtons('homer_size','Selecting the size of the region for motif finding',
+    radioButtons('homer_size','Type of the region for motif finding',
                  c('given (exact size)'="given",
                    'custom size'="custom"
                  ),selected = "custom")
   })
   output$homer_bg <- renderUI({
     if(input$Genomic_region == "Genome-wide"){
-    radioButtons('homer_bg','Selecting the background sequence',
+    radioButtons('homer_bg','Background sequence',
                  c('random'="random",
                    'peak calling files'="peakcalling"
                  ),selected = "random")
@@ -2922,11 +2922,47 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     sliderInput("homer_showCategory_venn","Most significant motifs", value=5, min=1,max=20)
   })
   output$homer_size_venn <- renderUI({
-    radioButtons('homer_size_venn','Selecting the size of the region for motif finding',
+    radioButtons('homer_size_venn','Type of the region for motif finding',
                  c('given (exact size)'="given",
                    'custom size'="custom"
                  ),selected = "custom")
   })
+  output$homer_bg_venn <- renderUI({
+      radioButtons('homer_bg_venn','Background sequence',
+                   c('random'="random",
+                     'bed files'="peakcalling"
+                   ),selected = "random")
+  })
+  output$homer_bg2_venn <- renderUI({
+    if(!is.null(input$homer_bg_venn)){
+      if(input$homer_bg_venn == "peakcalling"){
+        fileInput('homer_bg2_venn',
+                  'Select bed files',
+                  accept = c("bed","narrowPeak"),
+                  multiple = TRUE,
+                  width = "80%")
+        }}
+  })
+  Venn_peak_call_files_homer <- reactive({
+    if(is.null(input$homer_bg2_venn)){
+      return(NULL)
+    }else{
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$homer_bg2_venn[, 1])){
+        file <- input$homer_bg2_venn[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$homer_bg2_venn[nr,]$name))
+        files <- c(files,file)
+      }
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
+      names(files2)<-name
+      print(files2)
+      files3 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+      print(files3)
+      return(files3)
+    }
+  })
+  
   output$homer_size2_venn <- renderUI({
     if(!is.null(input$homer_size_venn)){
     if(input$homer_size_venn == "custom"){
@@ -2948,8 +2984,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   preMotif_list_venn <- reactive({
     df <- list()
     for(name in input$venn_whichGroup1){
+      print(name)
       df[[name]] <- venn_overlap()$peaklist[[name]]
     }
+    print(df)
     return(df)
   })
 
@@ -2958,8 +2996,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(input$homer_size_venn == "custom") size <- input$homer_size2_venn
     if(input$motifButton_venn > 0 && !is.null(preMotif_list_venn()) 
        && input$Species_venn != "not selected" && !is.null(input$homer_unknown_venn)){
-      return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,
-                       motif=input$homer_unknown_venn))
+      return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,
+                       motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other"))
     }
   })
   
@@ -5618,7 +5656,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   ##Enrich motif -----------
   output$homer_size_enrich <- renderUI({
-    radioButtons('homer_size_enrich','Selecting the size of the region for motif finding',
+    radioButtons('homer_size_enrich','Type of the region for motif finding',
                  c('given (exact size)'="given",
                    'custom size'="custom"
                  ),selected = "custom")
@@ -5628,6 +5666,41 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(input$homer_size_enrich == "custom"){
       numericInput('homer_size2_enrich','Size of the region for motif finding',value=200, step=100)
       }}
+  })
+  output$homer_bg_enrich <- renderUI({
+    radioButtons('homer_bg_enrich','Background sequence',
+                 c('random'="random",
+                   'bed files'="peakcalling"
+                 ),selected = "random")
+  })
+  output$homer_bg2_enrich <- renderUI({
+    if(!is.null(input$homer_bg_enrich)){
+      if(input$homer_bg_enrich == "peakcalling"){
+        fileInput('homer_bg2_enrich',
+                  'Select bed files',
+                  accept = c("bed","narrowPeak"),
+                  multiple = TRUE,
+                  width = "80%")
+      }}
+  })
+  Enrich_peak_call_files_homer <- reactive({
+    if(is.null(input$homer_bg2_enrich)){
+      return(NULL)
+    }else{
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$homer_bg2_enrich[, 1])){
+        file <- input$homer_bg2_enrich[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$homer_bg2_enrich[nr,]$name))
+        files <- c(files,file)
+      }
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
+      names(files2)<-name
+      print(files2)
+      files3 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+      print(files3)
+      return(files3)
+    }
   })
   output$homer_unknown_enrich <- renderUI({
     selectInput("homer_unknown_enrich","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
@@ -5641,11 +5714,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich
     if(input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
        && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
-      return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,
-                       motif=input$homer_unknown_enrich))
+      return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,
+                       motif=input$homer_unknown_enrich, other_data = Enrich_peak_call_files_homer(),type="Other"))
     }
   })
-  
+
   output$motif_enrich_plot <- renderPlot({
     if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && 
        !is.null(input$homer_unknown_enrich) && input$Species_enrich != "not selected"){
