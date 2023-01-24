@@ -258,6 +258,11 @@ shinyUI(
                               )),
                      tabPanel("Peak distribution",
                               downloadButton("download_input_peak_distribution", "Download Up DAR distribution"),
+                              column(4, textOutput("Spe_dist_promoter"),
+                                     tags$head(tags$style("#Spe_dist_promoter{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }"))),
                               textOutput("Spe_dist"),
                                      tags$head(tags$style("#Spe_dist{color: red;
                                  font-size: 20px;
@@ -792,7 +797,22 @@ shinyUI(
                                     fluidRow(
                                       column(5, numericInput("upstream_clustering", "upstream", value = 500, min = 0)),
                                       column(5, numericInput("downstream_clustering", "downstream", value = 500, min = 0))
-                                    )
+                                    ),
+                                    fileInput("genelist_file1_clustering",
+                                              strong(
+                                                span("Option: Select a gene list file for gene extraction"),
+                                                span(icon("info-circle"), id = "icon_genelist_clustering", 
+                                                     options = list(template = popoverTempate))
+                                              ),
+                                              accept = c("txt","csv","xlsx"),
+                                              multiple = TRUE,
+                                              width = "80%"),
+                                    bsPopover("icon_genelist_clustering", "gene list file (txt, csv, xlsx):", 
+                                              content=paste("The first column is", strong("gene name"), ".<br>", 
+                                                            "The second and subsequent columns do not affect the analysis.<br>", 
+                                                            "File names do not use `.` other than the extension.<br><br>", 
+                                                            img(src="genelist_input.png", width = 100,height = 300)), 
+                                              placement = "right",options = list(container = "body"))
                    ),
                    conditionalPanel(condition="input.Genomic_region_clustering=='Genome-wide'",
                                     fileInput("peak_call_file1_clustering",

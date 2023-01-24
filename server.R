@@ -11,6 +11,9 @@ shinyServer(function(input, output, session) {
   output$Spe_dist <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
   })
+  output$Spe_dist_promoter <- renderText({
+    if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, this function is not available. This function is for 'Genome-wide' mode. ")
+  })
   output$Spe_motif <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
   })
@@ -1462,9 +1465,11 @@ shinyServer(function(input, output, session) {
   })  
   output$deg_peak_distribution <- renderPlot({
     withProgress(message = "Plot peak distribution for DAR",{
-      if(!is.null(deg_peak_list()) && input$Genomic_region == "Genome-wide" && input$Species != "not selected"){
+      if(input$Genomic_region == "Genome-wide"){
+      if(!is.null(deg_peak_list()) && input$Species != "not selected"){
         genomicElementDistribution(deg_peak_list()[["Down"]], 
                                    TxDb = txdb())
+      }
       }
     })
   })
@@ -1563,7 +1568,6 @@ shinyServer(function(input, output, session) {
   
   peak_up_sig <- reactive({
     up2 <- peak_up_grange()
-    feature.recentered <- reCenterPeaks(up2, width=4000)
     cvglists <- peak_up_cvglists()
     feature.center <- reCenterPeaks(up2, width=1)
     sig <- featureAlignedSignal(cvglists, feature.center,
@@ -1574,9 +1578,6 @@ shinyServer(function(input, output, session) {
   peak_up_feature_center <- reactive({
     up2 <- peak_up_grange()
     feature.center <- reCenterPeaks(up2, width=1)
-    sig <- peak_up_sig()
-    keep <- rowSums(sig[[2]]) > 0
-    feature.center <- feature.center[keep]
     return(feature.center)
   })
   peak_up_alinedHeatmap <- reactive({
@@ -1681,7 +1682,6 @@ shinyServer(function(input, output, session) {
   
   peak_down_sig <- reactive({
     down2 <- peak_down_grange()
-    feature.recentered <- reCenterPeaks(down2, width=4000)
     cvglists <- peak_down_cvglists()
     feature.center <- reCenterPeaks(down2, width=1)
     sig <- featureAlignedSignal(cvglists, feature.center,
@@ -1692,9 +1692,6 @@ shinyServer(function(input, output, session) {
   peak_down_feature_center <- reactive({
     down2 <- peak_down_grange()
     feature.center <- reCenterPeaks(down2, width=1)
-    sig <- peak_down_sig()
-    keep <- rowSums(sig[[2]]) > 0
-    feature.center <- feature.center[keep]
     return(feature.center)
   })
   peak_down_alinedHeatmap <- reactive({
@@ -2690,12 +2687,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   peak_venn_sig <- reactive({
     venn2 <- peak_venn_grange()
-    feature.recentered <- reCenterPeaks(venn2, width=4000)
     cvglists <- peak_venn_cvglists()
     feature.center <- reCenterPeaks(venn2, width=1)
-    print(venn2)
-    print(feature.center)
-    print(cvglists)
     sig <- featureAlignedSignal(cvglists, feature.center,
                                 upstream=2000, downstream=2000,)
     return(sig)
@@ -2704,9 +2697,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   peak_venn_feature_center <- reactive({
     venn2 <- peak_venn_grange()
     feature.center <- reCenterPeaks(venn2, width=1)
-    sig <- peak_venn_sig()
-    keep <- rowSums(sig[[2]]) > 0
-    feature.center <- feature.center[keep]
     return(feature.center)
   })
   peak_venn_alinedHeatmap <- reactive({
@@ -4018,13 +4008,33 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       as.data.frame(uploaded_files)
     }
   })
-  
-  bw_count_clustering <- reactive({
+  genelist_clustering <- reactive({
+    withProgress(message = "Importing a gene list file, please wait",{
+      tmp <- input$genelist_file1_clustering$datapath
+      if(is.null(input$genelist_file1_clustering) && input$goButton_clustering > 0 )  tmp = "data/RNAseq.txt"
+      if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+        if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
+        if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
+        rownames(df) = gsub("\"", "", rownames(df))
+        if(length(colnames(df)) != 0){
+          if(str_detect(colnames(df)[1], "^X\\.")){
+            colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+          }
+        }
+        return(df)
+      }
+    })
+  })
+  bw_count_clustering2 <- reactive({
     if(input$data_file_type_clustering == "Row1" && !is.null(bw_files_clustering())){
       if(input$Genomic_region_clustering == "Promoter"){
         if(input$Species_clustering != "not selected"){
-          return(Bigwig2count(bw = bw_files_clustering(),promoter_region_clustering(),
-                              Species = input$Species_clustering,input_type =input$Genomic_region_clustering)) 
+          count <-Bigwig2count(bw = bw_files_clustering(),promoter_region_clustering(),
+                               Species = input$Species_clustering,input_type =input$Genomic_region_clustering)
+          return(count) 
         }
       }else{
         if(!is.null(peak_call_files_clustering())){
@@ -4063,6 +4073,29 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           }
         }
       })
+    }
+  })
+  bw_count_clustering <- reactive({
+    if(input$data_file_type_clustering == "Row1" && !is.null(bw_files_clustering())){
+      if(input$Genomic_region_clustering == "Promoter"){
+        if(input$Species_clustering != "not selected"){
+          count <-bw_count_clustering2()
+          if(!is.null(genelist_clustering())){
+            colnum <- length(colnames(count))
+            print(colnum)
+            count <- merge(count,genelist_clustering(),by=0)
+            rownames(count) <- count$Row.names
+            count <- count[,2:(1+colnum)]
+          }
+          return(count) 
+        }
+      }else{
+          return(bw_count_clustering2())
+      }
+    }
+    if(input$Species_clustering != "not selected" && input$data_file_type_clustering == "Row2" && 
+       !is.null(bam_clustering())){
+      return(bw_count_clustering2())
     }
   })
   output$raw_count_table_clustering <- DT::renderDataTable({
@@ -4509,7 +4542,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   peak_kmeans_sig <- reactive({
     kmeans2 <- peak_kmeans_grange()
-    feature.recentered <- reCenterPeaks(kmeans2, width=4000)
     cvglists <- peak_kmeans_cvglists()
     feature.center <- reCenterPeaks(kmeans2, width=1)
     sig <- featureAlignedSignal(cvglists, feature.center,
@@ -4520,9 +4552,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   peak_kmeans_feature_center <- reactive({
     kmeans2 <- peak_kmeans_grange()
     feature.center <- reCenterPeaks(kmeans2, width=1)
-    sig <- peak_kmeans_sig()
-    keep <- rowSums(sig[[2]]) > 0
-    feature.center <- feature.center[keep]
     return(feature.center)
   })
   peak_kmeans_alinedHeatmap <- reactive({
