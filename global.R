@@ -56,7 +56,7 @@ gene_set_list <- c("MSigDB Hallmark", "KEGG", "Reactome", "PID (Pathway Interact
                    "BioCarta","WikiPathways", "GO biological process", 
                    "GO cellular component","GO molecular function", "Human phenotype ontology", 
                    "DoRothEA regulon (activator)", "DoRothEA regulon (repressor)",
-                   "Transcription factor targets", "miRNA target")
+                   "Transcription factor targets", "miRNA target","Position")
 gene_set_list_genome <- c("MSigDB Hallmark", "KEGG", "Reactome", "PID (Pathway Interaction Database)",
                    "BioCarta","WikiPathways", "GO biological process", 
                    "GO cellular component","GO molecular function", "Human phenotype ontology", 
@@ -286,6 +286,10 @@ GeneList_for_enrichment <- function(Species, Gene_set, org, Custom_gene_list){
       H_t2g["gs_name"] <- lapply(H_t2g["gs_name"], gsub, pattern="HALLMARK_", replacement = "")
       H_t2g$gs_name <- H_t2g$gs_name %>% str_to_lower() %>% str_to_title()
       H_t2g["gs_name"] <- lapply(H_t2g["gs_name"], gsub, pattern="P53", replacement = "p53")
+    }
+    if(Gene_set == "Position"){
+      H_t2g <- msigdbr(species = species, category = "C1") %>%
+        dplyr::select(gs_name, entrez_gene, gs_id, gs_description) 
     }
     if(Gene_set == "KEGG"){
       H_t2g <- msigdbr(species = species, category = "C2", subcategory = "CP:KEGG") %>%
