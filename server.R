@@ -2180,7 +2180,7 @@ shinyServer(function(input, output, session) {
   int_selected_bed <- reactive({
     if(!is.null(RP_selected_table())){
       gene <- RP_selected_table()$gene_id
-      type <- gsub("\\-.*","", input$RNAseqGroup)
+      type <- gsub(".+\\-","", input$RNAseqGroup)
       print(type)
       if(type == "up") {
         peak <- subset(mmAnno_up(), gene_id %in% gene)
@@ -2200,7 +2200,6 @@ shinyServer(function(input, output, session) {
         mcols(down_peak3) <- DataFrame(Group = "up")
         y <- as.data.frame(down_peak3)
       }
-      y <- as.data.frame(peak)
       return(y)
     }
   })
