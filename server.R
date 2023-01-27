@@ -2184,11 +2184,21 @@ shinyServer(function(input, output, session) {
       print(type)
       if(type == "up") {
         peak <- subset(mmAnno_up(), gene_id %in% gene)
-        mcols(peak) <- DataFrame(Group = "up")
+        up_peak2 <- as.data.frame(peak)
+        up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+        up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+        up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+        mcols(up_peak3) <- DataFrame(Group = "up")
+        y <- as.data.frame(up_peak3)
       }
       if(type == "down") {
         peak <- subset(mmAnno_down(), gene_id %in% gene)
-        mcols(peak) <- DataFrame(Group = "down")
+        down_peak2 <- as.data.frame(peak)
+        down_peak2$Row.names <- paste0(down_peak2$seqnames,":",down_peak2$start,"-",down_peak2$end)
+        down_peak2 <- down_peak2 %>% distinct(Row.names, .keep_all = T)
+        down_peak3 <- with(down_peak2,GRanges(seqnames,IRanges(start,end)))
+        mcols(down_peak3) <- DataFrame(Group = "up")
+        y <- as.data.frame(down_peak3)
       }
       y <- as.data.frame(peak)
       return(y)
@@ -2231,27 +2241,19 @@ shinyServer(function(input, output, session) {
       y <- NULL
       if(!is.null(mmAnno_up())) {
         up_peak <- subset(mmAnno_up(), gene_id %in% gene)
-        up_peak2 <- as.data.frame(up_peak)
-        up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-        up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-        up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-        mcols(up_peak3) <- DataFrame(Group = "up")
+        mcols(up_peak) <- DataFrame(Group = "up")
       }
       if(!is.null(mmAnno_down())) {
         down_peak <- subset(mmAnno_down(), gene_id %in% gene)
-        down_peak2 <- as.data.frame(down_peak)
-        down_peak2$Row.names <- paste0(down_peak2$seqnames,":",down_peak2$start,"-",down_peak2$end)
-        down_peak2 <- down_peak2 %>% distinct(Row.names, .keep_all = T)
-        down_peak3 <- with(down_peak2,GRanges(seqnames,IRanges(start,end)))
-        mcols(down_peak3) <- DataFrame(Group = "up")
-        y <- as.data.frame(down_peak3)
+        mcols(down_peak) <- DataFrame(Group = "up")
+        y <- as.data.frame(down_peak)
       }
       if(!is.null(mmAnno_up()) && !is.null(mmAnno_down())) {
-        peak <- c(up_peak3,down_peak3)
+        peak <- c(up_peak,down_peak)
         y <- as.data.frame(peak)
       }else{
-        if(!is.null(mmAnno_up())) y <- as.data.frame(up_peak3)
-        if(!is.null(mmAnno_down())) y <- as.data.frame(down_peak3)
+        if(!is.null(mmAnno_up())) y <- as.data.frame(up_peak)
+        if(!is.null(mmAnno_down())) y <- as.data.frame(down_peak)
       }
       print(y)
       return(y)
