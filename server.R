@@ -2583,7 +2583,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 7
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        ggVennPeaks(make_venn())
+        print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
         dev.off()
         incProgress(1)
       })
@@ -3885,9 +3885,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 8
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        dotplot_for_output(data = int_enrich(),
-                           plot_genelist = int_enrich_plot(), Gene_set = input$intGeneset, 
-                           Species = input$Species)
+        dotplot_for_output(data = int_enrich_venn(),
+                           plot_genelist = int_enrich_plot_venn(), Gene_set = input$intGeneset_venn, 
+                           Species = input$Species_venn)
         dev.off()
         incProgress(1)
       })
