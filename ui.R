@@ -399,6 +399,11 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              textOutput("RNAseq_boxplot_error"),
+                              tags$head(tags$style("#RNAseq_boxplot_error{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
                               plotOutput("int_boxplot"),
                               fluidRow(
                                 column(4, htmlOutput("DEG_fc")),
@@ -682,6 +687,16 @@ shinyUI(
                                 column(4, htmlOutput("peak_distance_venn")),
                                 column(4, downloadButton("download_vennintbox","Download box plot"))
                               ),
+                              textOutput("Spe_int_venn"),
+                              tags$head(tags$style("#Spe_int_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              textOutput("RNAseq_boxplot_venn_error"),
+                              tags$head(tags$style("#RNAseq_boxplot_venn_error{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
                               plotOutput("int_box_venn"),
                               fluidRow(
                                 column(4, htmlOutput("DEG_fc_venn")),
@@ -691,11 +706,6 @@ shinyUI(
                                 column(4, downloadButton("download_vennintbar","Download bar plot")),
                                 column(4, downloadButton("download_vennKSplot","Download ks plot"))
                               ),
-                              textOutput("Spe_int_venn"),
-                              tags$head(tags$style("#Spe_int_venn{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),
                               fluidRow(
                                 column(6,plotOutput("int_bar_venn")),
                                 column(6,plotOutput('ks_plot_venn'))
@@ -1001,6 +1011,16 @@ shinyUI(
                                 column(4, htmlOutput("peak_distance_clustering")),
                                 column(4, downloadButton("download_clusteringintbox","Download box plot"))
                               ),
+                              textOutput("Spe_int_clustering"),
+                              tags$head(tags$style("#Spe_int_clustering{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              textOutput("RNAseq_boxplot_clustering_error"),
+                              tags$head(tags$style("#RNAseq_boxplot_clustering_error{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
                               plotOutput("int_box_clustering"),
                               fluidRow(
                                 column(4, htmlOutput("DEG_fc_clustering")),
@@ -1010,11 +1030,6 @@ shinyUI(
                                 column(4, downloadButton("download_clusteringintbar","Download bar plot")),
                                 column(4, downloadButton("download_clusteringKSplot","Download ks plot"))
                               ),
-                              textOutput("Spe_int_clustering"),
-                              tags$head(tags$style("#Spe_int_clustering{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),
                               fluidRow(
                                 column(6,plotOutput("int_bar_clustering")),
                                 column(6,plotOutput('ks_plot_clustering'))

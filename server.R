@@ -698,7 +698,6 @@ shinyServer(function(input, output, session) {
         y <- as.data.frame(subset(promoter_region(), gene_id %in% gene_IDs))
       }else{
         label_data <- rownames(deg_result2()[input$DEG_result_rows_selected,])
-        print(label_data)
         y <- dplyr::filter(deg_result_anno2(),locus == label_data)
       }
       return(y)
@@ -733,12 +732,9 @@ shinyServer(function(input, output, session) {
       for(nr in 1:length(input$trackplot_additional1[, 1])){
         file <- input$trackplot_additional1[[nr, 'datapath']]
         name <- c(name, gsub("\\..+$", "", input$trackplot_additional1[nr,]$name))
-        print(name)
         files <- c(files,file)
       }
       names(files)<-name
-      print(input$trackplot_additional1[[1, 'datapath']])
-      print(files)
       return(files)
     }
   })
@@ -759,7 +755,6 @@ shinyServer(function(input, output, session) {
       gene_position <- goi_gene_position()
       chr <- gene_position$seqnames
       df <- data_track()
-      print(df)
       if(y$start < input$igv_uprange[2] && y$end > input$igv_uprange[1]){
         withProgress(message = "Highlighting the selected region",{
           ht <- HighlightTrack(trackList = df,
@@ -1014,7 +1009,6 @@ shinyServer(function(input, output, session) {
           if(length(as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))$id) != 0) {
             group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
             group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-            print(group1)
             group1$Group <- name
           }else group1 <- NULL
           data <- rbind(data, group1)
@@ -1094,7 +1088,6 @@ shinyServer(function(input, output, session) {
             data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
             data$x <- gsub(":","", data$x)
             data <- dplyr::arrange(data, x)
-            print(data)
             idx <- order(data[["x"]], decreasing = FALSE)
             data$Description <- factor(data$Description,
                                        levels=rev(unique(data$Description[idx])))
@@ -1361,7 +1354,6 @@ shinyServer(function(input, output, session) {
     content = function(fname){
       fs <- c()
       path_list <- enrich_motif()
-      print(path_list)
       base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
       for(name in names(path_list)){
         files <-list.files(path_list[[name]],pattern = "*.*")
@@ -1431,7 +1423,6 @@ shinyServer(function(input, output, session) {
           files[["data/peakcall/A_2_peaks.narrowPeak"]] <- "data/peakcall/A_2_peaks.narrowPeak"
           files[["data/peakcall/B_1_peaks.narrowPeak"]] <- "data/peakcall/B_1_peaks.narrowPeak"
           files[["data/peakcall/B_2_peaks.narrowPeak"]] <- "data/peakcall/B_2_peaks.narrowPeak"
-          print(files)
           Glist <- files2GRangelist(files)
           Glist[["Consensus_region"]] <- promoter_region()
           return(Glist)
@@ -1443,7 +1434,6 @@ shinyServer(function(input, output, session) {
     withProgress(message = "Plot peak distribution for peak call files",{
       if(!is.null(input_peak_list()) && !is.null(txdb()) && 
          input$Genomic_region == "Genome-wide"){
-        print(input_peak_list())
         genomicElementDistribution(deg_peak_list()[["Up"]], 
                                    TxDb = txdb(),) 
       }
@@ -1532,12 +1522,9 @@ shinyServer(function(input, output, session) {
       for(nr in 1:length(input$peak_pattern_up_add[, 1])){
         file <- input$peak_pattern_up_add[[nr, 'datapath']]
         name <- c(name, gsub("\\..+$", "", input$peak_pattern_up_add[nr,]$name))
-        print(name)
         files <- c(files,file)
       }
       names(files)<-name
-      print(input$peak_pattern_up_add[[1, 'datapath']])
-      print(files)
       return(files)
     }
   })
@@ -1941,19 +1928,42 @@ shinyServer(function(input, output, session) {
       stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
       col <- c("gray","#F8766D","#00BFC4")
     }else{
+      group1 <- dplyr::filter(data, group == collist[1])
+      group2 <- dplyr::filter(data, group == collist[2])
+      if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
       stat.test <- data %>% t_test(log2FoldChange ~ group)
       stat.test <- stat.test %>% add_significance()
       stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
       col <-c("gray","#F8766D")
+      }else stat.test <- NULL
     }
-    
-    print(stat.test)
-    p <- ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
+    if(!is.null(stat.test)){
+    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
                            fill = "group", scales = "free", add = "jitter",
                            xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
-      xlab(NULL)+ylab("RNAseq log2FoldChange")+scale_fill_manual(values = col)
-    p <- p + stat_pvalue_manual(stat.test,hide.ns = T,size = 5)
+      xlab(NULL)+ylab("RNAseq log2FoldChange")+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T,size = 5))
+    }
     return(p)
+  })
+  output$RNAseq_boxplot_error <- renderText({
+    if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && 
+       !is.na(input$DEG_fdr) && !is.na(input$DEG_fc) && !is.null(bw_count()) && input$Species != "not selected"){
+      RNA <- RNAseqDEG_anno()
+      RNA <- dplyr::filter(RNA, !is.na(gene_id))
+      data <- merge(RNA,RP(), by="gene_id",all=T)
+      data$group <- "Others"
+      data$group[data$sumRP > input$DEG_fdr] <- "RP > 1"
+      data$group[data$sumRP < -input$DEG_fdr] <- "RP < -1"
+      data$group <- factor(data$group,levels=c("Others","RP > 1","RP < -1"),ordered=TRUE)
+      collist <- unique(data$group)
+      if (length(collist) < 3){
+      group1 <- dplyr::filter(data, group == collist[1])
+      group2 <- dplyr::filter(data, group == collist[2])
+      if(length(rownames(group1)) <= 1 || length(rownames(group2)) <= 1){
+        print("boxplot: There are few genes with |RP| > 1")
+      }
+      }
+    }
   })
   RNAseq_popu <- reactive({
     RNA <- RNAseqDEG_anno()
@@ -2016,7 +2026,6 @@ shinyServer(function(input, output, session) {
     data <- merge(RNA,RP(), by="gene_id")
     data$epigenome_category <- "up"
     data$epigenome_category[data$sumRP < 0] <- "down"
-    print(length(which(unique(data$epigenome_category) == "up")))
     if(length(which(unique(data$epigenome_category) == "up")) == 1){
       up <- data %>% dplyr::filter(epigenome_category == "up")
       up_total <- length(rownames(up))
@@ -2058,7 +2067,6 @@ shinyServer(function(input, output, session) {
     target_result <- regulatory_potential()$data
     target_result$epigenome_category <- "up"
     target_result$epigenome_category[target_result$sumRP < 0] <- "down"
-    print(target_result)
     table <- NULL
     if(!is.null(mmAnno_up()) && !is.null(mmAnno_down())) {
     table <- data.frame(Symbol = target_result$Symbol,
@@ -2181,7 +2189,6 @@ shinyServer(function(input, output, session) {
     if(!is.null(RP_selected_table())){
       gene <- RP_selected_table()$gene_id
       type <- gsub(".+\\-","", input$RNAseqGroup)
-      print(type)
       if(type == "up") {
         peak <- subset(mmAnno_up(), gene_id %in% gene)
         up_peak2 <- as.data.frame(peak)
@@ -2254,7 +2261,6 @@ shinyServer(function(input, output, session) {
         if(!is.null(mmAnno_up())) y <- as.data.frame(up_peak)
         if(!is.null(mmAnno_down())) y <- as.data.frame(down_peak)
       }
-      print(y)
       return(y)
     }
   })
@@ -2281,12 +2287,9 @@ shinyServer(function(input, output, session) {
       for(nr in 1:length(input$int_trackplot_additional1[, 1])){
         file <- input$int_trackplot_additional1[[nr, 'datapath']]
         name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1[nr,]$name))
-        print(name)
         files <- c(files,file)
       }
       names(files)<-name
-      print(input$int_trackplot_additional1[[1, 'datapath']])
-      print(files)
       return(files)
     }
   })
@@ -2515,7 +2518,6 @@ shinyServer(function(input, output, session) {
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      print(files2)
       return(files2)
     }
   })
@@ -2830,7 +2832,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$selected_intersect_annotation_rows_selected)){
       library(Gviz)
       label_data <- selected_annoData_table()[input$selected_intersect_annotation_rows_selected,]
-      print(label_data)
       return(label_data)
     }
   })
@@ -2838,7 +2839,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   goi_gene_position_venn <- reactive({
     if(!is.null(goi_promoter_position_venn())){
       label_data <- goi_promoter_position_venn()$NearestGene
-      print(label_data)
       gene_IDs<-AnnotationDbi::select(org_venn(),keys = label_data,
                                       keytype = "SYMBOL",
                                       columns = "ENTREZID")
@@ -2956,9 +2956,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      print(files2)
       files3 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
-      print(files3)
       return(files3)
     }
   })
@@ -2984,10 +2982,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   preMotif_list_venn <- reactive({
     df <- list()
     for(name in input$venn_whichGroup1){
-      print(name)
       df[[name]] <- venn_overlap()$peaklist[[name]]
     }
-    print(df)
     return(df)
   })
 
@@ -3075,7 +3071,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     content = function(fname){
       fs <- c()
       path_list <- enrich_motif_venn()
-      print(path_list)
       base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
       for(name in names(path_list)){
         files <-list.files(path_list[[name]],pattern = "*.*")
@@ -3111,7 +3106,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   selected_grange_venn_list <- reactive({
     if(!is.null(input$venn_whichGroup2)){
       Glist <- GRangesList()
-      print(input$venn_whichGroup2)
       for(name in input$venn_whichGroup2){
         data <- venn_overlap()$peaklist[[name]]
         Glist[[name]] <- data
@@ -3179,7 +3173,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
         data$x <- gsub("-","", data$x)
         data <- dplyr::arrange(data, x)
-        print(data)
         idx <- order(data[["x"]], decreasing = FALSE)
         data$Description <- factor(data$Description,
                                    levels=rev(unique(data$Description[idx])))
@@ -3250,7 +3243,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$intersection_venn_fun)){
       group <- input$intersection_venn_fun
       set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_venn()), Group == group)$id)
-      print(set_list)
       selectInput('Pathway_list_venn', 'Pathway list', set_list)
     }
   })
@@ -3419,25 +3411,39 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
     
     collist <- unique(data$group)
-    if (length(collist) >= 3){
-      stat.test <- data %>% tukey_hsd(log2FoldChange ~ group)
-      stat.test <- stat.test %>% add_significance("p.adj")
-      stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-      col <- c("gray","#F8766D","#00BFC4")
-    }else{
+    group1 <- dplyr::filter(data, group == collist[1])
+    group2 <- dplyr::filter(data, group == collist[2])
+    if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
       stat.test <- data %>% t_test(log2FoldChange ~ group)
       stat.test <- stat.test %>% add_significance()
       stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
       col <-c("gray","#F8766D")
-    }
-    
-    print(stat.test)
-    p <- ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
+    }else stat.test <- NULL
+    if(!is.null(stat.test)){
+    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
                            fill = "group", scales = "free", add = "jitter",
                            xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
-      xlab(NULL)+scale_fill_manual(values = col)
-    p <- p + stat_pvalue_manual(stat.test,hide.ns = T, size = 5)
+      xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
+    }
     return(p)
+  })
+  output$RNAseq_boxplot_venn_error <- renderText({
+    if(!is.null(input$peak_distance_venn) && !is.null(RNAseqDEG_venn()) && 
+       input$Species_venn != "not selected" && !is.null(mmAnno_venn())){
+      RNA <- RNAseqDEG_anno_venn()
+      RNA <- dplyr::filter(RNA, !is.na(gene_id))
+      data <- merge(RNA,RP_venn(), by="gene_id",all=T)
+      data$group <- "Others"
+      data$group[data$sumRP > 1] <- "RP > 1"
+      data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
+      
+      collist <- unique(data$group)
+      group1 <- dplyr::filter(data, group == collist[1])
+      group2 <- dplyr::filter(data, group == collist[2])
+      if(length(rownames(group1)) <= 1 || length(rownames(group2)) <= 1){
+        print("boxplot: There are few genes with RP > 1")
+    }
+    }
   })
   
   RNAseq_popu_venn <- reactive({
@@ -3445,7 +3451,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     RNA <- dplyr::filter(RNA, !is.na(gene_id))
     RNA$group[RNA$log2FoldChange > log2(input$DEG_fc_venn) & RNA$padj < input$DEG_fdr_venn] <- "up"
     RNA$group[RNA$log2FoldChange < -log2(input$DEG_fc_venn) & RNA$padj < input$DEG_fdr_venn] <- "down"
-    print(RNA)
     data <- merge(RNA,RP_venn(), by="gene_id",all=T)
     if(length(which(unique(data$group) == "up")) == 1){
       up <- data %>% dplyr::filter(group == "up")
@@ -3495,11 +3500,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     RNA$gene_category <- "NS"
     RNA$gene_category[RNA$log2FoldChange > log2(input$DEG_fc_venn) & RNA$padj < input$DEG_fdr_venn] <- "up"
     RNA$gene_category[RNA$log2FoldChange < -log2(input$DEG_fc_venn) & RNA$padj < input$DEG_fdr_venn] <- "down"
-    print(RNA)
     data <- merge(RNA,RP_venn(), by="gene_id")
     data$epigenome_category <- "NS"
     data$epigenome_category[data$sumRP > 0] <- "up"
-    print(length(which(unique(data$epigenome_category) == "up")))
     if(length(which(unique(data$epigenome_category) == "up")) == 1){
       up <- data %>% dplyr::filter(epigenome_category == "up")
       up_total <- length(rownames(up))
@@ -3525,7 +3528,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   RP_all_table_venn <- reactive({
     target_result <- regulatory_potential_venn()$data
     target_result$epigenome_category <- "up"
-    print(target_result)
     table <- NULL
     if(!is.null(mmAnno_venn())) {
       table <- data.frame(Symbol = target_result$Symbol,
@@ -3682,7 +3684,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         mcols(up_peak3) <- DataFrame(Group = "up")
         y <- as.data.frame(up_peak3)
       }
-      print(y)
       return(y)
     }
   })
@@ -3709,12 +3710,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(nr in 1:length(input$int_trackplot_additional1_venn[, 1])){
         file <- input$int_trackplot_additional1_venn[[nr, 'datapath']]
         name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1_venn[nr,]$name))
-        print(name)
         files <- c(files,file)
       }
       names(files)<-name
-      print(input$int_trackplot_additional1_venn[[1, 'datapath']])
-      print(files)
       return(files)
     }
   })
@@ -4000,7 +3998,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         }
         files2 <- lapply(files, GetGRanges, simple = TRUE)
         names(files2)<-name
-        print(files2)
         return(files2)
       }
     }
@@ -4013,7 +4010,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$input_bw_files_clustering <- DT::renderDT({
     if(input$data_file_type_clustering == "Row1"){
       uploaded_files = names(bws_clustering())
-      print(data.frame(uploaded_files = uploaded_files))
       data.frame(uploaded_files = uploaded_files)
     }else{
       uploaded_files = names(bam_clustering())
@@ -4085,7 +4081,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           if(!is.null(peak_call_files_clustering())){
             count <- featureCounts(bam_clustering(),annot.ext = regionsToCount,isPairedEnd = seq,
                                    countMultiMappingReads =F,maxFragLength = 100)$counts
-            print(count)
             rownames(count) <- Row.name
             colnames(count) <- names(bam_clustering())
             return(count)
@@ -4101,7 +4096,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           count <-bw_count_clustering2()
           if(!is.null(genelist_clustering())){
             colnum <- length(colnames(count))
-            print(colnum)
             count <- merge(count,genelist_clustering(),by=0)
             rownames(count) <- count$Row.names
             count <- count[,2:(1+colnum)]
@@ -4525,12 +4519,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(nr in 1:length(input$peak_pattern_kmeans_add[, 1])){
         file <- input$peak_pattern_kmeans_add[[nr, 'datapath']]
         name <- c(name, gsub("\\..+$", "", input$peak_pattern_kmeans_add[nr,]$name))
-        print(name)
         files <- c(files,file)
       }
       names(files)<-name
-      print(input$peak_pattern_kmeans_add[[1, 'datapath']])
-      print(files)
       return(files)
     }
   })
@@ -4737,12 +4728,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(nr in 1:length(input$trackplot_additional1_clustering[, 1])){
         file <- input$trackplot_additional1_clustering[[nr, 'datapath']]
         name <- c(name, gsub("\\..+$", "", input$trackplot_additional1_clustering[nr,]$name))
-        print(name)
         files <- c(files,file)
       }
       names(files)<-name
-      print(input$trackplot_additional1_clustering[[1, 'datapath']])
-      print(files)
       return(files)
     }
   })
@@ -4956,25 +4944,41 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
     
     collist <- unique(data$group)
-    if (length(collist) >= 3){
-      stat.test <- data %>% tukey_hsd(log2FoldChange ~ group)
-      stat.test <- stat.test %>% add_significance("p.adj")
-      stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-      col <- c("gray","#F8766D","#00BFC4")
-    }else{
+    group1 <- dplyr::filter(data, group == collist[1])
+    group2 <- dplyr::filter(data, group == collist[2])
+    if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
       stat.test <- data %>% t_test(log2FoldChange ~ group)
       stat.test <- stat.test %>% add_significance()
       stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
       col <-c("gray","#F8766D")
-    }
-    
-    print(stat.test)
-    p <- ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
+    }else stat.test <- NULL
+    if(!is.null(stat.test)){
+    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
                            fill = "group", scales = "free", add = "jitter",
                            xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
-      xlab(NULL)+scale_fill_manual(values = col)
-    p <- p + stat_pvalue_manual(stat.test,hide.ns = T, size = 5)
+      xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
+    }
     return(p)
+  })
+  output$RNAseq_boxplot_clustering_error <- renderText({
+    if(!is.null(input$peak_distance_clustering) && !is.null(RNAseqDEG_clustering()) && 
+       !is.na(input$DEG_fdr_clustering) && !is.na(input$DEG_fc_clustering) && 
+       !is.null(bw_count_clustering()) && input$Species_clustering != "not selected" && 
+       !is.null(mmAnno_clustering())){
+      RNA <- RNAseqDEG_anno_clustering()
+      RNA <- dplyr::filter(RNA, !is.na(gene_id))
+      data <- merge(RNA,RP_clustering(), by="gene_id",all=T)
+      data$group <- "Others"
+      data$group[data$sumRP > 1] <- "RP > 1"
+      data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
+      
+      collist <- unique(data$group)
+      group1 <- dplyr::filter(data, group == collist[1])
+      group2 <- dplyr::filter(data, group == collist[2])
+      if(length(rownames(group1)) <= 1 || length(rownames(group2)) <= 1){
+        print("boxplot: There are few genes with RP > 1")
+      }
+    }
   })
   
   RNAseq_popu_clustering <- reactive({
@@ -4982,7 +4986,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     RNA <- dplyr::filter(RNA, !is.na(gene_id))
     RNA$group[RNA$log2FoldChange > log2(input$DEG_fc_clustering) & RNA$padj < input$DEG_fdr_clustering] <- "up"
     RNA$group[RNA$log2FoldChange < -log2(input$DEG_fc_clustering) & RNA$padj < input$DEG_fdr_clustering] <- "down"
-    print(RNA)
     data <- merge(RNA,RP_clustering(), by="gene_id",all=T)
     if(length(which(unique(data$group) == "up")) == 1){
       up <- data %>% dplyr::filter(group == "up")
@@ -5035,11 +5038,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     RNA$gene_category <- "NS"
     RNA$gene_category[RNA$log2FoldChange > log2(input$DEG_fc_clustering) & RNA$padj < input$DEG_fdr_clustering] <- "up"
     RNA$gene_category[RNA$log2FoldChange < -log2(input$DEG_fc_clustering) & RNA$padj < input$DEG_fdr_clustering] <- "down"
-    print(RNA)
     data <- merge(RNA,RP_clustering(), by="gene_id")
     data$epigenome_category <- "NS"
     data$epigenome_category[data$sumRP > 0] <- "up"
-    print(length(which(unique(data$epigenome_category) == "up")))
     if(length(which(unique(data$epigenome_category) == "up")) == 1){
       up <- data %>% dplyr::filter(epigenome_category == "up")
       up_total <- length(rownames(up))
@@ -5065,7 +5066,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   RP_all_table_clustering <- reactive({
     target_result <- regulatory_potential_clustering()$data
     target_result$epigenome_category <- "up"
-    print(target_result)
     table <- NULL
     if(!is.null(mmAnno_clustering())) {
       table <- data.frame(Symbol = target_result$Symbol,
@@ -5223,7 +5223,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         mcols(up_peak3) <- DataFrame(Group = "up")
         y <- as.data.frame(up_peak3)
       }
-      print(y)
       return(y)
     }
   })
@@ -5250,12 +5249,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(nr in 1:length(input$int_trackplot_additional1_clustering[, 1])){
         file <- input$int_trackplot_additional1_clustering[[nr, 'datapath']]
         name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1_clustering[nr,]$name))
-        print(name)
         files <- c(files,file)
       }
       names(files)<-name
-      print(input$int_trackplot_additional1_clustering[[1, 'datapath']])
-      print(files)
       return(files)
     }
   })
@@ -5481,7 +5477,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      print(files2)
       return(files2)
     }
   })
@@ -5561,7 +5556,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
         data$x <- gsub(":","", data$x)
         data <- dplyr::arrange(data, x)
-        print(data)
         idx <- order(data[["x"]], decreasing = FALSE)
         data$Description <- factor(data$Description,
                                    levels=rev(unique(data$Description[idx])))
@@ -5632,7 +5626,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$intersection_enrich_fun)){
       group <- input$intersection_enrich_fun
       set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_enrich()), Group == group)$id)
-      print(set_list)
       selectInput('Pathway_list_enrich', 'Pathway list', set_list)
     }
   })
@@ -5752,9 +5745,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      print(files2)
       files3 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
-      print(files3)
       return(files3)
     }
   })
@@ -5850,7 +5841,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     content = function(fname){
       fs <- c()
       path_list <- enrich_motif_enrich()
-      print(path_list)
       base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
       for(name in names(path_list)){
         files <-list.files(path_list[[name]],pattern = "*.*")
@@ -5896,7 +5886,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      print(files2)
       return(files2)
     }
   })
@@ -5922,7 +5911,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      print(files2)
       return(files2)
     }
   })
@@ -5971,7 +5959,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(i in 1:length(names(files))){
         name <- paste0(names(bed_peak_call_files1()[i])," - ", 
                               names(bed_peak_call_files2()[i]))
-        print(name)
         df[[name]] <- subtract_bed(files[[i]],files2[[i]])
       }
     }else{
@@ -5984,7 +5971,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(i in 1:length(names(files))){
         name <- paste0(names(bed_peak_call_files1()[i]),mode, 
                        names(bed_peak_call_files2()[i]))
-        print(name)
         df[[name]] <- intersect_bed(files[[i]],files2[[i]],mode=input$intersect_bed)
       }
     }
