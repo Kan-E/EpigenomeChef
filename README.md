@@ -1,5 +1,45 @@
 # EpigenomeChef
-EpigenomeChef, an Epigenetic data controller highlighting epigenetic features, is a web-based application ([https://imeg-ku.shinyapps.io/EpigenomeChef/](https://imeg-ku.shinyapps.io/EpigenomeChefChef/)) for automated, systematic, and integrated epigenetic analysis. EpigenomeChef is designed for wet-bench scientists with little computational programming skill to dissect multiple epigenetic datasets (such as ChIP-seq, ATAC-seq, Bisulfite-Seq) quickly. <br>
+EpigenomeChef is a platform of systematic epigenome data analysis which can automatically detect, integrate, and visualize the epigenetic information and its interaction with transcriptome without bioinformatics skills.<br>
+Data downloaded from ChIP-atlas, a database of ChIP-seq, ATAC-seq, and Bisulfite-seq, can be used as input.<br>
+In addition, integrated analysis with transcriptome data is possible by uploading the results file of differentially expressed gene (DEG) analysis obtained from RNA-seq data.<br>
+
+# Local installation
+EpigenomeChef can be used by installing the Docker image.<br>
+
+0. (If you do not have a Docker environment) Install Docker <br>
+1. Run the following command (Once you run it, you won't need it again) <br> 
+```
+#AMD64 architecture (Windows, Linux, MacOS(Intel))
+##HOMER human (hg19) 
+docker pull kanetoh1030/shiny-epigenomechef:hg19v0.0.1-amd64
+##HOMER mouse (mm10) 
+docker pull kanetoh1030/shiny-epigenomechef:mm10v0.0.1-amd64
+
+#ARM64 architecture (MacOS (M1/M2))
+##HOMER human (hg19) 
+docker pull kanetoh1030/shiny-epigenomechef:hg19v0.0.1-arm64
+##HOMER mouse (mm10) 
+docker pull kanetoh1030/shiny-epigenomechef:mm10v0.0.1-arm64
+
+```
+2. Run the following command for the launch EpigenomeChef on the browser
+```
+#AMD64 architecture (Windows, Linux, MacOS(Intel))
+##HOMER human (hg19)
+docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:hg19v0.0.1-amd64
+##HOMER mouse (mm10) 
+docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:mm10v0.0.1-amd64
+
+#ARM64 architecture (MacOS (M1/M2))
+##HOMER human (hg19) 
+docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:hg19v0.0.1-arm64
+##HOMER mouse (mm10) 
+docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:mm10v0.0.1-arm64
+
+```
+Access [http://localhost:3838](http://localhost:3838).
+
+If you need help, please create an issue on [Github](https://github.com/Kan-E/EpigenomeChef/issues) or [contact us](mailto:kaneto@kumamoto-u.ac.jp). <br>
 
 # Reference
 Shiny framework
@@ -97,7 +137,7 @@ Gviz (for track plot)
 # License
 This shiny code is licensed under the GPLv3. Please see the file [LICENSE.md](https://github.com/Kan-E/EpigenomeChef/blob/main/LICENSE.md) for information.<br>
 ```
-EpigenomeChef, an epigenome data controller highlighting epigenetic features
+EpigenomeChef
 Shiny App for automated, systematic, and integrated epigenetic analysis
 Copyright (C) 2022  Kan Etoh
 
