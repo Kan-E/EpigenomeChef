@@ -1284,7 +1284,7 @@ shinyServer(function(input, output, session) {
     if(input$Genomic_region == "Genome-wide"){
     radioButtons('homer_bg','Background sequence',
                  c('random'="random",
-                   'peak calling files'="peakcalling"
+                   'peak call files'="peakcalling"
                  ),selected = "random")
     }
   })
