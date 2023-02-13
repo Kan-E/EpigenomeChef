@@ -5,6 +5,7 @@ In addition, integrated analysis with transcriptome data is possible by uploadin
 
 # Local installation
 EpigenomeChef can be used by installing the Docker image.<br>
+
 0. (If you do not have a Docker environment) Install Docker <br>
 1. Run the following command (Once you run it, you won't need it again) <br> 
 ```
