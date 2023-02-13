@@ -38,7 +38,7 @@ docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:mm10v0.0.1-arm64
 ```
 Access [http://localhost:3838](http://localhost:3838).
 
-If you need help, please create an issue on [Github](https://github.com/Kan-E/EpigenomeChef/issues) or [contact us](mailto:kaneto@kumamoto-u.ac.jp){.email}. <br>
+If you need help, please create an issue on [Github](https://github.com/Kan-E/EpigenomeChef/issues) or [contact us](mailto:kaneto@kumamoto-u.ac.jp). <br>
 
 # Reference
 Shiny framework
