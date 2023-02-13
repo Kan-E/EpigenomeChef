@@ -2,7 +2,7 @@
 <img src="https://github.com/Kan-E/EpigenomeChef/blob/main/main%20figures/graphical_abstract2.png" width="800"><br><br>
 EpigenomeChef is a platform of systematic epigenome data analysis which can automatically detect, integrate, and visualize the epigenetic information and its interaction with transcriptome without bioinformatics skills.<br>
 Data downloaded from ChIP-atlas, a database of ChIP-seq, ATAC-seq, and Bisulfite-seq, can be used as input.<br>
-In addition, integrated analysis with transcriptome data is possible by uploading the results file of differentially expressed gene (DEG) analysis obtained from RNA-seq data.<br>
+In addition, it can easily perform the integrative analysis with transcriptome data by uploading the results file of differentially expressed gene (DEG) analysis obtained from RNA-seq data.
 
 # Local installation
 EpigenomeChef can be used by installing the Docker image.<br>
