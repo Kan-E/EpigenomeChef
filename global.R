@@ -778,10 +778,13 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
             call. = FALSE)
     return(merge_result)
   }
+  #bonfferoni correction
   up_static_pvalue <- suppressWarnings(ks.test(upGenes_rank, 
-                                               staticGenes_rank)$p.value)
+                                               staticGenes_rank)$p.value * 2)
+  if(up_static_pvalue > 1) up_static_pvalue <- 1
   down_static_pvalue <- suppressWarnings(ks.test(downGenes_rank, 
-                                                 staticGenes_rank)$p.value)
+                                                 staticGenes_rank)$p.value * 2)
+  if(down_static_pvalue > 1) down_static_pvalue <- 1
   ks_test <- paste0("\n Kolmogorov-Smirnov Tests ", "\n pvalue of up vs NS: ", 
                     format(up_static_pvalue, digits = 3, scientific = TRUE), 
                     "\n pvalue of down vs NS: ", format(down_static_pvalue, 
