@@ -4,8 +4,28 @@ library(Rsamtools)
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+library(TxDb.Dmelanogaster.UCSC.dm6.ensGene)
+library(TxDb.Rnorvegicus.UCSC.rn6.refGene)
+library(TxDb.Celegans.UCSC.ce11.refGene)
+library(TxDb.Btaurus.UCSC.bosTau8.refGene)
+library(TxDb.Cfamiliaris.UCSC.canFam3.refGene)
+library(TxDb.Drerio.UCSC.danRer10.refGene)
+library(TxDb.Ggallus.UCSC.galGal4.refGene)
+library(TxDb.Mmulatta.UCSC.rheMac8.refGene)
+library(TxDb.Ptroglodytes.UCSC.panTro4.refGene)
 library(org.Hs.eg.db)
 library(org.Mm.eg.db)
+library(org.Rn.eg.db)
+library(org.Dm.eg.db)
+library(org.Ce.eg.db)
+library(org.Xl.eg.db)
+library(org.Bt.eg.db)
+library(org.Cf.eg.db)
+library(org.Dr.eg.db)
+library(org.Gg.eg.db)
+library(org.Mmu.eg.db)
+library(org.Pt.eg.db)
+library(biomaRt)
 library(shiny)
 library(DT)
 library(gdata)
@@ -51,7 +71,10 @@ library(bedtorch)
 options('homer_path' = "/usr/local/homer")
 check_homer()
 options(rsconnect.max.bundle.size=31457280000000000000)
-species_list <- c("not selected", "Mus musculus (mm10)","Homo sapiens (hg19)","Homo sapiens (hg38)")
+species_list <- c("not selected", "Homo sapiens (hg19)","Homo sapiens (hg38)","Mus musculus (mm10)",
+                  "Rattus norvegicus (rn6)","Drosophila melanogaster (dm6)","Caenorhabditis elegans (ce11)",
+                  "Bos taurus (bosTau8)","Canis lupus familiaris (canFam3)","Danio rerio (danRer10)",
+                  "Gallus gallus (galGal4)","Macaca mulatta (rheMac8)","Pan troglodytes (panTro4)")
 gene_set_list <- c("MSigDB Hallmark", "KEGG", "Reactome", "PID (Pathway Interaction Database)",
                    "BioCarta","WikiPathways", "GO biological process", 
                    "GO cellular component","GO molecular function", "Human phenotype ontology", 
@@ -66,17 +89,50 @@ org <- function(Species){
     switch (Species,
             "Homo sapiens (hg38)" = org <- org.Hs.eg.db,
             "Homo sapiens (hg19)" = org <- org.Hs.eg.db,
-            "Mus musculus (mm10)" = org <- org.Mm.eg.db
+            "Mus musculus (mm10)" = org <- org.Mm.eg.db,
+            "Drosophila melanogaster (dm6)" = org <- org.Dm.eg.db,
+            "Rattus norvegicus (rn6)" = org <- org.Rn.eg.db,
+            "Caenorhabditis elegans (ce11)" = org <- org.Ce.eg.db,
+            "Bos taurus (bosTau8)" = org <- org.Bt.eg.db,
+            "Canis lupus familiaris (canFam3)" = org <- org.Cf.eg.db,
+            "Danio rerio (danRer10)" = org <- org.Dr.eg.db,
+            "Gallus gallus (galGal4)" = org <- org.Gg.eg.db,
+            "Macaca mulatta (rheMac8)" = org <- org.Mmu.eg.db,
+            "Pan troglodytes (panTro4)" = org <- org.Pt.eg.db,
+            "Saccharomyces cerevisiae (sacCer3)" = org <- org.Sc.sgd.db,
+            "Xenopus laevis (xenLae2)" = org <- org.Xl.eg.db,
+            "Arabidopsis thaliana (tair10)" = org <- org.At.tair.db
             )
     return(org)
   }
 }
 
 txdb_function <- function(Species){
+  if(Species == "Xenopus laevis (xenLae2)"){
+    xenLae2<-makeTxDbFromUCSC(genome="xenLae2", tablename="ncbiRefSeq",
+                              transcript_ids=NULL,
+                              circ_seqs=NULL,
+                              url="http://genome.ucsc.edu/cgi-bin/",
+                              goldenPath.url=getOption("UCSC.goldenPath.url"),
+                              taxonomyId=NA,
+                              miRBaseBuild=NA)
+  }
   switch (Species,
           "Mus musculus (mm10)" = txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene,
           "Homo sapiens (hg19)" = txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene,
-          "Homo sapiens (hg38)" = txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene)
+          "Homo sapiens (hg38)" = txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene,
+          "Drosophila melanogaster (dm6)" = txdb <- TxDb.Dmelanogaster.UCSC.dm6.ensGene,
+          "Rattus norvegicus (rn6)" = txdb <- TxDb.Rnorvegicus.UCSC.rn6.refGene,
+          "Caenorhabditis elegans (ce11)" = txdb <- TxDb.Celegans.UCSC.ce11.refGene,
+          "Bos taurus (bosTau8)" = txdb <- TxDb.Btaurus.UCSC.bosTau8.refGene,
+          "Canis lupus familiaris (canFam3)" = txdb <- TxDb.Cfamiliaris.UCSC.canFam3.refGene,
+          "Danio rerio (danRer10)" = txdb <- TxDb.Drerio.UCSC.danRer10.refGene,
+          "Gallus gallus (galGal4)" = txdb <- TxDb.Ggallus.UCSC.galGal4.refGene,
+          "Macaca mulatta (rheMac8)" = txdb <- TxDb.Mmulatta.UCSC.rheMac8.refGene,
+          "Pan troglodytes (panTro4)" = txdb <- TxDb.Ptroglodytes.UCSC.panTro4.refGene,
+          "Saccharomyces cerevisiae (sacCer3)" = txdb <- TxDb.Scerevisiae.UCSC.sacCer3.sgdGene,
+          "Xenopus laevis (xenLae2)" = txdb <- xenLae2,
+          "Arabidopsis thaliana (tair10)" = txdb <- TxDb.Athaliana.BioMart.plantsmart51)
   return(txdb)
 }
 
@@ -135,13 +191,10 @@ for(i in seq_len(length(bw))) {
 }
 })
 if(input_type == "Promoter"){
-  switch (Species,
-          "Mus musculus (mm10)" = org <- org.Mm.eg.db,
-          "Homo sapiens (hg19)" = org <- org.Hs.eg.db,
-          "Homo sapiens (hg38)" = org <- org.Hs.eg.db)
+  or <- org(Species)
   rownames(counts) <- bed1$gene_id
 my.symbols <- rownames(counts)
-gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
+gene_IDs<-AnnotationDbi::select(or,keys = my.symbols,
                                 keytype = "ENTREZID",
                                 columns = c("ENTREZID","SYMBOL"))
 colnames(gene_IDs) <- c("Row.names","SYMBOL")
@@ -276,10 +329,7 @@ dotplot_for_output <- function(data, plot_genelist, Gene_set, Species){
 }
 GeneList_for_enrichment <- function(Species, Gene_set, org, Custom_gene_list){
   if(Species != "not selected" || is.null(Gene_set) || is.null(org)){
-    switch (Species, 
-            "Mus musculus (mm10)" = species <- "Mus musculus",
-            "Homo sapiens (hg19)" = species <- "Homo sapiens",
-            "Homo sapiens (hg38)" = species <- "Homo sapiens")
+    species <- substr(gsub("\\(.+$","",Species),1,nchar(gsub("\\(.+$","",Species))-1)
     if(Gene_set == "MSigDB Hallmark"){
       H_t2g <- msigdbr(species = species, category = "H") %>%
         dplyr::select(gs_name, entrez_gene, gs_id, gs_description) 
@@ -398,11 +448,21 @@ GeneList_for_enrichment <- function(Species, Gene_set, org, Custom_gene_list){
     return(H_t2g)
   }else return(NULL)
 }
-gene_list_for_enrichment_genome <- function(H_t2g){
+gene_list_for_enrichment_genome <- function(H_t2g, Species=NULL){
   df <- list()
   set <- unique(H_t2g$gs_name)
   for(name in set){
     data <- dplyr::filter(H_t2g, gs_name == name)
+    if(Species == "Drosophila melanogaster (dm6)"){
+      column <- c("ENTREZID", "ENSEMBL")
+      key <- "ENTREZID"
+    gene_IDs<-AnnotationDbi::select(org(Species),keys = as.character(data$entrez_gene),
+                                    keytype = key,
+                                    columns = column)
+    colnames(gene_IDs) <- c("entrez_gene","ENSEMBL")
+    data <- gene_IDs %>% distinct(ENSEMBL, .keep_all = T)
+    df[[name]] <- data$ENSEMBL
+    }
     df[[name]] <- data$entrez_gene
   }
   return(df)
@@ -428,6 +488,36 @@ dorothea <- function(species, confidence = "recommend",type){
   net2 <- merge(net2, gene_IDs, by="target")
   net3 <- data.frame(gs_name = net2$tf, entrez_gene = net2$ENTREZID, target = net2$target, confidence = net2$confidence)
   net3 <- dplyr::arrange(net3, gs_name)
+  if(species != "Mus musculus (mm10)" && species != "Homo sapiens (hg19)" && 
+     species != "Homo sapiens (hg38)"){
+    withProgress(message = paste0("Gene ID conversion from human to ", species, "for the regulon gene set. It takes a few minutes."),{
+      genes <- net3$entrez_gene
+      switch (species,
+              "Rattus norvegicus (rn6)" = set <- "rnorvegicus_gene_ensembl",
+              "Xenopus tropicalis" = set <- "xtropicalis_gene_ensembl",
+              "Drosophila melanogaster (dm6)" = set <- "dmelanogaster_gene_ensembl",
+              "Caenorhabditis elegans (ce11)" = set <- "celegans_gene_ensembl",
+              "Bos taurus (bosTau8)" = set <- "btaurus_gene_ensembl",
+              "Canis lupus familiaris" = set <- "clfamiliaris_gene_ensembl",
+              "Danio rerio (danRer10)" = set <- "drerio_gene_ensembl",
+              "Gallus gallus (galGal4)" = set <- "ggallus_gene_ensembl",
+              "Macaca mulatta (rheMac8)" = set <- "mmulatta_gene_ensembl",
+              "Pan troglodytes (panTro4)" = set <- "ptroglodytes_gene_ensembl",
+              "Saccharomyces cerevisiae (sacCer3)" = set <-"scerevisiae_gene_ensembl",
+              "Arabidopsis thaliana (tair10)" = set <- "athaliana_eg_gene")
+      convert = useMart("ensembl", dataset = set, host="https://dec2021.archive.ensembl.org")
+      human = useMart("ensembl", dataset = "hsapiens_gene_ensembl", host="https://dec2021.archive.ensembl.org")
+      genes2 = getLDS(attributes = c("entrezgene_id"), filters = "entrezgene_id",
+                      values = genes ,mart = human,
+                      attributesL = c("entrezgene_id"),
+                      martL = convert, uniqueRows=T)
+      colnames(genes2) <- c("entrez_gene", "converted_entrez_gene")
+      genes2 <- genes2 %>% distinct(converted_entrez_gene, .keep_all = T)
+      merge <- merge(net3, genes2, by = "entrez_gene") 
+      net3 <- data.frame(gs_name = merge$gs_name, entrez_gene = merge$converted_entrez_gene, confidence = merge$confidence)
+      net3 <- dplyr::arrange(net3, gs_name)
+    })
+  }
   return(net3)
 }
 cnet_for_output <- function(data, plot_data, Gene_set, Species){
@@ -554,10 +644,7 @@ read_known_results<-function (path, homer_dir = TRUE) {
                     by = c("motif_name", "motif_family", "experiment", "accession"))
 }   
 findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,size,back="random",bw_count=NULL,other_data=NULL){
-    switch(Species,
-           "Mus musculus (mm10)" = ref <- "mm10",
-           "Homo sapiens (hg19)" = ref <- "hg19",
-           "Homo sapiens (hg38)" = ref <- "hg38")
+  ref <- gsub(".+\\(","",gsub(")", "", Species))
     switch(motif,
            "known motif" = time <- "10 ~ 20",
            "known and de novo motifs" = time <- "20 ~ 30")
@@ -945,12 +1032,17 @@ symbol2gene_id <- function(data,org){
 
 data_trac <- function(y,gene_position,gen,txdb,org,filetype=NULL,bw_files,
                       bam_files,track_additional_files){
-  chr <- gene_position$seqnames
+  chr <- as.character(gene_position$seqnames)
+  print(chr)
+  print(gen)
   grtrack <- GeneRegionTrack(txdb,
                              chromosome = chr, name = "UCSC known genes",geneSymbol = TRUE,
                              transcriptAnnotation = "symbol",genome = gen,
                              background.title = "grey",cex = 1.25)
-  symbols <- unlist(mapIds(org, gene(grtrack), "SYMBOL", "ENTREZID", multiVals = "first"))
+  if(gen != "dm6"){
+    ID <- "ENTREZID"
+  }else ID <- "ENSEMBL"
+  symbols <- unlist(mapIds(org, gene(grtrack), "SYMBOL", ID, multiVals = "first"))
   symbol(grtrack) <- symbols[gene(grtrack)]
   displayPars(grtrack) <- list(fontsize = 15)
   if(!is.null(filetype)){
@@ -1006,21 +1098,17 @@ RNAseqDEGimport <- function(tmp,exampleButton){
     }
   })
 }
-RNAseqDEG_ann <- function(RNAdata,org){
+RNAseqDEG_ann <- function(RNAdata,Species){
   RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
   if(str_detect(rownames(RNAdata)[1], "ENS")){
     my.symbols <- gsub("\\..*","", rownames(RNAdata))
-    gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
-                                    keytype = "ENSEMBL",
-                                    columns = c("ENSEMBL","SYMBOL","ENTREZID"))
+    gene_IDs<-id_convert(my.symbols,Species,type="ENSEMBL")
     colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
     RNAdata$EnsemblID <- gsub("\\..*","", rownames(RNAdata))
     gene_IDs <- gene_IDs %>% distinct(EnsemblID, .keep_all = T)
   }else{
     my.symbols <- rownames(RNAdata)
-    gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
-                                    keytype = "SYMBOL",
-                                    columns = c("SYMBOL", "ENTREZID"))
+    gene_IDs<-id_convert(my.symbols, Species,type="SYMBOL_single")
     colnames(gene_IDs) <- c("Symbol", "gene_id")
     gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T)
     RNAdata$Symbol <- rownames(RNAdata) 
@@ -1096,3 +1184,66 @@ GetGRanges <- function (LoadFile, simple = FALSE,sepr = "\t", simplify = FALSE) 
     }
   return(RegionRanges)
 }
+
+id_convert <- function(my.symbols,Species,type){
+  if(Species != "Drosophila melanogaster (dm6)") {
+    if(type == "ENTREZID"){
+      column <- c("SYMBOL", "ENTREZID")
+      key <- "ENTREZID"
+    }
+    if(type == "SYMBOL_single"){
+      column <- "ENTREZID"
+      key <- "SYMBOL"
+    }
+    if(type == "SYMBOL_double"){
+      column <- c("SYMBOL", "ENTREZID")
+      key <- "SYMBOL"
+    }
+    if(type == "ENSEMBL"){
+      column <- c("ENSEMBL","SYMBOL","ENTREZID")
+      key <- "ENSEMBL"
+    }
+  }else {
+    if(type == "ENTREZID"){
+    column <- c("SYMBOL", "ENSEMBL")
+    key <- "ENSEMBL"
+    }
+    if(type == "SYMBOL_single"){
+      column <- "ENSEMBL"
+      key <- "SYMBOL"
+    }
+    if(type == "SYMBOL_double"){
+      column <- c("SYMBOL", "ENSEMBL")
+      key <- "SYMBOL"
+    }
+    if(type == "ENSEMBL"){
+      column <- c("ENSEMBL","SYMBOL")
+      key <- "ENSEMBL"
+    }
+  }
+  gene_IDs<-AnnotationDbi::select(org(Species),keys = my.symbols,
+                                  keytype = key,
+                                  columns = column)
+  if(Species == "Drosophila melanogaster (dm6)" && type == "ENSEMBL") gene_IDs$ENTREZID <- gene_IDs$ENSEMBL
+  return(gene_IDs)
+}
+ref_for_GREAT <- function(Species){
+  switch (Species,
+          "Mus musculus (mm10)" = source <- "TxDb.Mmusculus.UCSC.mm10.knownGene",
+          "Homo sapiens (hg19)" = source <- "TxDb.Hsapiens.UCSC.hg19.knownGene",
+          "Homo sapiens (hg38)" = source <- "TxDb.Hsapiens.UCSC.hg38.knownGene",
+          "Drosophila melanogaster (dm6)" = source <- "TxDb.Dmelanogaster.UCSC.dm6.ensGene",
+          "Rattus norvegicus (rn6)" = source <- "TxDb.Rnorvegicus.UCSC.rn6.refGene",
+          "Caenorhabditis elegans (ce11)" = source <- "TxDb.Celegans.UCSC.ce11.refGene",
+          "Bos taurus (bosTau8)" = source <- "TxDb.Btaurus.UCSC.bosTau8.refGene",
+          "Canis lupus familiaris (canFam3)" = source <- "TxDb.Cfamiliaris.UCSC.canFam3.refGene",
+          "Danio rerio (danRer10)" = source <- "TxDb.Drerio.UCSC.danRer10.refGene",
+          "Gallus gallus (galGal4)" = source <- "TxDb.Ggallus.UCSC.galGal4.refGene",
+          "Macaca mulatta (rheMac8)" = source <- "TxDb.Mmulatta.UCSC.rheMac8.refGene",
+          "Pan troglodytes (panTro4)" = source <- "TxDb.Ptroglodytes.UCSC.panTro4.refGene",
+          "Saccharomyces cerevisiae (sacCer3)" = source <- "TxDb.Scerevisiae.UCSC.sacCer3.sgdGene",
+          "Xenopus laevis (xenLae2)" = source <- "xenLae2",
+          "Arabidopsis thaliana (tair10)" = source <- "TxDb.Athaliana.BioMart.plantsmart51")
+  return(source)
+}
+

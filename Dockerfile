@@ -28,6 +28,17 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('ggnewscale', update = F)" && \
     R -e "BiocManager::install('org.Hs.eg.db', update = F)" && \
     R -e "BiocManager::install('org.Mm.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Rn.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Dm.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Ce.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Xl.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Bt.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Cf.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Dr.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Gg.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Mmu.eg.db', update = F)" && \
+    R -e "BiocManager::install('org.Pt.eg.db', update = F)" && \
+    R -e "BiocManager::install('biomaRt', update = F)" && \
     R -e "BiocManager::install('DOSE', update = F)" && \
     R -e "BiocManager::install('msigdbr', update = F)" && \
     R -e "BiocManager::install('genefilter', update = F)" && \
@@ -43,6 +54,15 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('TxDb.Mmusculus.UCSC.mm10.knownGene', update = F)" && \
     R -e "BiocManager::install('TxDb.Hsapiens.UCSC.hg19.knownGene', update = F)" && \
     R -e "BiocManager::install('TxDb.Hsapiens.UCSC.hg38.knownGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Dmelanogaster.UCSC.dm6.ensGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Rnorvegicus.UCSC.rn6.refGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Celegans.UCSC.ce11.refGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Btaurus.UCSC.bosTau8.refGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Cfamiliaris.UCSC.canFam3.refGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Drerio.UCSC.danRer10.refGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Ggallus.UCSC.galGal4.refGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Mmulatta.UCSC.rheMac8.refGene', update = F)" && \
+    R -e "BiocManager::install('TxDb.Ptroglodytes.UCSC.panTro4.refGene', update = F)" && \
     R -e "BiocManager::install('rtracklayer', update = F)" && \
     R -e "BiocManager::install('ChIPseeker', update = F)" && \
     R -e "BiocManager::install('ChIPpeakAnno', update = F)" && \
@@ -62,6 +82,7 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('RColorBrewer', update = F)" && \
     R -e "BiocManager::install('plyranges', update = F)" && \
     R -e "BiocManager::install('ggvenn', update = F)"
+##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
     mkdir -p /usr/local/homer && \
@@ -70,7 +91,15 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     perl configureHomer.pl -install && \
     perl configureHomer.pl -install hg19 && \
     perl configureHomer.pl -install hg38 && \
-    perl configureHomer.pl -install mm10
+    perl configureHomer.pl -install mm10 && \
+    perl configureHomer.pl -install rn6 && \
+    perl configureHomer.pl -install ce11 && \
+    perl configureHomer.pl -install dm6 && \
+    perl configureHomer.pl -install canFam3 && \
+    perl configureHomer.pl -install galGal4 && \
+    perl configureHomer.pl -install danRer10 && \
+    perl configureHomer.pl -install rheMac8 && \
+    perl configureHomer.pl -install panTro4
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/

@@ -323,9 +323,7 @@ shinyServer(function(input, output, session) {
       if(input$Genomic_region == "Promoter"){
         if(input$Species != "not selected"){
           my.symbols <- data$Row.names
-          gene_IDs<-AnnotationDbi::select(org1(),keys = my.symbols,
-                                          keytype = "SYMBOL",
-                                          columns = c("SYMBOL", "ENTREZID"))
+          gene_IDs<-id_convert(my.symbols,input$Species,type="SYMBOL_double")
           colnames(gene_IDs) <- c("Row.names", "ENTREZID")
           gene_IDs <- gene_IDs %>% distinct(Row.names, .keep_all = T)
           data <- merge(data, gene_IDs, by="Row.names")
@@ -374,9 +372,7 @@ shinyServer(function(input, output, session) {
     Row.name <- paste0(data$seqnames,":",data$start,"-",data$end)
     data$locus <- Row.name
     my.symbols <- data$geneId
-    gene_IDs<-AnnotationDbi::select(org1(),keys = my.symbols,
-                                    keytype = "ENTREZID",
-                                    columns = c("SYMBOL", "ENTREZID"))
+    gene_IDs<-id_convert(my.symbols,input$Species,type="ENTREZID")
     colnames(gene_IDs) <- c("geneId","NearestGene")
     data <- merge(data, gene_IDs, by="geneId")
     data <- data %>% distinct(locus, .keep_all = T)
@@ -515,13 +511,17 @@ shinyServer(function(input, output, session) {
         data$color[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr] <- paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))
         data$padj[data$padj == 0] <- 10^(-300)
         if(!is.null(label_data)) {
-          Color <- c("blue","green","darkgray","red")
-          if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("green","darkgray","red")
           for(name in label_data){
             data$color[data$Row.names == name] <- "GOI"
           }
+          Color <- c("blue","green","darkgray","red")
+          data$color <- factor(data$color, levels = c(paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
+                                                      "GOI","NS", paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
+          if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("green","darkgray","red")
         }else{
           Color <- c("blue","darkgray","red")
+          data$color <- factor(data$color, levels = c(paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
+                                                      "NS", paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
           if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("darkgray","red")
         }
         
@@ -639,10 +639,7 @@ shinyServer(function(input, output, session) {
   
   ##trackplot----------
   ref <- reactive({
-    switch (input$Species,
-            "Mus musculus (mm10)" = ref <- "mm10",
-            "Homo sapiens (hg19)" = ref <- "hg19",
-            "Homo sapiens (hg38)" = ref <- "hg38")
+    ref <- gsub(".+\\(","",gsub(")", "", input$Species))
     return(ref)
   })
   
@@ -692,9 +689,7 @@ shinyServer(function(input, output, session) {
       library(Gviz)
       if(input$Genomic_region == "Promoter"){
         label_data <- rownames(deg_result()[input$DEG_result_rows_selected,])
-        gene_IDs<-AnnotationDbi::select(org1(),keys = label_data,
-                                        keytype = "SYMBOL",
-                                        columns = "ENTREZID")
+        gene_IDs<-id_convert(label_data,input$Species,type="SYMBOL_single")
         y <- as.data.frame(subset(promoter_region(), gene_id %in% gene_IDs))
       }else{
         label_data <- rownames(deg_result2()[input$DEG_result_rows_selected,])
@@ -711,9 +706,7 @@ shinyServer(function(input, output, session) {
       }else{
         label_data <- deg_result2()[input$DEG_result_rows_selected,]$NearestGene
       }
-      gene_IDs<-AnnotationDbi::select(org1(),keys = label_data,
-                                      keytype = "SYMBOL",
-                                      columns = "ENTREZID")
+      gene_IDs<- id_convert(label_data,input$Species,type="SYMBOL_single")
       gene_position <- as.data.frame(subset(gene_position(), gene_id %in% gene_IDs))
       return(gene_position)
     }
@@ -957,21 +950,17 @@ shinyServer(function(input, output, session) {
       }else{ 
         data3 <- deg_result_anno2()
         H_t2g <- Hallmark_set()
-        switch (input$Species,
-                "Homo sapiens (hg38)" = source <- "TxDb.Hsapiens.UCSC.hg38.knownGene",
-                "Homo sapiens (hg19)" = source <- "TxDb.Hsapiens.UCSC.hg19.knownGene",
-                "Mus musculus (mm10)" = source <- "TxDb.Mmusculus.UCSC.mm10.knownGene"
-        )
+        source <- ref_for_GREAT(input$Species)
         data_degcount_up2 <- dplyr::filter(data3, locus %in% rownames(data_degcount_up()))
         data_degcount_up3 <- with(data_degcount_up2, GRanges(seqnames = seqnames, 
                                                              ranges = IRanges(start,end),
                                                              ENTREZID = geneId))
-        res_up = rGREAT::great(gr = data_degcount_up3,gene_sets = gene_list_for_enrichment_genome(H_t2g),source)
+        res_up = rGREAT::great(gr = data_degcount_up3,gene_sets = gene_list_for_enrichment_genome(H_t2g,input$Species),source)
         data_degcount_down2 <- dplyr::filter(data3, locus %in% rownames(data_degcount_down()))
         data_degcount_down3 <- with(data_degcount_down2, GRanges(seqnames = seqnames, 
                                                                  ranges = IRanges(start,end),
                                                                  ENTREZID = geneId))
-        res_down = rGREAT::great(data_degcount_down3,gene_list_for_enrichment_genome(H_t2g), source)
+        res_down = rGREAT::great(data_degcount_down3,gene_list_for_enrichment_genome(H_t2g,input$Species), source)
         df <- list()
         df[["Up"]] <- res_up
         df[["Down"]] <- res_down
@@ -1788,17 +1777,13 @@ shinyServer(function(input, output, session) {
     RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
     if(str_detect(rownames(RNAdata)[1], "ENS")){
       my.symbols <- gsub("\\..*","", rownames(RNAdata))
-      gene_IDs<-AnnotationDbi::select(org1(),keys = my.symbols,
-                                      keytype = "ENSEMBL",
-                                      columns = c("ENSEMBL","SYMBOL","ENTREZID"))
+      gene_IDs<-id_convert(my.symbols,input$Species,type="ENSEMBL")
       colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
       RNAdata$EnsemblID <- gsub("\\..*","", rownames(RNAdata))
       gene_IDs <- gene_IDs %>% distinct(EnsemblID, .keep_all = T)
     }else{
       my.symbols <- rownames(RNAdata)
-      gene_IDs<-AnnotationDbi::select(org1(),keys = my.symbols,
-                                      keytype = "SYMBOL",
-                                      columns = c("SYMBOL", "ENTREZID"))
+      gene_IDs<-id_convert(my.symbols, input$Species,type="SYMBOL_single")
       colnames(gene_IDs) <- c("Symbol", "gene_id")
       gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T)
       RNAdata$Symbol <- rownames(RNAdata) 
@@ -2625,9 +2610,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                                                                plot = F)$peaks,
                                     TxDb = txdb_venn()) %>% as.data.frame()
       my.symbols <- overlaps.anno$geneId
-      gene_IDs<-AnnotationDbi::select(org_venn(),keys = my.symbols,
-                                      keytype = "ENTREZID",
-                                      columns = c("SYMBOL", "ENTREZID"))
+      gene_IDs<-id_convert(my.symbols,input$Species_venn,type="ENTREZID")
       colnames(gene_IDs) <- c("geneId","NearestGene")
       data <- merge(gene_IDs,overlaps.anno,by="geneId")
       data <- data[,2:11] %>% distinct(peakNames, .keep_all = T)
@@ -2781,10 +2764,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   ##venn_trackplot----------
   ref_venn <- reactive({
-    switch (input$Species_venn,
-            "Mus musculus (mm10)" = ref <- "mm10",
-            "Homo sapiens (hg19)" = ref <- "hg19",
-            "Homo sapiens (hg38)" = ref <- "hg38")
+    ref <- gsub(".+\\(","",gsub(")", "", input$Species_venn))
     return(ref)
   })
   
@@ -2839,9 +2819,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   goi_gene_position_venn <- reactive({
     if(!is.null(goi_promoter_position_venn())){
       label_data <- goi_promoter_position_venn()$NearestGene
-      gene_IDs<-AnnotationDbi::select(org_venn(),keys = label_data,
-                                      keytype = "SYMBOL",
-                                      columns = "ENTREZID")
+      gene_IDs<- id_convert(label_data,input$Species_venn,type="SYMBOL_single")
       gene_position <- as.data.frame(subset(gene_position_venn(), gene_id %in% gene_IDs))
       return(gene_position)
     }
@@ -3118,13 +3096,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     data <- selected_grange_venn_list()
     H_t2g <- Hallmark_set_venn()
     df <- list()
-    switch (input$Species_venn,
-            "Homo sapiens (hg38)" = source <- "TxDb.Hsapiens.UCSC.hg38.knownGene",
-            "Homo sapiens (hg19)" = source <- "TxDb.Hsapiens.UCSC.hg19.knownGene",
-            "Mus musculus (mm10)" = source <- "TxDb.Mmusculus.UCSC.mm10.knownGene"
-    )
+    source <- ref_for_GREAT(input$Species_venn)
     for(name in names(data)){
-      res = rGREAT::great(gr = data[[name]],gene_sets = gene_list_for_enrichment_genome(H_t2g),source)
+      res = rGREAT::great(gr = data[[name]],gene_sets = gene_list_for_enrichment_genome(H_t2g,input$Species_venn),source)
       df[[name]] <- res
     }
     return(df)
@@ -3355,7 +3329,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   RNAseqDEG_anno_venn <- reactive({
-    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_venn(),org=org_venn()))
+    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_venn(),Species=input$Species_venn))
   })
   
   mmAnno_venn <- reactive({
@@ -4289,9 +4263,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         Row.name <- paste0(data$seqnames,":",data$start,"-",data$end)
         data$locus <- Row.name
         my.symbols <- data$geneId
-        gene_IDs<-AnnotationDbi::select(org1_clustering(),keys = my.symbols,
-                                        keytype = "ENTREZID",
-                                        columns = c("SYMBOL", "ENTREZID"))
+        gene_IDs<-id_convert(my.symbols,input$Species_clustering,type="ENTREZID")
         colnames(gene_IDs) <- c("geneId","NearestGene")
         data <- merge(data, gene_IDs, by="geneId")
         data <- data %>% distinct(locus, .keep_all = T)
@@ -4633,10 +4605,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   )
   #Clustering trackplot-------
   ref_clustering <- reactive({
-    switch (input$Species_clustering,
-            "Mus musculus (mm10)" = ref <- "mm10",
-            "Homo sapiens (hg19)" = ref <- "hg19",
-            "Homo sapiens (hg38)" = ref <- "hg38")
+    ref <- gsub(".+\\(","",gsub(")", "", input$Species_clustering))
     return(ref)
   })
   
@@ -4687,9 +4656,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       library(Gviz)
       if(input$Genomic_region_clustering == "Promoter"){
         label_data <- rownames(clustering_kmeans_pattern_extract()[input$clustering_kmeans_extract_table_rows_selected,])
-        gene_IDs<-AnnotationDbi::select(org1_clustering(),keys = label_data,
-                                        keytype = "SYMBOL",
-                                        columns = "ENTREZID")
+        gene_IDs<- id_convert(label_data,input$Species_clustering,type="SYMBOL_single")
         y <- as.data.frame(subset(promoter_region_clustering(), gene_id %in% gene_IDs))
       }else{
         data <- range_changer(bw_count_clusterin_anno2()[input$clustering_kmeans_extract_table_rows_selected,])
@@ -4707,9 +4674,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }else{
         label_data <- bw_count_clusterin_anno2()[input$clustering_kmeans_extract_table_rows_selected,]$NearestGene
       }
-      gene_IDs<-AnnotationDbi::select(org1_clustering(),keys = label_data,
-                                      keytype = "SYMBOL",
-                                      columns = "ENTREZID")
+      gene_IDs<- id_convert(label_data,input$Species_clustering,type="SYMBOL_single")
       gene_position <- as.data.frame(subset(gene_position_clustering(), gene_id %in% gene_IDs))
       return(gene_position)
     }
@@ -4888,7 +4853,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   RNAseqDEG_anno_clustering <- reactive({
-    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_clustering(),org=org1_clustering()))
+    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_clustering(),Species=input$Species_clustering))
   })
   
   mmAnno_clustering <- reactive({
@@ -5501,13 +5466,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     data <- Enrich_peak_call_files()
     H_t2g <- Hallmark_set_enrich()
     df <- list()
-    switch (input$Species_enrich,
-            "Homo sapiens (hg38)" = source <- "TxDb.Hsapiens.UCSC.hg38.knownGene",
-            "Homo sapiens (hg19)" = source <- "TxDb.Hsapiens.UCSC.hg19.knownGene",
-            "Mus musculus (mm10)" = source <- "TxDb.Mmusculus.UCSC.mm10.knownGene"
-    )
+    source <- ref_for_GREAT(input$Species_enrich)
     for(name in names(data)){
-      res = rGREAT::great(gr = data[[name]],gene_sets = gene_list_for_enrichment_genome(H_t2g),source)
+      res = rGREAT::great(gr = data[[name]],gene_sets = gene_list_for_enrichment_genome(H_t2g,input$Species_enrich),source)
       df[[name]] <- res
     }
     return(df)
