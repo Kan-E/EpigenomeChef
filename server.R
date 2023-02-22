@@ -515,15 +515,19 @@ shinyServer(function(input, output, session) {
         data$color[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr] <- paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))
         data$padj[data$padj == 0] <- 10^(-300)
         if(!is.null(label_data)) {
-          Color <- c("blue","green","darkgray","red")
-          if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("green","darkgray","red")
-          for(name in label_data){
-            data$color[data$Row.names == name] <- "GOI"
-          }
-        }else{
-          Color <- c("blue","darkgray","red")
-          if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("darkgray","red")
-        }
+                  for(name in label_data){
+                    data$color[data$Row.names == name] <- "GOI"
+                  }
+                  Color <- c("blue","green","darkgray","red")
+                  data$color <- factor(data$color, levels = c(paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
+                                                              "GOI","NS", paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
+                  if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("green","darkgray","red")
+                }else{
+                  Color <- c("blue","darkgray","red")
+                  data$color <- factor(data$color, levels = c(paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
+                                                              "NS", paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
+                  if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("darkgray","red")
+                }
         
         v <- ggplot(data, aes(x = log2FoldChange, y = -log10(padj))) + geom_point(aes(color = color),size = 0.4)
         v <- v  + geom_vline(xintercept = c(-log2(input$fc), log2(input$fc)), linetype = c(2, 2), color = c("black", "black")) +
