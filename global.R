@@ -1246,4 +1246,76 @@ ref_for_GREAT <- function(Species){
           "Arabidopsis thaliana (tair10)" = source <- "TxDb.Athaliana.BioMart.plantsmart51")
   return(source)
 }
+ggVennPeaks <- function (peak_list, peak_names = names(peak_list), percent = TRUE, 
+          stranded = FALSE, true_overlaps = FALSE, in_fill = c("blue", 
+                                                                     "gold3"), alpha = 0.4, out_color = "black", name_color = "black", 
+                                                                     text_color = "black", name_size = 5, label_size = 3, title = "", 
+          subtitle = "", return_peaks = FALSE) 
+{
+  suppressPackageStartupMessages(require(ggvenn))
+  suppressPackageStartupMessages(require(dplyr))
+  suppressPackageStartupMessages(require(reshape2))
+  suppressPackageStartupMessages(require(magrittr))
+  suppressPackageStartupMessages(require(purrr))
+  suppressPackageStartupMessages(require(tidyr))
+  suppressPackageStartupMessages(require(plyranges))
+  if (!is.list(peak_list)) {
+    stop("'peak_list' must be a (named) list of dataframes with, at least, the columns 'seqnames', 'start' and 'end'.")
+  }
+  if (length(peak_list) != length(peak_names)) {
+    stop("'peak_names' must be a character vector with the same length as 'peak_list'.")
+  }
+  if (stranded) {
+    if (!"strand" %in% colnames(bind_rows(peak_list))) {
+      stop("If 'stranded' is TRUE, a 'strand' column must be present in all the elements from peak list.")
+    }
+    else {
+      peak_list <- peak_list %>% purrr::map(~dplyr::mutate(.x, 
+                                                           strand = if_else(strand %in% c("\\.", "\\*", 
+                                                                                          ".", "*"), "*", strand)))
+    }
+  }
+  if (true_overlaps & length(peak_list) == 2) {
+    stranded <- FALSE
+    percent <- FALSE
+  }
+  peak_list <- peak_list %>% purrr::map(~dplyr::mutate(.x, 
+                                                       strand = if_else(strand %in% c(".", "*", "\\.", "\\*"), 
+                                                                        "*", strand)))
+  peaks1 <- peak_list[[1]] %>% plyranges::as_granges()
+  peaks2 <- peak_list[[2]] %>% plyranges::as_granges()
+  overlaps1 <- plyranges::filter_by_overlaps(peaks1, peaks2)
+  overlaps2 <- plyranges::filter_by_overlaps(peaks2, peaks1)
+  x <- getVennCounts(peaks = peak_list, conds = peak_names, 
+                     stranded = stranded)
+  if (length(in_fill) != length(peak_list)) {
+    if (length(peak_list) == 2) {
+      in_fill <- c("blue", "gold3")
+    }
+    else if (length(peak_list) == 3) {
+      in_fill <- c("blue", "gold3", "pink")
+    }
+    else if (length(peak_list) == 4) {
+      in_fill <- c("blue", "gold3", "pink", "green")
+    }
+    else if (length(peak_list) == 5) {
+      in_fill <- c("blue", "gold3", "pink", "green", "orange")
+    }
+  }
+  y <- x$matrix %>% as_tibble() %>% magrittr::set_colnames(c("Peak", 
+                                                             paste("cond", 1:length(peak_list), sep = ""))) %>% reshape2::melt() %>% 
+    mutate(value = if_else(value == 1, Peak, NA)) %>% tidyr::pivot_wider(names_from = "variable", 
+                                                                           values_from = "value") %>% dplyr::select(-Peak) %>% dplyr::as_tibble() %>% 
+    as.list() %>% purrr::set_names(peak_names) %>% purrr::map(~na.omit(.x))
+  venn <- ggvenn::ggvenn(data = y, show_percentage = percent, 
+                         fill_color = in_fill, fill_alpha = alpha, stroke_color = out_color, 
+                         set_name_color = name_color, set_name_size = name_size, 
+                         text_color = text_color, text_size = label_size) + scale_y_discrete(expand = c(0, 
+                                                                                                        0.5))
+  if (length(peak_list) %in% 4:5) {
+    venn <- venn + scale_x_discrete(expand = c(0, 0.5))
+  }
+  return(venn)
+}
+
 
