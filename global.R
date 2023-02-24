@@ -68,6 +68,7 @@ library(colorspace)
 library(ggcorrplot)
 library(RColorBrewer)
 library(bedtorch)
+library(venn)
 options('homer_path' = "/usr/local/homer")
 check_homer()
 options(rsconnect.max.bundle.size=31457280000000000000)
@@ -1252,13 +1253,9 @@ ggVennPeaks <- function (peak_list, peak_names = names(peak_list), percent = TRU
                                                                      text_color = "black", name_size = 5, label_size = 3, title = "", 
           subtitle = "", return_peaks = FALSE) 
 {
-  suppressPackageStartupMessages(require(ggvenn))
   suppressPackageStartupMessages(require(dplyr))
   suppressPackageStartupMessages(require(reshape2))
   suppressPackageStartupMessages(require(magrittr))
-  suppressPackageStartupMessages(require(purrr))
-  suppressPackageStartupMessages(require(tidyr))
-  suppressPackageStartupMessages(require(plyranges))
   if (!is.list(peak_list)) {
     stop("'peak_list' must be a (named) list of dataframes with, at least, the columns 'seqnames', 'start' and 'end'.")
   }
@@ -1288,33 +1285,12 @@ ggVennPeaks <- function (peak_list, peak_names = names(peak_list), percent = TRU
   overlaps2 <- plyranges::filter_by_overlaps(peaks2, peaks1)
   x <- getVennCounts(peaks = peak_list, conds = peak_names, 
                      stranded = stranded)
-  if (length(in_fill) != length(peak_list)) {
-    if (length(peak_list) == 2) {
-      in_fill <- c("blue", "gold3")
-    }
-    else if (length(peak_list) == 3) {
-      in_fill <- c("blue", "gold3", "pink")
-    }
-    else if (length(peak_list) == 4) {
-      in_fill <- c("blue", "gold3", "pink", "green")
-    }
-    else if (length(peak_list) == 5) {
-      in_fill <- c("blue", "gold3", "pink", "green", "orange")
-    }
-  }
   y <- x$matrix %>% as_tibble() %>% magrittr::set_colnames(c("Peak", 
                                                              paste("cond", 1:length(peak_list), sep = ""))) %>% reshape2::melt() %>% 
     mutate(value = if_else(value == 1, Peak, NA)) %>% tidyr::pivot_wider(names_from = "variable", 
                                                                            values_from = "value") %>% dplyr::select(-Peak) %>% dplyr::as_tibble() %>% 
     as.list() %>% purrr::set_names(peak_names) %>% purrr::map(~na.omit(.x))
-  venn <- ggvenn::ggvenn(data = y, show_percentage = percent, 
-                         fill_color = in_fill, fill_alpha = alpha, stroke_color = out_color, 
-                         set_name_color = name_color, set_name_size = name_size, 
-                         text_color = text_color, text_size = label_size) + scale_y_discrete(expand = c(0, 
-                                                                                                        0.5))
-  if (length(peak_list) %in% 4:5) {
-    venn <- venn + scale_x_discrete(expand = c(0, 0.5))
-  }
+  venn <- venn::venn(y, ilabels = TRUE, zcolor = "style", opacity = 0, ilcs = 1.5, sncs = 1.5)
   return(venn)
 }
 

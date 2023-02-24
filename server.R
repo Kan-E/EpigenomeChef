@@ -2564,10 +2564,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     content = function(file) {
       withProgress(message = "Preparing download",{
         if(input$venn_pdf_height == 0){
-          pdf_height <- 7
+          pdf_height <- 6
         }else pdf_height <- input$venn_pdf_height
         if(input$venn_pdf_width == 0){
-          pdf_width <- 7
+          pdf_width <- 6
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))

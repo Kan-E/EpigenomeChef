@@ -81,7 +81,7 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('ggcorrplot', update = F)" && \
     R -e "BiocManager::install('RColorBrewer', update = F)" && \
     R -e "BiocManager::install('plyranges', update = F)" && \
-    R -e "BiocManager::install('ggvenn', update = F)"
+    R -e "BiocManager::install('venn', update = F)"
 ##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
