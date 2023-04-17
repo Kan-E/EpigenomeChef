@@ -14,6 +14,9 @@ shinyServer(function(input, output, session) {
   output$Spe_dist_promoter <- renderText({
     if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, this function is not available. This function is for 'Genome-wide' mode. ")
   })
+  output$Spe_great_promoter <- renderText({
+    if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, this function is not available. This function is for 'Genome-wide' mode. ")
+  })
   output$Spe_motif <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
   })
@@ -160,6 +163,21 @@ shinyServer(function(input, output, session) {
       as.data.frame(uploaded_files)
     }
   })
+  input_list_data_pair <- reactive({
+    if(input$data_file_type == "Row1"){
+      bw_files = as.data.frame(names(bw_files()))
+    }else{
+      bw_files = as.data.frame(names(bam()))
+    }
+    if(input$Genomic_region == "Genome-wide"){
+      peak_files = as.data.frame(names(peak_call_files()))
+      list <- data.frame(bw = bw_files[,1], peak_call = peak_files[,1])
+    }else list <- data.frame(bw = bw_files[,1])
+    if(input$data_file_type != "Row1"){
+      colnames(list)[1] <- "Bam"
+    }
+    return(list)
+  })
   
   bw_count <- reactive({
     if(input$data_file_type == "Row1" && !is.null(bw_files())){
@@ -217,6 +235,15 @@ shinyServer(function(input, output, session) {
       }},
     content = function(file){write.table(bw_count(), file, row.names = T, sep = "\t", quote = F)}
   )
+  output$download_filtered_peakcall_bed <- downloadHandler(
+    filename = function() {
+      if (input$Genomic_region=='Promoter'){
+        paste0("filtered_marged-promoter(", -input$upstream,"-",input$downstream,").bed")
+      }else{
+        paste0("filtered_marged-genomeWide",".bed")
+      }},
+    content = function(file){write.table(as.data.frame(promoter_region()), file, row.names = F,col.names=F, sep = "\t", quote = F)}
+  )
   
   ##pair-wise deseq2--------
   dds <- reactive({
@@ -235,10 +262,13 @@ shinyServer(function(input, output, session) {
     withProgress(message = "Detecting differential accessible region (limma-trend)",{
     count <- log(bw_count() + 1,2)
     collist <- gsub("\\_.+$", "", colnames(count))
-      group <- factor(collist)
+    colnames(count) <- gsub("\\-","\\_",colnames(count))
+    collist<- gsub("\\-","\\_",collist)
+    collist<- factor(collist, levels = unique(collist),ordered = TRUE)
+    print(collist)
       eset = new("ExpressionSet", exprs=as.matrix(count))
       design <- model.matrix(~0+collist)
-      colnames(design) <- unique(collist)
+      colnames(design) <- factor(unique(collist),levels = unique(collist))
       fit <- lmFit(eset, design)
       comparisons <-  paste(unique(collist)[1],"-",unique(collist)[2],sep="")
       cont.matrix <- makeContrasts(contrasts=comparisons, levels=design)
@@ -424,7 +454,11 @@ shinyServer(function(input, output, session) {
     content = function(file){
       if(input$Genomic_region == "Promoter"){
         write.table(deg_result(), file, row.names = T, sep = "\t", quote = F)
-      }else write.table(deg_result2(), file, row.names = T, sep = "\t", quote = F)
+      }else{
+        if(input$Species != "not_selected"){
+        write.table(deg_result2(), file, row.names = T, sep = "\t", quote = F)
+        }else write.table(deg_result(), file, row.names = T, sep = "\t", quote = F)
+        }
     }
   )
   output$download_pair_norm_count = downloadHandler(
@@ -436,6 +470,8 @@ shinyServer(function(input, output, session) {
       }},
     content = function(file){write.table(deg_norm_count(), file, row.names = T, sep = "\t", quote = F)}
   )
+  
+  
   # pair-wise PCA ------------------------------------------------------------------------------
   output$download_pair_PCA = downloadHandler(
     filename = "PCA-MDS-dendrogram.pdf",
@@ -479,6 +515,7 @@ shinyServer(function(input, output, session) {
       if(!is.null(data_degcount())){
       withProgress(message = "Preparing volcano plot",{
         data <- as.data.frame(data_degcount())
+        data <- na.omit(data)
         min <- floor(min(data$log2FoldChange))
         max <- ceiling(max(data$log2FoldChange))
     sliderInput("xrange","X_axis range:",min = min-1,
@@ -490,6 +527,8 @@ shinyServer(function(input, output, session) {
   output$volcano_y <- renderUI({
     if(!is.null(data_degcount())){
       data <- as.data.frame(data_degcount())
+      data$padj[data$padj == 0] <- 10^(-300)
+      data <- na.omit(data)
     max <- ceiling(max(-log10(data$padj)))
     sliderInput("yrange","Y_axis range:",min = 0, max= max+1, step = 1,
                 value = max)
@@ -767,14 +806,14 @@ shinyServer(function(input, output, session) {
         plot<- plotTracks(list(gtrack(), highlight_trackplot()),
                           from = input$igv_uprange[1], 
                           to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
-                          type="hist")
+                          type="hist",add=TRUE)
       }else{
         df <- data_track()
         df[["gtrack"]] <- gtrack()
         plot<- plotTracks(df,
                           from = input$igv_uprange[1], 
                           to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
-                          type="hist")
+                          type="hist",add=TRUE)
       }
       return(plot)
     }
@@ -798,26 +837,26 @@ shinyServer(function(input, output, session) {
         if(input$pair_pdf_width == 0){
           pdf_width <- 7
         }else pdf_width <- input$pair_pdf_width
+        print(class(goi_trackplot()))
         pdf(file, height = pdf_height, width = pdf_width)
         if(!is.null(highlight_trackplot())){
           plotTracks(list(gtrack(), highlight_trackplot()),
                             from = input$igv_uprange[1], 
                             to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
-                            type="hist")
+                            type="hist",add=TRUE)
         }else{
           df <- data_track()
           df[["gtrack"]] <- gtrack()
           plotTracks(df,
                             from = input$igv_uprange[1], 
                             to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
-                            type="hist")
+                            type="hist",add=TRUE)
         }
         dev.off()
         incProgress(1)
       })
     }
   )
-  
   
   
   ##Functional enrichment analysis-------------
@@ -1356,6 +1395,25 @@ shinyServer(function(input, output, session) {
     contentType = "application/zip"
   )
   
+  output$download_pair_report = downloadHandler(
+    filename = function() {
+      paste0("HOMER_report",".zip")
+    },
+    content = function(fname){
+      fs <- c()
+      path_list <- enrich_motif()
+      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+      for(name in names(path_list)){
+        files <-list.files(path_list[[name]],pattern = "*.*")
+        for(i in 1:length(files)){
+          data <- paste0(path_list[[name]],"/",files[[i]])
+          fs <- c(fs, data)
+        }
+      }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
   
   output$download_motif_table = downloadHandler(
     filename = function() {
@@ -1419,14 +1477,17 @@ shinyServer(function(input, output, session) {
       }
     }
   })
+  updistribution <- reactive({
+    return(genomicElementDistribution(deg_peak_list()[["Up"]], 
+                               TxDb = txdb()))
+  })
   output$input_peak_distribution <- renderPlot({
-    withProgress(message = "Plot peak distribution for peak call files",{
       if(!is.null(input_peak_list()) && !is.null(txdb()) && 
          input$Genomic_region == "Genome-wide"){
-        genomicElementDistribution(deg_peak_list()[["Up"]], 
-                                   TxDb = txdb(),) 
+        withProgress(message = "Plot peak distribution of up DAR",{
+        updistribution()
+        })
       }
-    })
   })
   deg_peak_list <- reactive({
     if(!is.null(data_degcount_up()) && !is.null(data_degcount_down())){
@@ -1442,12 +1503,15 @@ shinyServer(function(input, output, session) {
       return(Glist)
     }
   })  
+  downdistribution <- reactive({
+    return(genomicElementDistribution(deg_peak_list()[["Down"]], 
+                                      TxDb = txdb()))
+  })
   output$deg_peak_distribution <- renderPlot({
-    withProgress(message = "Plot peak distribution for DAR",{
+    withProgress(message = "Plot peak distribution of down DAR",{
       if(input$Genomic_region == "Genome-wide"){
       if(!is.null(deg_peak_list()) && input$Species != "not selected"){
-        genomicElementDistribution(deg_peak_list()[["Down"]], 
-                                   TxDb = txdb())
+        downdistribution()
       }
       }
     })
@@ -1467,8 +1531,7 @@ shinyServer(function(input, output, session) {
           pdf_width <- 10
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        genomicElementDistribution(deg_peak_list()[["Up"]], 
-                                   TxDb = txdb()) 
+        print(updistribution())
         dev.off()
         incProgress(1)
       })
@@ -1488,8 +1551,7 @@ shinyServer(function(input, output, session) {
           pdf_width <- 10
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        genomicElementDistribution(deg_peak_list()[["Down"]], 
-                                   TxDb = txdb()) 
+        print(downdistribution())
         dev.off()
         incProgress(1)
       })
@@ -1514,12 +1576,287 @@ shinyServer(function(input, output, session) {
         files <- c(files,file)
       }
       names(files)<-name
-      return(files)
+      return(bigwig_breakline(files))
     }
   })
   output$peak_pattern_up_heat_range <- renderUI({
-    numericInput("peak_up_range","Intensity range",value=10,min = 0.1,step=2)
+    if(!is.null(deg_result())){
+      withProgress(message = "Preparing peak pattern for up DAR",{
+      rg <- pair_pattern_range_up()
+    sliderInput("peak_up_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+      })
+    }
   })
+  pair_pattern_range_up <- reactive({
+    rg <- c()
+    sig <- peak_pattern_function(grange=peak_up_grange(), files=bws(),
+                                 additional=up_additional(),plot = FALSE)
+    for(name in names(sig)){
+      rg <- c(rg, mean(sig[[name]][,50]))
+    }
+    rg <- max(rg) + max(rg)*0.1
+    return(rg)
+  })
+  pair_pattern_range_down <- reactive({
+    rg <- c()
+    sig <- peak_pattern_function(grange=peak_down_grange(), files=bws(),
+                                 additional=up_additional(),plot = FALSE)
+    for(name in names(sig)){
+      rg <- c(rg, mean(sig[[name]][,50]))
+    }
+    rg <- max(rg) + max(rg)*0.1
+    return(rg)
+  })
+  
+  output$pair_report = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"pairwiseDAR_report",".zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download, please wait for a few minutes.",{
+        fs <- c()
+        print(fs)
+        dir.create("DEG_result",showWarnings = FALSE)
+        dir.create("Input",showWarnings = FALSE)
+        dir.create("Clustering/",showWarnings = FALSE)
+        DEG <- "DEG_result/DEG_result.txt"
+        up <- "DEG_result/up_DAR.bed"
+        down <- "DEG_result/down_DAR.bed"
+        input_list <- "Input/input_list.txt"
+        count <- "Input/count.txt"
+        bed <- "Input/filtered_merged_peak_call.bed"
+        PCA <- "Clustering/clustering.pdf"
+        PCA_table <- "Clustering/pca.txt"
+        heatmap <- "DEG_result/heatmap.pdf"
+
+        fs <- c(DEG, up,down,count,bed,input_list,PCA,PCA_table,heatmap)
+        print(fs)
+        if(input$Species != "not selected") process_num <- 8 else process_num <- 3
+        pdf(heatmap, height = 4, width = 3)
+        print(pair_heatmap())
+        dev.off()
+        pdf(PCA, height = 3.5, width = 9)
+        print(PCAplot(data = deg_norm_count(),plot=TRUE))
+        dev.off()
+        write.table(PCAplot(data = deg_norm_count(),plot=FALSE), PCA_table, row.names = T, sep = "\t", quote = F)
+        write.table(input_list_data_pair(), input_list, row.names = F, sep = "\t", quote = F)
+        write.table(deg_norm_count(), count, row.names = T, sep = "\t", quote = F)
+        withProgress(message = "DEG_result",{
+          if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
+            write.table(deg_result(), DEG, row.names = T, sep = "\t", quote = F)
+          }else{
+            write.table(deg_result2(), DEG, row.names = T, sep = "\t", quote = F) 
+          }
+          write.table(data_degcount_up_bed(), up, row.names = F, col.names = F,sep = "\t", quote = F)
+          write.table(data_degcount_down_bed(), down, row.names = F, col.names = F,sep = "\t", quote = F)
+          write.table(as.data.frame(promoter_region()), bed, row.names = F,col.names=F, sep = "\t", quote = F)
+        })
+        incProgress(1/process_num)
+        if(!is.null(input$peak_up_range)){
+        withProgress(message = "Peak pattern",{
+          dir.create("peak_pattern",showWarnings = FALSE)
+          up_pattern <- "peak_pattern/up_lineplot.pdf"
+          down_pattern <- "peak_pattern/down_lineplot.pdf"
+          up_pattern_heatmap <- "peak_pattern/up_heatmap.pdf"
+          down_pattern_heatmap <- "peak_pattern/down_heatmap.pdf"
+          fs <- c(fs,up_pattern,down_pattern, up_pattern_heatmap,down_pattern_heatmap)
+          pdf(up_pattern, height = 5, width = 5)
+          matplot(peak_up_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                  type="l",ylab="density",lty=1,xaxt="n",)
+          axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+          legend("topright", legend=colnames(peak_up_alinedHeatmap()[["line"]]), col=1:6,
+                 lty=1, lwd=1)
+          dev.off()
+          incProgress(1/4)
+          pdf(down_pattern, height = 5, width = 5)
+          matplot(peak_down_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                  type="l",ylab="density",lty=1,xaxt="n")
+          axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+          legend("topright", legend=colnames(peak_down_alinedHeatmap()[["line"]]), col=1:6,
+                 lty=1, lwd=1)
+          dev.off()
+          incProgress(1/4)
+          pdf(up_pattern_heatmap, height = 6, width = 6)
+          print(plot_grid(peak_up_alinedHeatmap()[["heat"]]))
+          dev.off()
+          incProgress(1/4)
+          pdf(down_pattern_heatmap, height = 6, width = 6)
+          print(plot_grid(peak_down_alinedHeatmap()[["heat"]]))
+          dev.off()
+          incProgress(1/4)
+        })
+        }
+        incProgress(1/process_num)
+        if(!is.null(input$xrange)){
+          withProgress(message = "volcano plot",{
+        volcano <- "DEG_result/volcano_plot.pdf"
+        fs <- c(fs, volcano)
+            pdf(volcano, height = 4, width = 4)
+            print(pair_volcano())
+            dev.off()
+        })
+      }
+        incProgress(1/process_num)
+        if(input$Species != "not selected"){
+          if(input$Genomic_region == "Genome-wide"){
+          dir.create("peak_distribution",showWarnings = FALSE)
+          up_distribution <- "peak_distribution/up_annotation.pdf"
+          down_distribution <- "peak_distribution/down_annotation.pdf"
+          fs <- c(fs, up_distribution,down_distribution)
+          withProgress(message = "Peak distribution",{
+            pdf(up_distribution, height = 6, width = 10)
+            print(updistribution())
+            dev.off()
+            incProgress(1/2)
+            pdf(down_distribution, height = 6, width = 10)
+            print(downdistribution())
+            dev.off()
+            incProgress(1/2)
+          })
+          }
+          incProgress(1/process_num)
+          if(!is.null(input$Gene_set) && input$Genomic_region == "Genome-wide"){
+            dir.create("GREAT",showWarnings = FALSE)
+            dotplot <- paste0("GREAT/dotplot_",input$Gene_set,".pdf")
+            enrich_table <- paste0("GREAT/enrichment_",input$Gene_set,".txt")
+            fs <- c(fs, dotplot,enrich_table)
+            withProgress(message = "GREAT",{
+              write.table(as.data.frame(enrichment_1_1()), enrich_table, row.names = F, sep = "\t", quote = F)
+              p1 <- pair_enrich1_H()
+              pdf(dotplot, height = 5, width = 6)
+              print(plot_grid(p1))
+              dev.off()
+              if(!is.null(input$Pathway_list) && 
+                 !is.null(input$Up_or_Down) && !is.null(enrichment_enricher())){
+                region_associate_plot <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".pdf")
+                region_associate_table <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".txt")
+                fs <- c(fs, region_associate_plot,region_associate_table)
+                set_list <- input$Pathway_list
+                df <- enrichment_enricher()
+                name <- input$Up_or_Down
+                write.table(region_gene_associate(), region_associate_table, row.names = F, sep = "\t", quote = F)
+                pdf(region_associate_plot, height = 5, width = 12)
+                rGREAT::plotRegionGeneAssociations(df[[name]], term_id = set_list)
+                dev.off()
+              }
+            })
+          }
+          incProgress(1/process_num)
+          if(input$motifButton > 0 && !is.null(enrich_motif()) && 
+             !is.null(input$homer_unknown)){
+            withProgress(message = "HOMER",{
+              path_list <- enrich_motif()
+              base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+              for(name in names(path_list)){
+                files <-list.files(path_list[[name]],pattern = "*.*")
+                for(i in 1:length(files)){
+                  data <- paste0(path_list[[name]],"/",files[[i]])
+                  fs <- c(fs, data)
+                }
+              }
+              motif <- paste0(base_dir,"/homer_dotplot",".pdf")
+              p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
+              pdf(motif, height = 6, width = 7)
+              print(p1)
+              dev.off()
+            })
+          }
+          incProgress(1/process_num)
+          if(!is.null(input$peak_distance) && !is.null(input$pair_DEG_result) && !is.na(input$DEG_fdr) && 
+             !is.na(input$DEG_fc)){
+            withProgress(message = "withRNAseq",{
+              dirname <- paste0("withRNAseq_range-",input$peak_distance,"kb_fc",input$DEG_fc,"_fdr",input$DEG_fdr,"_RNAseq-",input$pair_DEG_result$name,"/")
+              dir.create(dirname,showWarnings = FALSE)
+              ksplot <- paste0(dirname,"KSplot.pdf")
+              RNAseq_boxplot <- paste0(dirname,"boxplot.pdf")
+              RNAseq_barplot <- paste0(dirname,"barplot.pdf")
+              RP_all <- paste0(dirname,"RP_summary.txt")
+              fs <- c(fs, ksplot, RNAseq_boxplot, RNAseq_barplot,RP_all)
+              pdf(ksplot, height = 5, width = 7)
+              print(regulatory_potential())
+              dev.off()
+              pdf(RNAseq_boxplot, height = 5, width = 7)
+              print(pari_RNAseq_boxplot())
+              dev.off()
+              pdf(RNAseq_barplot, height = 5, width = 7)
+              gridExtra::grid.arrange(RNAseq_popu(), ChIPseq_popu(), ncol = 1)
+              dev.off()
+              write.table(RP_all_table(), RP_all, row.names = F, sep = "\t", quote = F)
+              dir.create(paste0(dirname,"selected_bed/"),showWarnings = FALSE)
+              dir.create(paste0(dirname,"selected_table/"),showWarnings = FALSE)
+              for(name in unique(RP_all_table()$Group)){
+                RP_selected <- paste0(dirname,"selected_table/RNA-epi_",name,".txt")
+                RP_selected_bed <- paste0(dirname,"selected_bed/RNA-epi_",name,".bed")
+                fs <- c(fs, RP_selected,RP_selected_bed)
+                table <- RP_all_table() %>% dplyr::filter(Group == name)
+                write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
+                gene <- table$gene_id
+                type <- gsub(".+\\-","", name)
+                if(type == "up") {
+                  peak <- subset(mmAnno_up(), gene_id %in% gene)
+                  up_peak2 <- as.data.frame(peak)
+                  up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+                  up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+                  up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+                  mcols(up_peak3) <- DataFrame(Group = "up")
+                  y <- as.data.frame(up_peak3)
+                }
+                if(type == "down") {
+                  peak <- subset(mmAnno_down(), gene_id %in% gene)
+                  down_peak2 <- as.data.frame(peak)
+                  down_peak2$Row.names <- paste0(down_peak2$seqnames,":",down_peak2$start,"-",down_peak2$end)
+                  down_peak2 <- down_peak2 %>% distinct(Row.names, .keep_all = T)
+                  down_peak3 <- with(down_peak2,GRanges(seqnames,IRanges(start,end)))
+                  mcols(down_peak3) <- DataFrame(Group = "up")
+                  y <- as.data.frame(down_peak3)
+                }
+                write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+              }
+              if(!is.null(input$RP_table_rows_selected) &&
+                 !is.null(int_goi_promoter_position()) && 
+                 !is.null(int_goi_gene_position()) && 
+                 !is.null(input$int_igv_uprange)){
+                print(RP_selected_table()[input$RP_table_rows_selected,])
+                gene <- RP_selected_table()[input$RP_table_rows_selected,]$Symbol
+                inttrack <- paste0(dirname,gene,".pdf")
+                fs <- c(fs, inttrack)
+                pdf(inttrack, height = 4, width = 7)
+                if(!is.null(int_highlight_trackplot())){
+                  plotTracks(list(gtrack(), int_highlight_trackplot()),
+                             from = input$int_igv_uprange[1], 
+                             to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                             type="hist")
+                }else{
+                  df <- int_data_track()
+                  df[["gtrack"]] <- gtrack()
+                  plotTracks(df,
+                             from = input$int_igv_uprange[1], 
+                             to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                             type="hist")
+                }
+                dev.off()
+              }
+              if(!is.null(input$intGeneset) && !is.null(input$intGroup)){
+                dir.create(paste0(dirname,"enrichment_analysis/"),showWarnings = FALSE)
+                intdotplot <- paste0(dirname,"enrichment_analysis/dotplot_",input$intGeneset,".pdf")
+                intenrichtable <- paste0(dirname,"enrichment_analysis/enrichment_",input$intGeneset,".txt")
+                fs <- c(fs, intdotplot,intenrichtable)
+                pdf(intdotplot, height = 5, width = 8)
+                dotplot_for_output(data = int_enrich(),
+                                   plot_genelist = int_enrich_plot(), Gene_set = input$intGeneset, 
+                                   Species = input$Species)
+                dev.off()
+                write.table(int_enrich_table(), intenrichtable, row.names = F, sep = "\t", quote = F)
+              }
+            })
+          }
+          incProgress(1/process_num)
+        }
+      })
+        zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
   peak_up_grange <- reactive({
     if(!is.null(data_degcount_down())){
     if(input$Genomic_region == "Genome-wide"){
@@ -1532,53 +1869,30 @@ shinyServer(function(input, output, session) {
     return(up)
     }else return(NULL)
   })
-  peak_up_cvglists <-reactive({
-    up2 <- peak_up_grange()
-    feature.recentered <- reCenterPeaks(up2, width=4000)
-    files <- bws()
-    if(!is.null(up_additional())) files <- c(files, up_additional())
-    cvglists <- sapply(files, import,which=feature.recentered,as="RleList")
-    names(cvglists) <- gsub(".+\\/","",gsub("\\..+$", "", names(files)))
-    return(cvglists)
-  })
   
-  peak_up_sig <- reactive({
-    up2 <- peak_up_grange()
-    cvglists <- peak_up_cvglists()
-    feature.center <- reCenterPeaks(up2, width=1)
-    sig <- featureAlignedSignal(cvglists, feature.center,
-                                upstream=2000, downstream=2000)
-    return(sig)
-  })
-  
-  peak_up_feature_center <- reactive({
-    up2 <- peak_up_grange()
-    feature.center <- reCenterPeaks(up2, width=1)
-    return(feature.center)
-  })
   peak_up_alinedHeatmap <- reactive({
-    if(!is.null(input$peak_up_range)){
-      range <- c()
-      for(n in length(names(bws()))) {range <- c(range, input$peak_up_range)}
-      heatmap <- featureAlignedHeatmap(peak_up_sig(), peak_up_feature_center(),
-                                       upstream=2000, downstream=2000,
-                                       upper.extreme=range,color = brewer.pal(n = 9, name = 'OrRd'))
+    if(!is.null(input$peak_up_range) && input$peak_up_range > 0){
+      bigwig <- bigwig_breakline(bws())
+      heatmap <- peak_pattern_function(grange=peak_up_grange(), files=bigwig,
+                                       additional=up_additional(),rg = input$peak_up_range)
       return(heatmap)
     }
   })
   output$peak_pattern_up_heatmap <- renderPlot({
     withProgress(message = "feature aligned heatmap",{
       if(!is.null(deg_result())){
-        plot_grid(peak_up_alinedHeatmap())
+        plot_grid(peak_up_alinedHeatmap()[["heat"]])
       }
     })
   })
   output$peak_pattern_up_line <- renderPlot({
     withProgress(message = "feature aligned distribution",{
-      if(!is.null(deg_result())){
-        featureAlignedDistribution(peak_up_sig(), peak_up_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+      if(!is.null(deg_result()) && !is.null(input$peak_up_range)){
+        matplot(peak_up_alinedHeatmap()[["line"]],
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_up_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
       }
     })
   })
@@ -1596,7 +1910,7 @@ shinyServer(function(input, output, session) {
           pdf_width <- 6
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(plot_grid(peak_up_alinedHeatmap()))
+        print(plot_grid(peak_up_alinedHeatmap()[["heat"]]))
         dev.off()
         incProgress(1)
       })
@@ -1615,24 +1929,24 @@ shinyServer(function(input, output, session) {
           pdf_width <- 5
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        featureAlignedDistribution(peak_up_sig(), peak_up_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+        matplot(peak_up_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_up_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
         dev.off()
         incProgress(1)
       })
     }
   )
   ###Peak pattern comparison down--------
-  output$peak_pattern_down_additional <- renderUI({
-    fileInput("peak_pattern_down_add",
-              "Select additional bigwig files",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
-  })
   output$peak_pattern_down_heat_range <- renderUI({
-    numericInput("peak_down_range","Intensity range",value=10,min = 0.1,step=2)
+    if(!is.null(deg_result())){
+      withProgress(message = "Preparing peak pattern for down DAR",{
+      rg <- pair_pattern_range_down()
+      sliderInput("peak_down_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+      })
+    }
   })
   peak_down_grange <- reactive({
     if(!is.null(data_degcount_down())){
@@ -1646,53 +1960,30 @@ shinyServer(function(input, output, session) {
     return(down)
     }else return(NULL)
   })
-  peak_down_cvglists <-reactive({
-    down2 <- peak_down_grange()
-    feature.recentered <- reCenterPeaks(down2, width=4000)
-    files <- bws()
-    if(!is.null(up_additional())) files <- c(files, up_additional())
-    cvglists <- sapply(files, import,which=feature.recentered,as="RleList")
-    names(cvglists) <- gsub(".+\\/","",gsub("\\..+$", "", names(files)))
-    return(cvglists)
-  })
   
-  peak_down_sig <- reactive({
-    down2 <- peak_down_grange()
-    cvglists <- peak_down_cvglists()
-    feature.center <- reCenterPeaks(down2, width=1)
-    sig <- featureAlignedSignal(cvglists, feature.center,
-                                upstream=2000, downstream=2000)
-    return(sig)
-  })
-  
-  peak_down_feature_center <- reactive({
-    down2 <- peak_down_grange()
-    feature.center <- reCenterPeaks(down2, width=1)
-    return(feature.center)
-  })
   peak_down_alinedHeatmap <- reactive({
-    if(!is.null(input$peak_down_range)){
-      range <- c()
-      for(n in length(names(bws()))) {range <- c(range, input$peak_down_range)}
-      heatmap <- featureAlignedHeatmap(peak_down_sig(), peak_down_feature_center(),
-                                       upstream=2000, downstream=2000,
-                                       upper.extreme=range,color = brewer.pal(n = 9, name = 'OrRd'))
+    if(!is.null(input$peak_down_range) && input$peak_down_range > 0){
+      bigwig <- bigwig_breakline(bws())
+      heatmap <- peak_pattern_function(grange=peak_down_grange(), files=bigwig,
+                                       additional=up_additional(),rg = input$peak_down_range)
       return(heatmap)
     }
   })
   output$peak_pattern_down_heatmap <- renderPlot({
     withProgress(message = "feature aligned heatmap",{
       if(!is.null(deg_result())){
-        plot_grid(peak_down_alinedHeatmap())
+        plot_grid(peak_down_alinedHeatmap()[["heat"]])
       }
     })
   })
   output$peak_pattern_down_line <- renderPlot({
     withProgress(message = "feature aligned distribution",{
-      if(!is.null(deg_result())){
-        featureAlignedDistribution(peak_down_sig(), peak_down_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+      if(!is.null(deg_result()) && !is.null(input$peak_down_range)){
+        matplot(peak_down_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_down_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
       }
     })
   })
@@ -1709,7 +2000,7 @@ shinyServer(function(input, output, session) {
           pdf_width <- 6
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(plot_grid(peak_down_alinedHeatmap()))
+        print(plot_grid(peak_down_alinedHeatmap()[["heat"]]))
         dev.off()
         incProgress(1)
       })
@@ -1728,9 +2019,11 @@ shinyServer(function(input, output, session) {
           pdf_width <- 5
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        featureAlignedDistribution(peak_down_sig(), peak_down_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+        matplot(peak_down_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_down_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
         dev.off()
         incProgress(1)
       })
@@ -1765,7 +2058,6 @@ shinyServer(function(input, output, session) {
       }
     })
   })
-  
   output$pair_DEG_result <- renderDataTable({
     if(!is.null(RNAseqDEG())){
       RNAseqDEG() 
@@ -1775,6 +2067,10 @@ shinyServer(function(input, output, session) {
   RNAseqDEG_anno <- reactive({
     RNAdata <- RNAseqDEG()
     RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
+    if(str_detect(rownames(RNAdata)[1], "FBgn")){
+      RNAdata$gene_id <- rownames(RNAdata)
+      data <- RNAdata
+    }else{
     if(str_detect(rownames(RNAdata)[1], "ENS")){
       my.symbols <- gsub("\\..*","", rownames(RNAdata))
       gene_IDs<-id_convert(my.symbols,input$Species,type="ENSEMBL")
@@ -1789,6 +2085,7 @@ shinyServer(function(input, output, session) {
       RNAdata$Symbol <- rownames(RNAdata) 
     }
     data <- merge(RNAdata, gene_IDs, by="Symbol")
+    }
     return(data)
   })
   
@@ -2053,8 +2350,11 @@ shinyServer(function(input, output, session) {
     target_result$epigenome_category <- "up"
     target_result$epigenome_category[target_result$sumRP < 0] <- "down"
     table <- NULL
+    if(str_detect(target_result$gene_id[1], "FBgn")){
+      symbol <- target_result$gene_id
+    }else symbol <- target_result$Symbol
     if(!is.null(mmAnno_up()) && !is.null(mmAnno_down())) {
-    table <- data.frame(Symbol = target_result$Symbol,
+    table <- data.frame(Symbol = symbol,
                         Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
                         RNA_log2FC = -target_result$log2FoldChange,
                         RNA_padj = target_result$padj,
@@ -2064,7 +2364,7 @@ shinyServer(function(input, output, session) {
                         gene_id = target_result$gene_id)
     }else{
       if(!is.null(mmAnno_up())){
-        table <- data.frame(Symbol = target_result$Symbol,
+        table <- data.frame(Symbol = symbol,
                             Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
                             RNA_log2FC = -target_result$log2FoldChange,
                             RNA_padj = target_result$padj,
@@ -2073,7 +2373,7 @@ shinyServer(function(input, output, session) {
                             gene_id = target_result$gene_id)
       }
       if(!is.null(mmAnno_down())){
-        table <- data.frame(Symbol = target_result$Symbol,
+        table <- data.frame(Symbol = symbol,
                             Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
                             RNA_log2FC = -target_result$log2FoldChange,
                             RNA_padj = target_result$padj,
@@ -2380,6 +2680,7 @@ shinyServer(function(input, output, session) {
       })
     }
   )
+
   
   #Integrative functional analysis--------
   int_Hallmark_set <- reactive({
@@ -2403,8 +2704,20 @@ shinyServer(function(input, output, session) {
     colnames(df) <- c("ENTREZID","Group")
     for(name in group){
       table <- RP_all_table() %>% dplyr::filter(Group == name)
-      head(table)
-      df2 <- data.frame(ENTREZID = table$gene_id, Group = table$Group)
+      entrezid <- table$gene_id
+      if(str_detect(table$gene_id[1], "FBgn")){
+        my.symbols <- gsub("\\..*","", table$gene_id)
+        gene_IDs<-AnnotationDbi::select(org(input$Species),keys = my.symbols,
+                                        keytype = "ENSEMBL",
+                                        columns = c("ENSEMBL","ENTREZID"))
+        colnames(gene_IDs) <- c("gene_id","ENTREZID")
+        gene_IDs <- gene_IDs %>% distinct("gene_id", .keep_all = T)
+        gene_IDs <- gene_IDs %>% distinct("ENTREZID", .keep_all = T)
+        gene_IDs <- na.omit(gene_IDs)
+        table <- merge(table,gene_IDs,by="gene_id")
+        entrezid <- table$ENTREZID
+      }
+      df2 <- data.frame(ENTREZID = entrezid, Group = table$Group)
       df <- rbind(df,df2)
     }
     return(df)
@@ -2576,6 +2889,16 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       })
     }
   )
+  input_list_data_venn <- reactive({
+    peak_files = as.data.frame(names(Venn_peak_call_files()))
+    list <- list()
+    list[["bed"]] <- data.frame(input_peak_call_files = peak_files[,1])
+    if(!is.null(bws_venn())){
+      list[["bw"]] <- data.frame(input_bigwig_files = as.data.frame(names(bws_venn()))[,1])
+    }
+    return(list)
+  })
+  
   
   output$select_file2 <- renderUI({
     if(!is.null(Venn_peak_call_files())){
@@ -2586,22 +2909,28 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   selected_grange <- reactive({
+    if(!is.null(input$intersect_select)){
     if(input$intersect_select != "not_selected"){
       return(venn_overlap()$peaklist[[input$intersect_select]])
     }
+    }
   })
-  
+  vendistribution <- reactive({
+    return(genomicElementDistribution(selected_grange(), 
+                               TxDb = txdb_venn()))
+  })
   output$venn_peak_distribution <- renderPlot({
     withProgress(message = "Peak distribution",{
       if(!is.null(input$intersect_select)){
       if(input$intersect_select != "not_selected" && !is.null(selected_grange()) &&
          input$Species_venn != "not selected"){
-        genomicElementDistribution(selected_grange(), 
-                                   TxDb = txdb_venn())
+        vendistribution()
       }
       }
     })
   })
+  
+  
   
   selected_annoData_table <- reactive({
     withProgress(message = "Preparing annotation",{
@@ -2613,7 +2942,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       gene_IDs<-id_convert(my.symbols,input$Species_venn,type="ENTREZID")
       colnames(gene_IDs) <- c("geneId","NearestGene")
       data <- merge(gene_IDs,overlaps.anno,by="geneId")
-      data <- data[,2:11] %>% distinct(peakNames, .keep_all = T)
+      data <- data[,2:11] %>% distinct(peakNames, .keep_all = T) %>% as.data.frame()
       return(data)
     })
   })
@@ -2624,6 +2953,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         datatable(
           selection = "single",
           filter = "top")
+    }else if(!is.null(selected_grange())){
+      as.data.frame(selected_grange())
     }
   })
   
@@ -2640,8 +2971,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 6
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        genomicElementDistribution(selected_grange(), 
-                                   TxDb = txdb_venn())
+        print(vendistribution())
         dev.off()
         incProgress(1)
       })
@@ -2651,73 +2981,62 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     filename = function() {
       paste0("Intersect_table-",input$intersect_select,".txt")
     },
-    content = function(file){write.table(as.data.frame(selected_annoData_table()), 
-                                         file, row.names = F, sep = "\t", quote = F)}
+    content = function(file){write.table(apply(selected_annoData_table()[,1:10],2,as.character), 
+                                         file, row.names = F, col.names = T,sep = "\t", quote = F)}
   )
   output$download_selected_intersect_annotation_table_bed <- downloadHandler(
     filename = function() {
       paste0("Intersect_table-",input$intersect_select,".bed")
     },
-    content = function(file){write.table(as.data.frame(selected_annoData_table()[,2:4]), 
+    content = function(file){write.table(as.data.frame(selected_grange())[1:3], 
                                          file, row.names = F, col.names = F,sep = "\t", quote = F)}
   )
   
   ###Venn Peak pattern comparison--------
   output$peak_pattern_venn_heat_range <- renderUI({
-    numericInput("peak_venn_range","Intensity range",value=10,min = 0.1,step=2)
+    if(!is.null(input$intersect_select) && 
+       input$intersect_select != "not_selected" && !is.null(bws_venn())){
+      withProgress(message = "Preparing peak pattern",{
+      rg <- venn_pattern_range()
+      sliderInput("peak_venn_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+      })
+      }
+  })
+  venn_pattern_range <- reactive({
+    rg <- c()
+    sig <- peak_pattern_function(grange=selected_grange(), files=bws_venn(),plot = FALSE)
+    for(name in names(sig)){
+      rg <- c(rg, mean(sig[[name]][,50]))
+    }
+    rg <- max(rg) + max(rg)*0.1
+    return(rg)
   })
   
-  peak_venn_grange <- reactive({
-    return(selected_grange())
-  })
-  
-  peak_venn_cvglists <-reactive({
-    venn2 <- peak_venn_grange()
-    feature.recentered <- reCenterPeaks(venn2, width=4000)
-    files <- bws_venn()
-    cvglists <- sapply(files, import,which=feature.recentered,as="RleList")
-    names(cvglists) <- gsub(".+\\/","",gsub("\\..+$", "", names(files)))
-    return(cvglists)
-  })
-  
-  peak_venn_sig <- reactive({
-    venn2 <- peak_venn_grange()
-    cvglists <- peak_venn_cvglists()
-    feature.center <- reCenterPeaks(venn2, width=1)
-    sig <- featureAlignedSignal(cvglists, feature.center,
-                                upstream=2000, downstream=2000,)
-    return(sig)
-  })
-  
-  peak_venn_feature_center <- reactive({
-    venn2 <- peak_venn_grange()
-    feature.center <- reCenterPeaks(venn2, width=1)
-    return(feature.center)
-  })
   peak_venn_alinedHeatmap <- reactive({
     if(!is.null(input$peak_venn_range)){
-      range <- c()
-      for(n in length(names(bws_venn()))) {range <- c(range, input$peak_venn_range)}
-      heatmap <- featureAlignedHeatmap(peak_venn_sig(), peak_venn_feature_center(),
-                                       upstream=2000, downstream=2000,
-                                       upper.extreme=range,color = brewer.pal(n = 9, name = 'OrRd'))
+      bigwig <- bigwig_breakline(bws_venn())
+      heatmap <- peak_pattern_function(grange=selected_grange(), files=bigwig,rg = input$peak_venn_range)
       return(heatmap)
     }
   })
+
   output$peak_pattern_venn_heatmap <- renderPlot({
     if(!is.null(input$intersect_select) && 
        input$intersect_select != "not_selected" && !is.null(bws_venn())){
       withProgress(message = "feature aligned heatmap",{
-        plot_grid(peak_venn_alinedHeatmap())
+        plot_grid(peak_venn_alinedHeatmap()[["heat"]])
       })
     }
   })
   output$peak_pattern_venn_line <- renderPlot({
-    if(!is.null(input$intersect_select) && input$intersect_select != "not_selected" && !is.null(bws_venn())){
+    if(!is.null(input$intersect_select) && input$intersect_select != "not_selected" && 
+       !is.null(bws_venn()) && !is.null(input$peak_venn_range)){
       withProgress(message = "feature aligned distribution",{
-        featureAlignedDistribution(peak_venn_sig(), peak_venn_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+        matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
       })
     }
   })
@@ -2734,7 +3053,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 6
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(plot_grid(peak_venn_alinedHeatmap()))
+        print(plot_grid(peak_venn_alinedHeatmap()[["heat"]]))
         dev.off()
         incProgress(1)
       })
@@ -2753,9 +3072,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 5
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        featureAlignedDistribution(peak_venn_sig(), peak_venn_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+        matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
         dev.off()
         incProgress(1)
       })
@@ -2974,11 +3295,14 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                        motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other"))
     }
   })
+  venn_motif_plot <- reactive({
+    return(homer_Motifplot(df = enrich_motif_venn(),showCategory = input$homer_showCategory_venn,section="venn"))
+  })
   
   output$motif_venn_plot <- renderPlot({
     if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
        !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
-      homer_Motifplot(df = enrich_motif_venn(),showCategory = input$homer_showCategory_venn)
+      venn_motif_plot()
     }
   })
   
@@ -2988,7 +3312,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = enrich_motif_venn(),showCategory = input$homer_showCategory_venn)
         if(input$venn_pdf_height == 0){
           pdf_height <- 6
         }else pdf_height <- input$venn_pdf_height
@@ -2996,13 +3319,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 8
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(p1)
+        print(venn_motif_plot())
         dev.off()
         incProgress(1)
       })
     }
   )
-  
   
   output$download_motif_venn_table = downloadHandler(
     filename = function() {
@@ -3143,6 +3465,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       colnames(data) <-  colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
                                              "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
       if(length(data$Description) != 0){
+        data$Group <- gsub("-", "- ", data$Group)
+        for(i in 1:length(data$Group)){
+          data$Group[i] <- paste(strwrap(data$Group[i], width = 15),collapse = "\n")
+        }
+        data$Group <- gsub(" \\(", "\n\\(", data$Group)
         data$Description <- gsub("_", " ", data$Description)
         data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
         data$x <- gsub("-","", data$x)
@@ -3503,8 +3830,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     target_result <- regulatory_potential_venn()$data
     target_result$epigenome_category <- "up"
     table <- NULL
+    if(length(str_detect(target_result$gene_id[1], "FBgn")) == 0){
+      symbol <- target_result$gene_id
+    }else symbol <- target_result$Symbol
     if(!is.null(mmAnno_venn())) {
-      table <- data.frame(Symbol = target_result$Symbol,
+      table <- data.frame(Symbol = symbol,
                           Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
                           RNA_log2FC = -target_result$log2FoldChange,
                           RNA_padj = target_result$padj,
@@ -3529,7 +3859,166 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           filter = "top")
     }
   })
-  
+  output$venn_report = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"venn_report",".zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download, please wait for >5 minutes.",{
+        fs <- c()
+        print(fs)
+        dir.create("intersection_bed",showWarnings = FALSE)
+        dir.create("Input",showWarnings = FALSE)
+        venn <- "venn.pdf"
+        input_list <- "Input/input_bed_list.txt"
+        fs <- c(venn,input_list)
+        pdf(venn, height = 6, width = 6)
+        print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
+        dev.off()
+        write.table(input_list_data_venn()[["bed"]], input_list, row.names = F, sep = "\t", quote = F)
+        process_num <- length(names(venn_overlap()$peaklist))
+        if(!is.null(input$intersect_select)){
+          for(name in names(venn_overlap()$peaklist)){
+            intersect_bed <- paste0("intersection_bed/",name,".bed")
+            fs <- c(fs, intersect_bed)
+            venn_g <- venn_overlap()$peaklist[[name]]
+            write.table(as.data.frame(venn_g)[1:3], 
+                        intersect_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+          }
+          if(!is.null(bws_venn())){
+            if(input$intersect_select != "not_selected"){
+              dir.create(input$intersect_select,showWarnings = FALSE)
+              input_bw_list <- "Input/input_bw_list.txt"
+              heatmap <- paste0(input$intersect_select,"/heatmap.pdf")
+              lineplot <- paste0(input$intersect_select,"/lineplot.pdf")
+              fs <- c(fs, heatmap, lineplot,input_bw_list)
+              write.table(input_list_data_venn()[["bw"]], input_bw_list, row.names = F, sep = "\t", quote = F)
+              pdf(heatmap, height = 6, width = 6)
+              print(plot_grid(peak_venn_alinedHeatmap()[["heat"]]))
+              dev.off()
+              pdf(lineplot, height = 5, width = 5)
+              matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                      type="l",ylab="density",lty=1,xaxt="n")
+              axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+              legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
+                     lty=1, lwd=1)
+              dev.off()
+            }
+          }
+          
+          if(input$Species_venn != "not_selected"){
+            distribution <- paste0(input$intersect_select,"/distribution.pdf")
+            annotation <- paste0(input$intersect_select,"/annotation.txt")
+            fs <- c(fs, distribution, annotation)
+            pdf(distribution, height = 4.5, width = 6)
+            print(vendistribution())
+            dev.off()
+            write.table(apply(selected_annoData_table()[,1:10],2,as.character), 
+                        annotation, row.names = F, col.names = T,sep = "\t", quote = F)
+          }
+        }
+        if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
+           !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
+          path_list <- enrich_motif_venn()
+          base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+          for(name in names(path_list)){
+            files <-list.files(path_list[[name]],pattern = "*.*")
+            for(i in 1:length(files)){
+              data <- paste0(path_list[[name]],"/",files[[i]])
+              fs <- c(fs, data)
+            }
+          }
+          homer_plot <- paste0(base_dir,"/homer_dotplot.pdf")
+          fs <- c(fs, homer_plot)
+          pdf(homer_plot, height = 6, width = 8)
+          print(venn_motif_plot())
+          dev.off()
+        }
+        if(!is.null(input$venn_whichGroup2) && input$Species_venn != "not_selected"){
+          dir.create("GREAT",showWarnings = FALSE)
+          great_dotplot <- paste0("GREAT/dotplot_",input$Gene_set_venn,".pdf")
+          great_table <- paste0("GREAT/enrichment_",input$Gene_set_venn,".txt")
+          region_associate_plot <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".pdf")
+          great_regionplot <- paste0("GREAT/",input$Gene_set_venn,"_",input$Pathway_list_venn,"_",input$intersection_venn_fun,".pdf")
+          great_regionplot_table <- paste0("GREAT/",input$Gene_set_venn,"_",input$Pathway_list_venn,"_",input$intersection_venn_fun,".txt")
+          fs <- c(fs, great_dotplot,great_regionplot,great_regionplot_table)
+          if(input$venn_pdf_height == 0){
+            pdf_height <- 6
+          }else pdf_height <- input$venn_pdf_height
+          if(input$venn_pdf_width == 0){
+            pdf_width <- 8
+          }else pdf_width <- input$venn_pdf_width
+          pdf(great_dotplot, height = 6, width = 8)
+          print(plot_grid(pair_enrich1_H_venn()))
+          dev.off()
+          write.table(as.data.frame(enrichment_1_1_venn()), great_table, row.names = F, sep = "\t", quote = F)
+          set_list <- input$Pathway_list_venn
+          df <- enrichment_enricher_venn()
+          name <- input$intersection_venn_fun
+          pdf(great_regionplot, height = 5, width = 12)
+          rGREAT::plotRegionGeneAssociations(df[[name]], term_id = set_list)
+          dev.off()
+          write.table(region_gene_associate_venn(), great_regionplot_table, row.names = F, sep = "\t", quote = F)
+        }
+        if(!is.null(input$RNAseqGroup_venn) && 
+           !is.null(input$peak_distance_venn && !is.null(mmAnno_venn()))){
+          dirname <- paste0("withRNAseq_range-",input$peak_distance_venn,"kb_fc",input$DEG_fc_venn,"_fdr",input$DEG_fdr_venn,"_RNAseq-",input$venn_DEG_result$name,"/")
+          dir.create(dirname,showWarnings = FALSE)
+          ksplot <- paste0(dirname,"KSplot.pdf")
+          RNAseq_boxplot <- paste0(dirname,"boxplot.pdf")
+          RNAseq_barplot <- paste0(dirname,"barplot.pdf")
+          RP_all <- paste0(dirname,"RP_summary.txt")
+          fs <- c(fs, ksplot, RNAseq_boxplot, RNAseq_barplot,RP_all)
+          pdf(ksplot, height = 5, width = 7)
+          print(regulatory_potential_venn())
+          dev.off()
+          pdf(RNAseq_boxplot, height = 5, width = 7)
+          print(RNAseq_boxplot_venn())
+          dev.off()
+          pdf(RNAseq_barplot, height = 5, width = 7)
+          gridExtra::grid.arrange(RNAseq_popu_venn(), ChIPseq_popu_venn(), ncol = 1)
+          dev.off()
+          write.table(RP_all_table_venn(), RP_all, row.names = F, sep = "\t", quote = F)
+          dir.create(paste0(dirname,"selected_bed/"),showWarnings = FALSE)
+          dir.create(paste0(dirname,"selected_table/"),showWarnings = FALSE)
+          for(name in unique(RP_all_table_venn()$Group)){
+            RP_selected <- paste0(dirname,"selected_table/RNA-epi_",name,".txt")
+            RP_selected_bed <- paste0(dirname,"selected_bed/RNA-epi_",name,".bed")
+            fs <- c(fs, RP_selected,RP_selected_bed)
+            table <- RP_all_table_venn() %>% dplyr::filter(Group == name)
+            write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
+            gene <- table$gene_id
+            y <- NULL
+            if(!is.null(mmAnno_venn())) {
+              up_peak <- subset(mmAnno_venn(), gene_id %in% gene)
+              up_peak2 <- as.data.frame(up_peak)
+              up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+              up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+              up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+              mcols(up_peak3) <- DataFrame(Group = "up")
+              y <- as.data.frame(up_peak3)
+            }
+            write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+          }
+          if(!is.null(input$intGeneset_venn) && !is.null(input$intGroup_venn)){
+            dir.create(paste0(dirname,"enrichment_analysis/"),showWarnings = FALSE)
+            intdotplot <- paste0(dirname,"enrichment_analysis/dotplot_",input$intGeneset_venn,".pdf")
+            intenrichtable <- paste0(dirname,"enrichment_analysis/enrichment_",input$intGeneset_venn,".txt")
+            fs <- c(fs, intdotplot,intenrichtable)
+            pdf(intdotplot, height = 5, width = 8)
+            dotplot_for_output(data = int_enrich_venn(),
+                               plot_genelist = int_enrich_plot_venn(), Gene_set = input$intGeneset_venn, 
+                               Species = input$Species_venn)
+            dev.off()
+            write.table(int_enrich_table_venn(), intenrichtable, row.names = F, sep = "\t", quote = F)
+          }
+        }
+        incProgress(1)
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
   output$download_vennintbar = downloadHandler(
     filename = function(){
       paste0("RNA-regulatory_potential profiling",".pdf")
@@ -3599,7 +4088,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     filename = function() {
       paste0("RP_",input$RNAseqGroup_venn,"_table.txt")
     },
-    content = function(file){write.table(RP_selected_tabl_venn(), file, row.names = F, sep = "\t", quote = F)}
+    content = function(file){write.table(RP_selected_table_venn(), file, row.names = F, sep = "\t", quote = F)}
   )
   int_selected_bed_venn <- reactive({
     if(!is.null(RP_selected_table_venn())){
@@ -3787,7 +4276,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                             to = input$int_igv_uprange_venn[2],ylim=c(0,input$int_igv_ylim_venn),
                             type="hist")
         }
-        ptirn(plot)
         dev.off()
         incProgress(1)
       })
@@ -4494,11 +4982,26 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         files <- c(files,file)
       }
       names(files)<-name
-      return(files)
+      return(bigwig_breakline(files))
     }
   })
   output$peak_pattern_kmeans_heat_range <- renderUI({
-    numericInput("peak_kmeans_range","Intensity range",value=10,min = 0.1,step=2)
+    if(!is.null(peak_kmeans_grange())){
+      withProgress(message = "Preparing peak pattern",{
+    rg <- kmeans_pattern_range()
+    sliderInput("peak_kmeans_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+      })
+    }
+  })
+  kmeans_pattern_range <- reactive({
+    rg <- c()
+    sig <- peak_pattern_function(grange=peak_kmeans_grange(), files=bws_clustering(),
+                                 additional=kmeans_additional(),plot = FALSE)
+    for(name in names(sig)){
+      rg <- c(rg, mean(sig[[name]][,50]))
+    }
+    rg <- max(rg) + max(rg)*0.1
+    return(rg)
   })
   peak_kmeans_grange <- reactive({
     if(!is.null(clustering_kmeans_pattern_extract())){
@@ -4512,53 +5015,30 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(kmeans)
     }else return(NULL)
   })
-  peak_kmeans_cvglists <-reactive({
-    kmeans2 <- peak_kmeans_grange()
-    feature.recentered <- reCenterPeaks(kmeans2, width=4000)
-    files <- bws_clustering()
-    if(!is.null(kmeans_additional())) files <- c(files, kmeans_additional())
-    cvglists <- sapply(files, import,which=feature.recentered,as="RleList")
-    names(cvglists) <- gsub(".+\\/","",gsub("\\..+$", "", names(files)))
-    return(cvglists)
-  })
   
-  peak_kmeans_sig <- reactive({
-    kmeans2 <- peak_kmeans_grange()
-    cvglists <- peak_kmeans_cvglists()
-    feature.center <- reCenterPeaks(kmeans2, width=1)
-    sig <- featureAlignedSignal(cvglists, feature.center,
-                                upstream=2000, downstream=2000)
-    return(sig)
-  })
-  
-  peak_kmeans_feature_center <- reactive({
-    kmeans2 <- peak_kmeans_grange()
-    feature.center <- reCenterPeaks(kmeans2, width=1)
-    return(feature.center)
-  })
   peak_kmeans_alinedHeatmap <- reactive({
-    if(!is.null(input$peak_kmeans_range)){
-      range <- c()
-      for(n in length(names(bws_clustering()))) {range <- c(range, input$peak_kmeans_range)}
-      heatmap <- featureAlignedHeatmap(peak_kmeans_sig(), peak_kmeans_feature_center(),
-                                       upstream=2000, downstream=2000,
-                                       upper.extreme=range,color = brewer.pal(n = 9, name = 'OrRd'))
+    if(!is.null(input$peak_kmeans_range) && input$peak_kmeans_range > 0){
+      bigwig <- bigwig_breakline(bws_clustering())
+      heatmap <- peak_pattern_function(grange=peak_kmeans_grange(), files=bigwig,
+                                       additional=kmeans_additional(),rg = input$peak_kmeans_range)
       return(heatmap)
     }
   })
   output$peak_pattern_kmeans_heatmap <- renderPlot({
     withProgress(message = "feature aligned heatmap",{
       if(!is.null(clustering_kmeans_pattern_extract())){
-        plot_grid(peak_kmeans_alinedHeatmap())
+        plot_grid(peak_kmeans_alinedHeatmap()[["heat"]])
       }
     })
   })
   output$peak_pattern_kmeans_line <- renderPlot({
     withProgress(message = "feature aligned distribution",{
       if(!is.null(clustering_kmeans_pattern_extract())){
-        featureAlignedDistribution(peak_kmeans_sig(), peak_kmeans_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+        matplot(peak_kmeans_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_kmeans_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
       }
     })
   })
@@ -4576,7 +5056,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 6
         }else pdf_width <- input$clustering_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(plot_grid(peak_kmeans_alinedHeatmap()))
+        print(plot_grid(peak_kmeans_alinedHeatmap()[["heat"]]))
         dev.off()
         incProgress(1)
       })
@@ -4595,9 +5075,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 5
         }else pdf_width <- input$clustering_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        featureAlignedDistribution(peak_kmeans_sig(), peak_kmeans_feature_center(),
-                                   upstream=2000, downstream=2000,
-                                   type="l")
+        matplot(peak_kmeans_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                type="l",ylab="density",lty=1,xaxt="n")
+        axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+        legend("topright", legend=colnames(peak_kmeans_alinedHeatmap()[["line"]]), col=1:6,
+               lty=1, lwd=1)
         dev.off()
         incProgress(1)
       })
@@ -5032,8 +5514,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     target_result <- regulatory_potential_clustering()$data
     target_result$epigenome_category <- "up"
     table <- NULL
+    if(str_detect(target_result$gene_id[1], "FBgn")){
+      symbol <- target_result$gene_id
+    }else symbol <- target_result$Symbol
     if(!is.null(mmAnno_clustering())) {
-      table <- data.frame(Symbol = target_result$Symbol,
+      table <- data.frame(Symbol = symbol,
                           Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
                           RNA_log2FC = -target_result$log2FoldChange,
                           RNA_padj = target_result$padj,
@@ -5513,6 +5998,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       colnames(data) <-  colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
                                              "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
       if(length(data$Description) != 0){
+        data$Group <- gsub("_", " ", data$Group)
+        for(i in 1:length(data$Group)){
+          data$Group[i] <- paste(strwrap(data$Group[i], width = 15),collapse = "\n")
+        }
+        data$Group <- gsub(" \\(", "\n\\(", data$Group)
         data$Description <- gsub("_", " ", data$Description)
         data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
         data$x <- gsub(":","", data$x)
@@ -5730,7 +6220,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$motif_enrich_plot <- renderPlot({
     if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && 
        !is.null(input$homer_unknown_enrich) && input$Species_enrich != "not selected"){
-      homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory)
+      homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich")
     }
   })
   
@@ -5740,7 +6230,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory)
+        p1 <- homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich")
         if(input$enrich_pdf_height == 0){
           pdf_height <- 6
         }else pdf_height <- input$enrich_pdf_height
@@ -5951,8 +6441,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           fs <- c(fs, file_name)
           write.table(as.data.frame(files[[name]]), file_name,quote = F, row.names = F, col.names = F,sep = "\t")
         }
-        zip(zipfile=fname, files=fs)
       })
+        zip(zipfile=fname, files=fs)
     },
     contentType = "application/zip"
   )

@@ -659,7 +659,7 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
     }
     perc <- 0
     df2 <- list()
-    path <- format(Sys.time(), "%Y%m%d_%H%M_homer")
+    path <- paste0(format(Sys.time(), "%Y%m%d_%H%M_homer_"),back,"_size-",size)
     dir.create(path = path)
     print(group_name)
     for(name in group_name){
@@ -765,7 +765,7 @@ denovo_motif <- function(df){
 }
 
 
-homer_Motifplot <- function(df, showCategory=5){
+homer_Motifplot <- function(df, showCategory=5,section=NULL){
   df2 <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
 
   for(name in names(df)){
@@ -787,6 +787,20 @@ homer_Motifplot <- function(df, showCategory=5){
   }else{
     colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
                        "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct","motif_pwm","log_odds_detection","Group")
+    if(!is.null(section)){
+      if(section == "venn"){
+        df2$Group <- gsub("- ", "- ", df2$Group)
+        for(i in 1:length(df2$Group)){
+          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
+        }
+      }else{
+        df2$Group <- gsub("_", " ", df2$Group)
+        for(i in 1:length(df2$Group)){
+          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
+        }
+      }
+      df2$Group <- gsub(" \\(", "\n\\(", df2$Group)
+    }
     df2 <- dplyr::mutate(df2, x = paste0(Group, 1/-log10(eval(parse(text = "p_value")))))
     df2$x <- gsub(":","", df2$x)
     df2 <- dplyr::arrange(df2, x)
@@ -1101,7 +1115,7 @@ RNAseqDEGimport <- function(tmp,exampleButton){
 }
 RNAseqDEG_ann <- function(RNAdata,Species){
   RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
-  if(str_detect(rownames(RNAdata)[1], "ENS")){
+  if(str_detect(rownames(RNAdata)[1], "ENS") || str_detect(rownames(RNAdata)[1], "FBgn")){
     my.symbols <- gsub("\\..*","", rownames(RNAdata))
     gene_IDs<-id_convert(my.symbols,Species,type="ENSEMBL")
     colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
@@ -1157,8 +1171,8 @@ GetGRanges <- function (LoadFile, simple = FALSE,sepr = "\t", simplify = FALSE) 
     if (sum(class(LoadFile) == "character")) {
       RangesTable <- read.delim(LoadFile, sep = sepr, header = FALSE, 
                                 comment.char = "#")
-      if(str_detect(RangesTable[1,2], "tart") == TRUE) {
-        RangesTable <- RangesTable[-1]
+      if(str_detect(RangesTable[1,2], "tart") == TRUE || is.na(RangesTable[1,2])) {
+        RangesTable <- RangesTable[-1,]
       }else RangesTable <- RangesTable
     }
     Chromosomes <- as.vector(RangesTable[, 1])
@@ -1294,4 +1308,41 @@ ggVennPeaks <- function (peak_list, peak_names = names(peak_list), percent = TRU
   return(venn)
 }
 
-
+peak_pattern_function <- function(grange, files,rg = NULL,additional=NULL,plot=TRUE){
+  feature.recentered <- reCenterPeaks(grange, width=4000)
+  if(!is.null(additional)) files <- c(files, additional)
+  cvglists <- sapply(files, import,which=feature.recentered,as="RleList")
+  names(cvglists) <- gsub(".+\\/","",gsub("\\..+$", "", names(files)))
+  feature.center <- reCenterPeaks(grange, width=1)
+  sig <- featureAlignedSignal(cvglists, feature.center,
+                              upstream=2000, downstream=2000)
+  if(plot == TRUE){
+  if(is.null(rg)){
+  rg <- c()
+  for(name in names(sig)){
+    rg <- c(rg, mean(sig[[name]][,50]))
+  }
+  rg <- max(rg) + max(rg)*0.1
+  }
+  range <- c()
+  for(n in length(names(files))) {range <- c(range, rg)}
+  heat <- featureAlignedHeatmap(sig, feature.center,
+                                upstream=2000, downstream=2000,
+                                upper.extreme=range,color = brewer.pal(n = 9, name = 'OrRd'))
+  line <- featureAlignedDistribution(sig, feature.center,
+                                     upstream=2000, downstream=2000,
+                                     type="l")
+  df <- list()
+  df[["heat"]] <- heat
+  df[["line"]] <- line
+  return(df)
+  }else return(sig)
+}
+bigwig_breakline <- function(bigwig){
+  names(bigwig) <- gsub("-", "- ", names(bigwig))
+  for(i in 1:length(names(bigwig))){
+    names(bigwig)[i] <- paste(strwrap(names(bigwig)[i], width = 15),collapse = "\n")
+  }
+  names(bigwig) <- gsub(" ", "", names(bigwig))
+  return(bigwig)
+}

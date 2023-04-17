@@ -158,7 +158,19 @@ shinyUI(
           body {
             padding: 0 !important;
           }"
-                             ))
+                             )),
+                   fluidRow(column(7),
+                   column(3, downloadButton("pair_report", "Download summary"),
+                          tags$head(tags$style("#pair_report{color: red;
+                                 font-size: 12px;
+                                 font-style: italic;
+                                 }"),
+                                    tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                    )))
+                   )
                  ), #sidebarPanel
                  
                  # Main Panel -------------------------------------
@@ -173,16 +185,17 @@ shinyUI(
                                          ),
                                          bsCollapsePanel(title="uploaded peak call files:",
                                                          value="peak_call_files_panel",
+                                                         downloadButton("download_filtered_peakcall_bed", "Download filtered_marged (.bed)"),
                                                          dataTableOutput('input_peak_call_files')
                                          ),
-                                         bsCollapsePanel(title="Raw count data:",
+                                         bsCollapsePanel(title="Count data:",
                                                          value="raw_count_panel",
                                                          column(4, textOutput("Spe"),
                                                                 tags$head(tags$style("#Spe{color: red;
                                  font-size: 20px;
             font-style: bold;
             }"))),
-                                                         downloadButton("download_raw_count_table", "Download raw count table"),
+                                                         downloadButton("download_raw_count_table", "Download count table"),
                                                          dataTableOutput('raw_count_table')
                                          )
                               )
@@ -295,6 +308,11 @@ shinyUI(
                               ),
                      ),
                      tabPanel("GREAT",
+                              column(4, textOutput("Spe_great_promoter"),
+                                     tags$head(tags$style("#Spe_great_promoter{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }"))),
                               fluidRow(
                                 column(4, textOutput("Spe_GREAT"),
                                        tags$head(tags$style("#Spe_GREAT{color: red;
@@ -506,7 +524,7 @@ shinyUI(
                    ),
                    bsPopover("venn_pdf_icon", "Output plot size setting for pdf (default: 0): ", 
                              content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
-                                           "Default size: <br>",strong("Venn diagram:"), "height = 6, width = 6<br>", 
+                                           "Default size: <br>",strong("Venn diagram:"), "height = 3, width = 3<br>", 
                                            strong("Peak distribution:"), "height = 4.5, width = 6 <br>",
                                            strong("Peak pattern heatmap:"), "height = 6, width = 6 <br>",
                                            strong("Peak pattern line plot:"), "height = 5, width = 5 <br>",
@@ -528,7 +546,19 @@ shinyUI(
             padding: 0 !important;
           }"
                              )
-                   ) #sidebarPanel
+                   ),
+                   fluidRow(column(7),
+                            column(3, downloadButton("venn_report", "Download summary"),
+                                   tags$head(tags$style("#venn_report{color: red;
+                                 font-size: 12px;
+                                 font-style: italic;
+                                 }"),
+                                             tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                             )))
+                   )#sidebarPanel
                  ),
                  
                  # Main Panel -------------------------------------
