@@ -1,9 +1,7 @@
 
 .DS_Store
-rsconnect/shinyapps.io/kan-e/EpigenomeChef.dcf
 EpigenomeChef.Rproj
 .Rproj.user
-rsconnect/shinyapps.io/imeg-ku/EpigenomeChef.dcf
 *.log
 lima.R
 bed.bed
