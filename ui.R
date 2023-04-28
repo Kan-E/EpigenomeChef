@@ -570,6 +570,22 @@ shinyUI(
                                 column(4, downloadButton("download_vennplot", "Download venn diagram"))
                               ),
                               plotOutput("venn"),
+                              bsCollapse(id="Lineplot of intersections",multiple = TRUE,
+                                         bsCollapsePanel(title="Lineplot of intersections (comparison between intersections):",
+                                                         value="vennLineplot_intersection_panel",
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_venn_intersection_line", "Download line plot"))
+                                                         ),
+                                                         plotOutput("venn_batch_bed_line")
+                                         ),
+                                         bsCollapsePanel(title="Lineplot of intersections (comparison between bigwig):",
+                                                         value="vennLineplot_bigwig_panel",
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_venn_bigwig_line", "Download line plot"))
+                                                         ),
+                                                         plotOutput("venn_batch_bigwig_line")
+                                         )
+                              )
                      ),
                      tabPanel("Peak pattern",
                               htmlOutput("select_file2"),

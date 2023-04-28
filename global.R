@@ -69,6 +69,8 @@ library(ggcorrplot)
 library(RColorBrewer)
 library(bedtorch)
 library(venn)
+library(reshape2)
+library(ggsci)
 options('homer_path' = "/usr/local/homer")
 check_homer()
 options(rsconnect.max.bundle.size=31457280000000000000)
@@ -1345,4 +1347,81 @@ bigwig_breakline <- function(bigwig){
   }
   names(bigwig) <- gsub(" ", "", names(bigwig))
   return(bigwig)
+}
+
+batch_lineplot <- function(files2,files_bw){
+  line_list <- data.frame(matrix(rep(NA, 4), nrow=1))[numeric(0), ]
+  for(k in 1:length(names(files_bw))){
+    cvg_com <- data.frame(matrix(rep(NA, 100), nrow=1))[numeric(0), ]
+    line_com <- data.frame(matrix(rep(NA, 100), nrow=1))[numeric(0), ]
+    for(i in 1:length(names(files2))){
+      cvg_list <- peak_pattern_function(grange=files2[[i]],files = files_bw[[k]],plot=F)
+      line_com <- rbind(line_com,apply(cvg_list[[1]],2,mean))
+    }
+    line_com_t <- t(line_com)
+    rownames(line_com_t) <- seq(from=-2000,to=2000,length=100)
+    colnames(line_com_t) <- names(files2)
+    y <- melt(line_com_t)
+    colnames(y) <- c("distance","bed","density")
+    y$bigwig <- names(files_bw)[[k]]
+    line_list <- rbind(line_list, y)
+  }
+  plot_list <- list()
+  g <- ggplot(line_list, aes(x = distance, y = density, color = bed))+
+    facet_wrap(~ bigwig, scales="free_y")+ labs(color = "intersection")
+  g <- g + scale_color_nejm()+ geom_line() + 
+    theme(panel.background =element_rect(fill=NA,color=NA),
+          panel.border = element_rect(fill = NA))
+  g <- g +  theme(legend.position = "top",strip.text.x = element_text(size = 15),
+                  title = element_text(size = 15),text = element_text(size = 12),
+                  axis.title.y = element_text(size=15),axis.title.x = element_text(size=15),legend.text = element_text(size=15),
+                  legend.background = element_rect(fill=NA,color=NA))
+  plot_list[["bed"]] <- g
+  g <- ggplot(line_list, aes(x = distance, y = density, color = bigwig))+
+    facet_wrap(~ bed, scales="free_y")
+  g <- g + scale_color_nejm(name=)+ geom_line() +
+    theme(panel.background =element_rect(fill=NA,color=NA),
+          panel.border = element_rect(fill = NA))
+  g <- g +  theme(legend.position = "top",strip.text.x = element_text(size = 15),
+                  title = element_text(size = 15),text = element_text(size = 12),
+                  axis.title.y = element_text(size=15),axis.title.x = element_text(size=15),legend.text = element_text(size=15),
+                  legend.background = element_rect(fill=NA,color=NA))
+  plot_list[["bigwig"]] <- g
+  return(plot_list)
+}
+pdf_h <- function(rowlist){
+  if ((length(rowlist) > 81) && (length(rowlist) <= 200)) pdf_hsize <- 24.5
+  if ((length(rowlist) > 64) && (length(rowlist) <= 81)) pdf_hsize <- 22.25
+  if ((length(rowlist) > 49) && (length(rowlist) <= 64)) pdf_hsize <- 19
+  if ((length(rowlist) > 36) && (length(rowlist) <= 49)) pdf_hsize <- 17.75
+  if ((length(rowlist) > 25) && (length(rowlist) <= 36)) pdf_hsize <- 15.5
+  if ((length(rowlist) > 16) && (length(rowlist) <= 25)) pdf_hsize <- 13.5
+  if ((length(rowlist) > 12) && (length(rowlist) <= 16)) pdf_hsize <- 11
+  if ((length(rowlist) > 9) && (length(rowlist) <= 12)) pdf_hsize <- 9
+  if ((length(rowlist) > 6) && (length(rowlist) <= 9)) pdf_hsize <- 9
+  if ((length(rowlist) > 4) && (length(rowlist) <= 6)) pdf_hsize <- 8
+  if (length(rowlist) == 4) pdf_hsize <- 8
+  if (length(rowlist) == 3) pdf_hsize <- 4
+  if (length(rowlist) == 2) pdf_hsize <- 4
+  if (length(rowlist) == 1) pdf_hsize <- 4
+  if (length(rowlist) > 200) pdf_hsize <- 30
+  return(pdf_hsize)
+}
+pdf_w <- function(rowlist){
+  if ((length(rowlist) > 81) && (length(rowlist) <= 200)) pdf_wsize <- 24.5
+  if ((length(rowlist) > 64) && (length(rowlist) <= 81)) pdf_wsize <- 22.25
+  if ((length(rowlist) > 49) && (length(rowlist) <= 64)) pdf_wsize <- 19
+  if ((length(rowlist) > 36) && (length(rowlist) <= 49)) pdf_wsize <- 17.75
+  if ((length(rowlist) > 25) && (length(rowlist) <= 36)) pdf_wsize <- 15.5
+  if ((length(rowlist) > 16) && (length(rowlist) <= 25)) pdf_wsize <- 15.5
+  if ((length(rowlist) > 12) && (length(rowlist) <= 16)) pdf_wsize <- 14
+  if ((length(rowlist) > 9) && (length(rowlist) <= 12)) pdf_wsize <- 14
+  if ((length(rowlist) > 6) && (length(rowlist) <= 9)) pdf_wsize <- 10
+  if ((length(rowlist) > 4) && (length(rowlist) <= 6)) pdf_wsize <- 12
+  if (length(rowlist) == 4) pdf_wsize <- 10
+  if (length(rowlist) == 3) pdf_wsize <- 12
+  if (length(rowlist) == 2) pdf_wsize <- 8
+  if (length(rowlist) == 1) pdf_wsize <- 4
+  if (length(rowlist) > 200) pdf_wsize <- 30
+  return(pdf_wsize)
 }

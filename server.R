@@ -2800,8 +2800,8 @@ shinyServer(function(input, output, session) {
     if(is.null(input$peak_call_file_venn1)){
       if(input$goButton_venn > 0 ){
         files <- list()
-        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+        files[["A_1.bed"]] <- "data/peakcall/A_1_peaks.narrowPeak"
+        files[["A_2.bed"]] <- "data/peakcall/A_2_peaks.narrowPeak"
         files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
@@ -2824,10 +2824,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$file_venn1)){
       if(input$goButton_venn > 0 ){
         df<-list()
-        df[["A_1"]] <- "data/bigwig/A_1.BigWig"
-        df[["A_2"]] <- "data/bigwig/A_2.BigWig"
-        df[["B_1"]] <- "data/bigwig/B_1.BigWig"
-        df[["B_2"]] <- "data/bigwig/B_2.BigWig"
+        df[["A_1.bw"]] <- "data/bigwig/A_1.BigWig"
+        df[["A_2.bw"]] <- "data/bigwig/A_2.BigWig"
+        df[["B_1.bw"]] <- "data/bigwig/B_1.BigWig"
+        df[["B_2.bw"]] <- "data/bigwig/B_2.BigWig"
         return(df)
       }
       return(NULL)
@@ -2884,6 +2884,243 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  observeEvent(bws_venn(), ({
+    updateCollapse(session,id =  "Lineplot of intersections", open="vennLineplot_intersection_panel")
+  }))
+  
+  venn_batch_lineplot <- reactive({
+    withProgress(message = "Line plot",{
+    return(batch_lineplot(files2 = venn_overlap()$peaklist,files_bw = bws_venn()))
+    })
+  })
+  
+  output$venn_batch_bed_line <- renderPlot({
+    if(!is.null(Venn_peak_call_files()) && !is.null(bws_venn())){
+    if(!is.null(venn_overlap())){
+    venn_batch_lineplot()[["bed"]]
+    }
+    }
+  })
+  output$venn_batch_bigwig_line <- renderPlot({
+    if(!is.null(Venn_peak_call_files()) && !is.null(bws_venn())){
+      if(!is.null(venn_overlap())){
+        venn_batch_lineplot()[["bigwig"]]
+      }
+    }
+  })
+
+  output$download_venn_intersection_line = downloadHandler(
+    filename = function(){
+      paste0("Lineplot_intersection",".pdf")
+    },
+    content = function(file) {
+      rowlist <- length(names(venn_overlap()$peaklist))
+      withProgress(message = "Preparing download",{
+        if(input$venn_pdf_height == 0){
+          pdf_height <- pdf_h(rowlist)
+        }else pdf_height <- input$venn_pdf_height
+        if(input$venn_pdf_width == 0){
+          pdf_width <- pdf_w(rowlist)
+        }else pdf_width <- input$venn_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(venn_batch_lineplot()[["bed"]])
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$venn_report = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"venn_report",".zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download, please wait for >5 minutes.",{
+        fs <- c()
+        print(fs)
+        dir.create("intersection_bed",showWarnings = FALSE)
+        dir.create("Input",showWarnings = FALSE)
+        venn <- "venn.pdf"
+        input_list <- "Input/input_bed_list.txt"
+        fs <- c(venn,input_list)
+        pdf(venn, height = 6, width = 6)
+        print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
+        dev.off()
+        write.table(input_list_data_venn()[["bed"]], input_list, row.names = F, sep = "\t", quote = F)
+        process_num <- length(names(venn_overlap()$peaklist))
+        if(!is.null(input$intersect_select)){
+          line_plot_all_bed <- paste0("lineplot_bed.pdf")
+          fs <- c(fs, line_plot_all_bed)
+          rowlist <- length(names(venn_overlap()$peaklist))
+          pdf(line_plot_all_bed, height = pdf_h(rowlist), width = pdf_w(rowlist))
+          print(venn_batch_lineplot()[["bed"]])
+          dev.off()
+          for(name in names(venn_overlap()$peaklist)){
+            intersect_bed <- paste0("intersection_bed/",name,".bed")
+            fs <- c(fs, intersect_bed)
+            venn_g <- venn_overlap()$peaklist[[name]]
+            write.table(as.data.frame(venn_g)[1:3], 
+                        intersect_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+          }
+          if(!is.null(bws_venn())){
+            line_plot_all_bw <- paste0("lineplot_bigwig.pdf")
+            fs <- c(fs, line_plot_all_bw)
+            rowlist <- length(names(bws_venn()))
+            pdf(line_plot_all_bw, height = pdf_h(rowlist), width = pdf_w(rowlist))
+            print(venn_batch_lineplot()[["bigwig"]])
+            dev.off()
+            if(input$intersect_select != "not_selected"){
+              dir.create(input$intersect_select,showWarnings = FALSE)
+              input_bw_list <- "Input/input_bw_list.txt"
+              heatmap <- paste0(input$intersect_select,"/heatmap.pdf")
+              lineplot <- paste0(input$intersect_select,"/lineplot.pdf")
+              fs <- c(fs, heatmap, lineplot,input_bw_list)
+              write.table(input_list_data_venn()[["bw"]], input_bw_list, row.names = F, sep = "\t", quote = F)
+              pdf(heatmap, height = 6, width = 6)
+              print(plot_grid(peak_venn_alinedHeatmap()[["heat"]]))
+              dev.off()
+              pdf(lineplot, height = 5, width = 5)
+              matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                      type="l",ylab="density",lty=1,xaxt="n")
+              axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+              legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
+                     lty=1, lwd=1)
+              dev.off()
+            }
+          }
+          
+          if(input$Species_venn != "not_selected"){
+            distribution <- paste0(input$intersect_select,"/distribution.pdf")
+            annotation <- paste0(input$intersect_select,"/annotation.txt")
+            fs <- c(fs, distribution, annotation)
+            pdf(distribution, height = 4.5, width = 6)
+            print(vendistribution())
+            dev.off()
+            write.table(apply(selected_annoData_table()[,1:10],2,as.character), 
+                        annotation, row.names = F, col.names = T,sep = "\t", quote = F)
+          }
+        }
+        if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
+           !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
+          path_list <- enrich_motif_venn()
+          base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+          for(name in names(path_list)){
+            files <-list.files(path_list[[name]],pattern = "*.*")
+            for(i in 1:length(files)){
+              data <- paste0(path_list[[name]],"/",files[[i]])
+              fs <- c(fs, data)
+            }
+          }
+          homer_plot <- paste0(base_dir,"/homer_dotplot.pdf")
+          fs <- c(fs, homer_plot)
+          pdf(homer_plot, height = 6, width = 8)
+          print(venn_motif_plot())
+          dev.off()
+        }
+        if(!is.null(input$venn_whichGroup2) && input$Species_venn != "not_selected"){
+          dir.create("GREAT",showWarnings = FALSE)
+          great_dotplot <- paste0("GREAT/dotplot_",input$Gene_set_venn,".pdf")
+          great_table <- paste0("GREAT/enrichment_",input$Gene_set_venn,".txt")
+          region_associate_plot <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".pdf")
+          great_regionplot <- paste0("GREAT/",input$Gene_set_venn,"_",input$Pathway_list_venn,"_",input$intersection_venn_fun,".pdf")
+          great_regionplot_table <- paste0("GREAT/",input$Gene_set_venn,"_",input$Pathway_list_venn,"_",input$intersection_venn_fun,".txt")
+          fs <- c(fs, great_dotplot,great_regionplot,great_regionplot_table)
+          if(input$venn_pdf_height == 0){
+            pdf_height <- 6
+          }else pdf_height <- input$venn_pdf_height
+          if(input$venn_pdf_width == 0){
+            pdf_width <- 8
+          }else pdf_width <- input$venn_pdf_width
+          pdf(great_dotplot, height = 6, width = 8)
+          print(plot_grid(pair_enrich1_H_venn()))
+          dev.off()
+          write.table(as.data.frame(enrichment_1_1_venn()), great_table, row.names = F, sep = "\t", quote = F)
+          set_list <- input$Pathway_list_venn
+          df <- enrichment_enricher_venn()
+          name <- input$intersection_venn_fun
+          pdf(great_regionplot, height = 5, width = 12)
+          rGREAT::plotRegionGeneAssociations(df[[name]], term_id = set_list)
+          dev.off()
+          write.table(region_gene_associate_venn(), great_regionplot_table, row.names = F, sep = "\t", quote = F)
+        }
+        if(!is.null(input$RNAseqGroup_venn) && 
+           !is.null(input$peak_distance_venn && !is.null(mmAnno_venn()))){
+          dirname <- paste0("withRNAseq_range-",input$peak_distance_venn,"kb_fc",input$DEG_fc_venn,"_fdr",input$DEG_fdr_venn,"_RNAseq-",input$venn_DEG_result$name,"/")
+          dir.create(dirname,showWarnings = FALSE)
+          ksplot <- paste0(dirname,"KSplot.pdf")
+          RNAseq_boxplot <- paste0(dirname,"boxplot.pdf")
+          RNAseq_barplot <- paste0(dirname,"barplot.pdf")
+          RP_all <- paste0(dirname,"RP_summary.txt")
+          fs <- c(fs, ksplot, RNAseq_boxplot, RNAseq_barplot,RP_all)
+          pdf(ksplot, height = 5, width = 7)
+          print(regulatory_potential_venn())
+          dev.off()
+          pdf(RNAseq_boxplot, height = 5, width = 7)
+          print(RNAseq_boxplot_venn())
+          dev.off()
+          pdf(RNAseq_barplot, height = 5, width = 7)
+          gridExtra::grid.arrange(RNAseq_popu_venn(), ChIPseq_popu_venn(), ncol = 1)
+          dev.off()
+          write.table(RP_all_table_venn(), RP_all, row.names = F, sep = "\t", quote = F)
+          dir.create(paste0(dirname,"selected_bed/"),showWarnings = FALSE)
+          dir.create(paste0(dirname,"selected_table/"),showWarnings = FALSE)
+          for(name in unique(RP_all_table_venn()$Group)){
+            RP_selected <- paste0(dirname,"selected_table/RNA-epi_",name,".txt")
+            RP_selected_bed <- paste0(dirname,"selected_bed/RNA-epi_",name,".bed")
+            fs <- c(fs, RP_selected,RP_selected_bed)
+            table <- RP_all_table_venn() %>% dplyr::filter(Group == name)
+            write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
+            gene <- table$gene_id
+            y <- NULL
+            if(!is.null(mmAnno_venn())) {
+              up_peak <- subset(mmAnno_venn(), gene_id %in% gene)
+              up_peak2 <- as.data.frame(up_peak)
+              up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+              up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+              up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+              mcols(up_peak3) <- DataFrame(Group = "up")
+              y <- as.data.frame(up_peak3)
+            }
+            write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+          }
+          if(!is.null(input$intGeneset_venn) && !is.null(input$intGroup_venn)){
+            dir.create(paste0(dirname,"enrichment_analysis/"),showWarnings = FALSE)
+            intdotplot <- paste0(dirname,"enrichment_analysis/dotplot_",input$intGeneset_venn,".pdf")
+            intenrichtable <- paste0(dirname,"enrichment_analysis/enrichment_",input$intGeneset_venn,".txt")
+            fs <- c(fs, intdotplot,intenrichtable)
+            pdf(intdotplot, height = 5, width = 8)
+            dotplot_for_output(data = int_enrich_venn(),
+                               plot_genelist = int_enrich_plot_venn(), Gene_set = input$intGeneset_venn, 
+                               Species = input$Species_venn)
+            dev.off()
+            write.table(int_enrich_table_venn(), intenrichtable, row.names = F, sep = "\t", quote = F)
+          }
+        }
+        incProgress(1)
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  output$download_venn_bigwig_line = downloadHandler(
+    filename = function(){
+      paste0("Lineplot_bigwig",".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        rowlist <- length(names(bws_venn()))
+        if(input$venn_pdf_height == 0){
+          pdf_height <- pdf_h(rowlist)
+        }else pdf_height <- input$venn_pdf_height
+        if(input$venn_pdf_width == 0){
+          pdf_width <- pdf_w(rowlist)
+        }else pdf_width <- input$venn_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(venn_batch_lineplot()[["bigwig"]])
         dev.off()
         incProgress(1)
       })
@@ -3859,166 +4096,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           filter = "top")
     }
   })
-  output$venn_report = downloadHandler(
-    filename = function() {
-      paste0(format(Sys.time(), "%Y%m%d_"),"venn_report",".zip")
-    },
-    content = function(fname){
-      withProgress(message = "Preparing download, please wait for >5 minutes.",{
-        fs <- c()
-        print(fs)
-        dir.create("intersection_bed",showWarnings = FALSE)
-        dir.create("Input",showWarnings = FALSE)
-        venn <- "venn.pdf"
-        input_list <- "Input/input_bed_list.txt"
-        fs <- c(venn,input_list)
-        pdf(venn, height = 6, width = 6)
-        print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
-        dev.off()
-        write.table(input_list_data_venn()[["bed"]], input_list, row.names = F, sep = "\t", quote = F)
-        process_num <- length(names(venn_overlap()$peaklist))
-        if(!is.null(input$intersect_select)){
-          for(name in names(venn_overlap()$peaklist)){
-            intersect_bed <- paste0("intersection_bed/",name,".bed")
-            fs <- c(fs, intersect_bed)
-            venn_g <- venn_overlap()$peaklist[[name]]
-            write.table(as.data.frame(venn_g)[1:3], 
-                        intersect_bed, row.names = F, col.names = F,sep = "\t", quote = F)
-          }
-          if(!is.null(bws_venn())){
-            if(input$intersect_select != "not_selected"){
-              dir.create(input$intersect_select,showWarnings = FALSE)
-              input_bw_list <- "Input/input_bw_list.txt"
-              heatmap <- paste0(input$intersect_select,"/heatmap.pdf")
-              lineplot <- paste0(input$intersect_select,"/lineplot.pdf")
-              fs <- c(fs, heatmap, lineplot,input_bw_list)
-              write.table(input_list_data_venn()[["bw"]], input_bw_list, row.names = F, sep = "\t", quote = F)
-              pdf(heatmap, height = 6, width = 6)
-              print(plot_grid(peak_venn_alinedHeatmap()[["heat"]]))
-              dev.off()
-              pdf(lineplot, height = 5, width = 5)
-              matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
-                      type="l",ylab="density",lty=1,xaxt="n")
-              axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
-              legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
-                     lty=1, lwd=1)
-              dev.off()
-            }
-          }
-          
-          if(input$Species_venn != "not_selected"){
-            distribution <- paste0(input$intersect_select,"/distribution.pdf")
-            annotation <- paste0(input$intersect_select,"/annotation.txt")
-            fs <- c(fs, distribution, annotation)
-            pdf(distribution, height = 4.5, width = 6)
-            print(vendistribution())
-            dev.off()
-            write.table(apply(selected_annoData_table()[,1:10],2,as.character), 
-                        annotation, row.names = F, col.names = T,sep = "\t", quote = F)
-          }
-        }
-        if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
-           !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
-          path_list <- enrich_motif_venn()
-          base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
-          for(name in names(path_list)){
-            files <-list.files(path_list[[name]],pattern = "*.*")
-            for(i in 1:length(files)){
-              data <- paste0(path_list[[name]],"/",files[[i]])
-              fs <- c(fs, data)
-            }
-          }
-          homer_plot <- paste0(base_dir,"/homer_dotplot.pdf")
-          fs <- c(fs, homer_plot)
-          pdf(homer_plot, height = 6, width = 8)
-          print(venn_motif_plot())
-          dev.off()
-        }
-        if(!is.null(input$venn_whichGroup2) && input$Species_venn != "not_selected"){
-          dir.create("GREAT",showWarnings = FALSE)
-          great_dotplot <- paste0("GREAT/dotplot_",input$Gene_set_venn,".pdf")
-          great_table <- paste0("GREAT/enrichment_",input$Gene_set_venn,".txt")
-          region_associate_plot <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".pdf")
-          great_regionplot <- paste0("GREAT/",input$Gene_set_venn,"_",input$Pathway_list_venn,"_",input$intersection_venn_fun,".pdf")
-          great_regionplot_table <- paste0("GREAT/",input$Gene_set_venn,"_",input$Pathway_list_venn,"_",input$intersection_venn_fun,".txt")
-          fs <- c(fs, great_dotplot,great_regionplot,great_regionplot_table)
-          if(input$venn_pdf_height == 0){
-            pdf_height <- 6
-          }else pdf_height <- input$venn_pdf_height
-          if(input$venn_pdf_width == 0){
-            pdf_width <- 8
-          }else pdf_width <- input$venn_pdf_width
-          pdf(great_dotplot, height = 6, width = 8)
-          print(plot_grid(pair_enrich1_H_venn()))
-          dev.off()
-          write.table(as.data.frame(enrichment_1_1_venn()), great_table, row.names = F, sep = "\t", quote = F)
-          set_list <- input$Pathway_list_venn
-          df <- enrichment_enricher_venn()
-          name <- input$intersection_venn_fun
-          pdf(great_regionplot, height = 5, width = 12)
-          rGREAT::plotRegionGeneAssociations(df[[name]], term_id = set_list)
-          dev.off()
-          write.table(region_gene_associate_venn(), great_regionplot_table, row.names = F, sep = "\t", quote = F)
-        }
-        if(!is.null(input$RNAseqGroup_venn) && 
-           !is.null(input$peak_distance_venn && !is.null(mmAnno_venn()))){
-          dirname <- paste0("withRNAseq_range-",input$peak_distance_venn,"kb_fc",input$DEG_fc_venn,"_fdr",input$DEG_fdr_venn,"_RNAseq-",input$venn_DEG_result$name,"/")
-          dir.create(dirname,showWarnings = FALSE)
-          ksplot <- paste0(dirname,"KSplot.pdf")
-          RNAseq_boxplot <- paste0(dirname,"boxplot.pdf")
-          RNAseq_barplot <- paste0(dirname,"barplot.pdf")
-          RP_all <- paste0(dirname,"RP_summary.txt")
-          fs <- c(fs, ksplot, RNAseq_boxplot, RNAseq_barplot,RP_all)
-          pdf(ksplot, height = 5, width = 7)
-          print(regulatory_potential_venn())
-          dev.off()
-          pdf(RNAseq_boxplot, height = 5, width = 7)
-          print(RNAseq_boxplot_venn())
-          dev.off()
-          pdf(RNAseq_barplot, height = 5, width = 7)
-          gridExtra::grid.arrange(RNAseq_popu_venn(), ChIPseq_popu_venn(), ncol = 1)
-          dev.off()
-          write.table(RP_all_table_venn(), RP_all, row.names = F, sep = "\t", quote = F)
-          dir.create(paste0(dirname,"selected_bed/"),showWarnings = FALSE)
-          dir.create(paste0(dirname,"selected_table/"),showWarnings = FALSE)
-          for(name in unique(RP_all_table_venn()$Group)){
-            RP_selected <- paste0(dirname,"selected_table/RNA-epi_",name,".txt")
-            RP_selected_bed <- paste0(dirname,"selected_bed/RNA-epi_",name,".bed")
-            fs <- c(fs, RP_selected,RP_selected_bed)
-            table <- RP_all_table_venn() %>% dplyr::filter(Group == name)
-            write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
-            gene <- table$gene_id
-            y <- NULL
-            if(!is.null(mmAnno_venn())) {
-              up_peak <- subset(mmAnno_venn(), gene_id %in% gene)
-              up_peak2 <- as.data.frame(up_peak)
-              up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-              up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-              up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-              mcols(up_peak3) <- DataFrame(Group = "up")
-              y <- as.data.frame(up_peak3)
-            }
-            write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
-          }
-          if(!is.null(input$intGeneset_venn) && !is.null(input$intGroup_venn)){
-            dir.create(paste0(dirname,"enrichment_analysis/"),showWarnings = FALSE)
-            intdotplot <- paste0(dirname,"enrichment_analysis/dotplot_",input$intGeneset_venn,".pdf")
-            intenrichtable <- paste0(dirname,"enrichment_analysis/enrichment_",input$intGeneset_venn,".txt")
-            fs <- c(fs, intdotplot,intenrichtable)
-            pdf(intdotplot, height = 5, width = 8)
-            dotplot_for_output(data = int_enrich_venn(),
-                               plot_genelist = int_enrich_plot_venn(), Gene_set = input$intGeneset_venn, 
-                               Species = input$Species_venn)
-            dev.off()
-            write.table(int_enrich_table_venn(), intenrichtable, row.names = F, sep = "\t", quote = F)
-          }
-        }
-        incProgress(1)
-      })
-      zip(zipfile=fname, files=fs)
-    },
-    contentType = "application/zip"
-  )
   output$download_vennintbar = downloadHandler(
     filename = function(){
       paste0("RNA-regulatory_potential profiling",".pdf")
@@ -4827,7 +4904,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                       column_order = colnames(data.z),
                       clustering_method_columns = 'ward.D2',
                       row_km= input$clustering_kmeans_number, cluster_row_slices = F, row_km_repeats = 100,
-                      show_row_names = F,column_names_side = "top")
+                      show_row_names = F,column_names_side = "top",use_raster = TRUE)
         ht <- draw(ht)
         return(ht)
       })
