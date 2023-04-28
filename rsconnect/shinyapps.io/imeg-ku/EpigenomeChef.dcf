@@ -1,0 +1,14 @@
+name: EpigenomeChef
+title: EpigenomeChef
+username:
+account: imeg-ku
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7681824
+bundleId: 7142304
+url: https://imeg-ku.shinyapps.io/EpigenomeChef/
+when: 1682582505.95755
+lastSyncTime: 1682582505.95759
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: bed.bed|Dockerfile|Dockerfile_arm|LICENSE|README.md|shiny-server.conf|main figures
