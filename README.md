@@ -54,7 +54,7 @@ install.packages("https://cran.r-project.org/src/contrib/Archive/lasso2/lasso2_1
 
 pkgs <- c("shiny","DT","gdata","rstatix","multcomp","tidyverse","ggpubr","venn","ggrepel",
 "ggdendro","ggplotify","gridExtra","cowplot","DESeq2","ggnewscale","AnnotationDbi","clusterProfiler","enrichplot","DOSE","msigdbr","genefilter","ComplexHeatmap","shinyBS","plotly","shinyjs","devtools","dorothea","biomaRt","GenomicRanges","rtracklayer","Rsubread","Rsamtools",
-"ChIPseeker","ChIPpeakAnno","rGREAT","FindIT2","limma","ggseqlogo","marge",
+"ChIPseeker","ChIPpeakAnno","rGREAT","FindIT2","limma","ggseqlogo",
 "colorspace","ggcorrplot","RColorBrewer","bedtorch","venn","reshape2","ggsci",
 "TxDb.Hsapiens.UCSC.hg19.knownGene","TxDb.Hsapiens.UCSC.hg38.knownGene","TxDb.Mmusculus.UCSC.mm10.knownGene",
 "TxDb.Dmelanogaster.UCSC.dm6.ensGene","TxDb.Rnorvegicus.UCSC.rn6.refGene",
@@ -67,6 +67,8 @@ for(pkg in pkgs) if (!require(pkg, character.only = T)){
     BiocManager::install(pkg, update = F)
 }
 devtools::install_github("ColeWunderlich/soGGi")
+devtools::install_github('robertamezquita/marge', ref = 'master')
+devtools::install_github("haizi-zh/bedtorch")
 ```
 
 You may now run EpigenomeChef with just one command in R:<br>

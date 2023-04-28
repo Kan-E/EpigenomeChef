@@ -38,6 +38,21 @@ shinyServer(function(input, output, session) {
   output$Spe_venn_distribution <- renderText({
     if(input$Species_venn == "not selected") print("Please select 'Species'")
   })
+  observeEvent(input$goButton,({
+    updateSelectInput(session,inputId = "Species","Species",species_list, selected = "Homo sapiens (hg19)")
+  }))
+  observeEvent(input$goButton_venn,({
+    updateSelectInput(session,inputId = "Species_venn","Species",species_list, selected = "Homo sapiens (hg19)")
+  }))
+  observeEvent(input$goButton_clustering,({
+    updateSelectInput(session,inputId = "Species_clustering","Species_clustering",species_list, selected = "Homo sapiens (hg19)")
+  }))
+  observeEvent(input$goButton_enrich,({
+    updateSelectInput(session,inputId = "Species_enrich","Species_enrich",species_list, selected = "Homo sapiens (hg19)")
+  }))
+  observeEvent(input$goButton_bed,({
+    updateSelectInput(session,inputId = "Species_bed","Species_bed",species_list, selected = "Homo sapiens (hg19)")
+  }))
   # pair-wise ------------------------------------------------------------------------------
   org1 <- reactive({
     return(org(Species = input$Species))
@@ -6143,7 +6158,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   output$enrich_enrichment_result <- DT::renderDataTable({
-    if(input$Species_enrich != "not selected" && !is.null(Enrich_peak_call_files())){
+    if(!is.null(input$Gene_set_enrich) && 
+       input$Species_enrich != "not selected" && !is.null(Enrich_peak_call_files())){
       as.data.frame(enrichment_1_1_enrich())
     }
   })
@@ -6151,10 +6167,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   
   output$whichGeneSet_enrich <- renderUI({
+    if(input$Species_enrich != "not selected" && !is.null(Enrich_peak_call_files())){
     if(!is.null(input$intersection_enrich_fun)){
       group <- input$intersection_enrich_fun
       set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_enrich()), Group == group)$id)
       selectInput('Pathway_list_enrich', 'Pathway list', set_list)
+    }
     }
   })
   
@@ -6182,7 +6200,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   output$whichGenes_enrich <- renderUI({
-    if(input$Species_enrich != "not selected"){ 
+    if(!is.null(input$Pathway_list_enrich) && input$Species_enrich != "not selected" && !is.null(input$Gene_set_enrich)){ 
       selectInput('intersection_enrich_fun', 'Select intersection', names(enrichment_enricher_enrich()))
     }
   })
