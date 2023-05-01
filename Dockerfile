@@ -81,7 +81,9 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('ggcorrplot', update = F)" && \
     R -e "BiocManager::install('RColorBrewer', update = F)" && \
     R -e "BiocManager::install('plyranges', update = F)" && \
-    R -e "BiocManager::install('venn', update = F)"
+    R -e "BiocManager::install('venn', update = F)" && \
+    R -e "BiocManager::install('reshape2', update = F)" && \
+    R -e "BiocManager::install('ggsci', update = F)"
 ##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
@@ -89,17 +91,8 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     cd /usr/local/homer && \
     wget http://homer.ucsd.edu/homer/configureHomer.pl && \
     perl configureHomer.pl -install && \
-    perl configureHomer.pl -install hg19 && \
-    perl configureHomer.pl -install hg38 && \
-    perl configureHomer.pl -install mm10 && \
-    perl configureHomer.pl -install rn6 && \
-    perl configureHomer.pl -install ce11 && \
-    perl configureHomer.pl -install dm6 && \
-    perl configureHomer.pl -install canFam3 && \
-    perl configureHomer.pl -install galGal4 && \
-    perl configureHomer.pl -install danRer10 && \
-    perl configureHomer.pl -install rheMac8 && \
-    perl configureHomer.pl -install panTro4
+    perl configureHomer.pl -install hg19
+RUN R -e "devtools::install_github('VPetukhov/ggrastr')"
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/

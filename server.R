@@ -53,6 +53,15 @@ shinyServer(function(input, output, session) {
   observeEvent(input$goButton_bed,({
     updateSelectInput(session,inputId = "Species_bed","Species_bed",species_list, selected = "Homo sapiens (hg19)")
   }))
+  observeEvent(input$close, {
+    session$close()
+    js$closeWindow()
+    stopApp()
+    cat(sprintf("Closing session %s\n", session$token))
+    lapply(paste("package:",names(sessionInfo()$otherPkgs),sep=""),
+           detach,character.only = TRUE,
+           unload = TRUE)
+  })
   # pair-wise ------------------------------------------------------------------------------
   org1 <- reactive({
     return(org(Species = input$Species))
@@ -579,7 +588,7 @@ shinyServer(function(input, output, session) {
           if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("darkgray","red")
         }
         
-        v <- ggplot(data, aes(x = log2FoldChange, y = -log10(padj))) + geom_point(aes(color = color),size = 0.4)
+        v <- ggplot(data, aes(x = log2FoldChange, y = -log10(padj))) + ggrastr::geom_point_rast(aes(color = color),size = 0.4)
         v <- v  + geom_vline(xintercept = c(-log2(input$fc), log2(input$fc)), linetype = c(2, 2), color = c("black", "black")) +
           geom_hline(yintercept = c(-log10(input$fdr)), linetype = 2, color = c("black"))
         v <- v +theme_bw()+ scale_color_manual(values = Color)+
@@ -615,35 +624,10 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  pair_heatmap <- reactive({
-    withProgress(message = "Heatmap",{
-      count <- deg_norm_count()
-      collist <- factor(gsub("\\_.+$", "", colnames(count)))
-      vec <- c()
-      for (i in 1:length(unique(collist))) {
-        num <- length(collist[collist == unique(collist)[i]])
-        vec <- c(vec, num)
-      }
-      Cond_1 <- vec[1]
-      Cond_2 <- vec[2]
-      data2 <- data_degcount2()
-      if(is.null(data2)){
-        ht <- NULL
-      }else{
-        data.z <- genescale(data2[,8:(7 + Cond_1 + Cond_2)], axis=1, method="Z")
-        ht <- GOIheatmap(data.z,show_row_names = FALSE)
-      }
-      return(ht)
-      incProgress(1)
-    })
-  })
-  output$GOIheatmap <- renderPlot({
-    pair_heatmap()
-  })
+  
   volcano_heatmap <- reactive({
     vol <- as.grob(pair_volcano())
-    heat <- as.grob(pair_heatmap())
-    return(plot_grid(vol,heat, rel_widths = c(2, 1)))
+    return(plot_grid(vol, rel_widths = c(2, 1)))
   })
   
   output$download_pair_volcano = downloadHandler(
@@ -663,28 +647,6 @@ shinyServer(function(input, output, session) {
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(pair_volcano())
-        dev.off()
-        incProgress(1)
-      })
-    }
-  )
-  output$download_pair_heatmap = downloadHandler(
-    filename = function() {
-      if (input$Genomic_region=='Promoter'){
-        paste0("Heatmap-promoter(", -input$upstream,"-",input$downstream,").pdf")
-      }else{
-        paste0("Heatmap-genomeWide",".pdf")
-      }},
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        if(input$pair_pdf_height == 0){
-          pdf_height <- 4
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
-          pdf_width <- 3
-        }else pdf_width <- input$pair_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(pair_heatmap())
         dev.off()
         incProgress(1)
       })
@@ -1331,6 +1293,23 @@ shinyServer(function(input, output, session) {
                  ),selected = "random")
     }
   })
+  
+  updateCounter <- reactiveValues(i = 0)
+  
+  observe({
+    input$motifButton
+    isolate({
+      updateCounter$i <- updateCounter$i + 1
+    })
+  })
+
+  
+  #Restart
+  defaultvalues <- observeEvent(enrich_motif(), {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+
   output$homer_size2 <- renderUI({
     if(!is.null(input$homer_size)){
     if(input$homer_size == "custom"){
@@ -1339,9 +1318,7 @@ shinyServer(function(input, output, session) {
   output$homer_unknown <- renderUI({
     selectInput("homer_unknown","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
   })
-  observeEvent(input$homer_unknown,({
-    updateActionButton(session,"motifButton", "Start")
-  }))
+
   
   preMotif_list <- reactive({
     df <- list()
@@ -1351,17 +1328,17 @@ shinyServer(function(input, output, session) {
   })
   
   enrich_motif <- reactive({
-    if(input$homer_size == "given") size <- "given"
-    if(input$homer_size == "custom") size <- input$homer_size2
-    if(input$motifButton > 0 && !is.null(preMotif_list()) 
+    if(updateCounter$i > 0 && input$motifButton > 0 && !is.null(preMotif_list()) 
        && input$Species != "not selected" && !is.null(input$homer_unknown)){
+      if(input$homer_size == "given") size <- "given"
+      if(input$homer_size == "custom") size <- input$homer_size2
       if(input$Genomic_region == "Genome-wide"){
         return(findMotif(df= preMotif_list(), anno_data = deg_result_anno2(),back = input$homer_bg,
                              Species = input$Species, motif=input$homer_unknown,size=size,bw_count=bw_count()))
       }else return(findMotif(df= data_degcount2(), anno_data = promoter_region(),
                                  Species = input$Species,
                                  type = "Promoter", motif=input$homer_unknown,size=size))
-    }
+    }else return(NULL)
   })
   
   output$motif_plot <- renderPlot({
@@ -1642,14 +1619,10 @@ shinyServer(function(input, output, session) {
         bed <- "Input/filtered_merged_peak_call.bed"
         PCA <- "Clustering/clustering.pdf"
         PCA_table <- "Clustering/pca.txt"
-        heatmap <- "DEG_result/heatmap.pdf"
 
-        fs <- c(DEG, up,down,count,bed,input_list,PCA,PCA_table,heatmap)
+        fs <- c(DEG, up,down,count,bed,input_list,PCA,PCA_table)
         print(fs)
         if(input$Species != "not selected") process_num <- 8 else process_num <- 3
-        pdf(heatmap, height = 4, width = 3)
-        print(pair_heatmap())
-        dev.off()
         pdf(PCA, height = 3.5, width = 9)
         print(PCAplot(data = deg_norm_count(),plot=TRUE))
         dev.off()
@@ -2937,10 +2910,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       rowlist <- length(names(venn_overlap()$peaklist))
       withProgress(message = "Preparing download",{
         if(input$venn_pdf_height == 0){
-          pdf_height <- pdf_h(rowlist)
+          pdf_height <- pdf_h(rowlist)+3
         }else pdf_height <- input$venn_pdf_height
         if(input$venn_pdf_width == 0){
-          pdf_width <- pdf_w(rowlist)
+          pdf_width <- pdf_w(rowlist)+3
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(venn_batch_lineplot()[["bed"]])
@@ -2971,7 +2944,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           line_plot_all_bed <- paste0("lineplot_bed.pdf")
           fs <- c(fs, line_plot_all_bed)
           rowlist <- length(names(venn_overlap()$peaklist))
-          pdf(line_plot_all_bed, height = pdf_h(rowlist), width = pdf_w(rowlist))
+          pdf(line_plot_all_bed, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
           print(venn_batch_lineplot()[["bed"]])
           dev.off()
           for(name in names(venn_overlap()$peaklist)){
@@ -2985,7 +2958,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
             line_plot_all_bw <- paste0("lineplot_bigwig.pdf")
             fs <- c(fs, line_plot_all_bw)
             rowlist <- length(names(bws_venn()))
-            pdf(line_plot_all_bw, height = pdf_h(rowlist), width = pdf_w(rowlist))
+            pdf(line_plot_all_bw, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
             print(venn_batch_lineplot()[["bigwig"]])
             dev.off()
             if(input$intersect_select != "not_selected"){
@@ -3129,10 +3102,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       withProgress(message = "Preparing download",{
         rowlist <- length(names(bws_venn()))
         if(input$venn_pdf_height == 0){
-          pdf_height <- pdf_h(rowlist)
+          pdf_height <- pdf_h(rowlist)+3
         }else pdf_height <- input$venn_pdf_height
         if(input$venn_pdf_width == 0){
-          pdf_width <- pdf_w(rowlist)
+          pdf_width <- pdf_w(rowlist)+3
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
         print(venn_batch_lineplot()[["bigwig"]])
@@ -3494,6 +3467,21 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                   width = "80%")
         }}
   })
+  updateCounter_venn <- reactiveValues(i = 0)
+  
+  observe({
+    input$motifButton_venn
+    isolate({
+      updateCounter_venn$i <- updateCounter_venn$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_venn <- observeEvent(enrich_motif_venn(), {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
   Venn_peak_call_files_homer <- reactive({
     if(is.null(input$homer_bg2_venn)){
       return(NULL)
@@ -3539,11 +3527,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
 
   enrich_motif_venn <- reactive({
-    if(input$homer_size_venn == "given") size <- "given"
-    if(input$homer_size_venn == "custom") size <- input$homer_size2_venn
-    if(input$motifButton_venn > 0 && !is.null(preMotif_list_venn()) 
+    if(updateCounter_venn$i > 0 && input$motifButton_venn > 0 && !is.null(preMotif_list_venn()) 
        && input$Species_venn != "not selected" && !is.null(input$homer_unknown_venn)){
-      return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,
+      if(input$homer_size_venn == "given") size <- "given"
+      if(input$homer_size_venn == "custom") size <- input$homer_size2_venn
+      if(input$homer_bg_venn == "peakcalling" && is.null(input$homer_bg2_venn)){
+        return(NULL)
+      }else return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,
                        motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other"))
     }
   })
@@ -6278,6 +6268,21 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                   width = "80%")
       }}
   })
+  updateCounter_enrich <- reactiveValues(i = 0)
+  
+  observe({
+    input$motifButton_enrich
+    isolate({
+      updateCounter_enrich$i <- updateCounter_enrich$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_enrich <- observeEvent(enrich_motif_enrich(), {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
   Enrich_peak_call_files_homer <- reactive({
     if(is.null(input$homer_bg2_enrich)){
       return(NULL)
@@ -6298,16 +6303,15 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$homer_unknown_enrich <- renderUI({
     selectInput("homer_unknown_enrich","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
   })
-  observeEvent(input$homer_unknown_enrich,({
-    updateActionButton(session,"motifButton_enrich", "Start")
-  }))
 
   enrich_motif_enrich <- reactive({
-    if(input$homer_size_enrich == "given") size <- "given"
-    if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich
-    if(input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
+    if(updateCounter_enrich$i && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
        && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
-      return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,
+      if(input$homer_size_enrich == "given") size <- "given"
+      if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich
+      if(input$homer_bg_enrich == "peakcalling" && is.null(input$homer_bg2_enrich)){
+        return(NULL)
+        }else return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,
                        motif=input$homer_unknown_enrich, other_data = Enrich_peak_call_files_homer(),type="Other"))
     }
   })

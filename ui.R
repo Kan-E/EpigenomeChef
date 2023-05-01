@@ -3,6 +3,14 @@ popoverTempate <-
 
 shinyUI(
   fluidPage(
+    useShinyjs(),
+    extendShinyjs(text = jscode, functions = c("closeWindow")),
+    actionButton("close", "",icon = icon("window-close")),
+    tags$a(href="javascript:history.go(0)", 
+           popify(tags$i(class="fa fa-refresh"),
+                  title = "Reload", 
+                  content = "Click here to restart the session",
+                  placement = "right")),
     tags$style(
       tags$head(
         includeScript("navAppend.js")
@@ -22,14 +30,14 @@ shinyUI(
     tags$style(".popover{
             max-width: 500px;
           }"),
-    
+
     navbarPage(
       footer=p(hr(),p("Need help? Create an issue on", a("Github", href = "https://github.com/Kan-E/RNAseqChef/issues"), 
                       "or", a("contact us", href = "kaneto@kumamoto-u.ac.jp"),".",align="center",width=4)
       ),
       "",
       id='navBar',
-      tabPanel("EpigenomeChef" ,value='Title', icon = icon("blender"),
+      tabPanel("EpigenomeChef" ,value='Title', icon = icon("utensils"),
                fluidRow(
                  column(12,
                         br(),br(),
@@ -69,7 +77,8 @@ shinyUI(
                                     bsPopover("icon1", "BigWig files (bw, BigWig):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>Short names are recommended for file names."), 
-                                              placement = "right",options = list(container = "body")),
+                                              placement = "right",options = list(container = "body"))
+                                    
                    ),
                    conditionalPanel(condition="input.data_file_type=='Row2'",
                                     fileInput("file_bam",
@@ -206,16 +215,12 @@ shinyUI(
                               ),
                               plotOutput("PCA"),
                               fluidRow(
-                                column(4, downloadButton("download_pair_volcano", "Download volcano plot")),
-                                column(4, downloadButton("download_pair_heatmap", "Download heatmap"))
+                                column(4, downloadButton("download_pair_volcano", "Download volcano plot"))
                               ),
                               fluidRow(
                                 column(6, htmlOutput("volcano_x")),
                                 column(6, htmlOutput("volcano_y"))),
-                              fluidRow(
-                                column(8, plotOutput("volcano1")),
-                                column(4, plotOutput("GOIheatmap"))
-                              ),
+                              plotOutput("volcano1"),
                               bsCollapse(id="input_collapse_pair_DEG",open="DEG_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Trackplot:",
                                                          value="Trackplot_panel",
@@ -1307,7 +1312,7 @@ shinyUI(
                                         multiple = FALSE,
                                         width = "80%"),
                               conditionalPanel(condition="input.data_file_type_bed=='type1'",
-                              htmlOutput("bed_merge_dist")
+                                               htmlOutput("bed_merge_dist")
                               ),
                               conditionalPanel(condition="input.data_file_type_bed=='type2' || input.data_file_type_bed=='type3'",
                                                fileInput("bed_data_file2",
@@ -1350,8 +1355,8 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
-                                       dataTableOutput('bed_input'),
-                                       downloadButton("download_bed", "Download processed bed files"),
+                              dataTableOutput('bed_input'),
+                              downloadButton("download_bed", "Download processed bed files"),
                               tags$head(tags$style("#download_bed{color: red;
                                  font-size: 20px;
             font-style: bold;

@@ -71,8 +71,10 @@ library(bedtorch)
 library(venn)
 library(reshape2)
 library(ggsci)
+library(ggrastr) ##devtools::install_github('VPetukhov/ggrastr')
 options('homer_path' = "/usr/local/homer")
 check_homer()
+jscode <- "shinyjs.closeWindow = function() { window.close(); }"
 options(rsconnect.max.bundle.size=31457280000000000000)
 species_list <- c("not selected", "Homo sapiens (hg19)","Homo sapiens (hg38)","Mus musculus (mm10)",
                   "Rattus norvegicus (rn6)","Drosophila melanogaster (dm6)","Caenorhabditis elegans (ce11)",
@@ -294,7 +296,7 @@ GOIheatmap <- function(data.z, show_row_names = TRUE){
   ht <- Heatmap(data.z, name = "z-score",column_order = colnames(data.z),
                 clustering_method_columns = 'ward.D2',
                 show_row_names = show_row_names, show_row_dend = F,column_names_side = "top",
-                row_names_gp = gpar(fontface = "italic"))
+                row_names_gp = gpar(fontface = "italic"),use_raster = TRUE)
   return(ht)
 }
 
@@ -692,6 +694,8 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
           data <- anno_data %>% dplyr::filter(! locus %in% rownames(data))
           data2 <- range_changer(data)
           bg <- data.frame(seqnames = data2$chr,start=data2$start,end=data2$end)
+          write.table(bg,"bed.bed",row.names = F,col.names = F,quote = F, sep = "\t")
+          bg <- "bed.bed"
         }
           }
         if(type== "Promoter") {
@@ -700,15 +704,16 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
           bg <- with(bg, GRanges(seqnames = seqnames, 
                               ranges = IRanges(start,end)))
           bg <- as.data.frame(bg)
+          write.table(bg,"bed.bed",row.names = F,col.names = F,quote = F, sep = "\t")
+          bg <- "bed.bed"
         }
         if(type=="Other"){
           if(back == "random"){
             bg <-'automatic'
           }else{
-            z <- with(y, GRanges(seqnames = seqnames, 
-                                 ranges = IRanges(start,end)))
-            bg <- exclude_bed(other_data,z)
-            bg <- as.data.frame(bg)
+            bg <- as.data.frame(other_data)
+            write.table(bg,"bed.bed",row.names = F,col.names = F,quote = F, sep = "\t")
+            bg <- "bed.bed"
           }
             }
         print(head(bg))

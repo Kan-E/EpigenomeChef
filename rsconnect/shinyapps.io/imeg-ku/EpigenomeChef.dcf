@@ -5,10 +5,10 @@ account: imeg-ku
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 7681824
-bundleId: 7142304
+bundleId: 7158164
 url: https://imeg-ku.shinyapps.io/EpigenomeChef/
-when: 1682582505.95755
-lastSyncTime: 1682582505.95759
+when: 1682917704.87657
+lastSyncTime: 1682917704.87659
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: bed.bed|Dockerfile|Dockerfile_arm|LICENSE|README.md|shiny-server.conf|main figures
+ignoredFiles: bed.bed|Dockerfile|Dockerfile_arm|LICENSE|README.md|shiny-server.conf|log|main figures
