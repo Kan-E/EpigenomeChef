@@ -2978,18 +2978,17 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
               legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
                      lty=1, lwd=1)
               dev.off()
+              if(input$Species_venn != "not_selected"){
+                distribution <- paste0(input$intersect_select,"/distribution.pdf")
+                annotation <- paste0(input$intersect_select,"/annotation.txt")
+                fs <- c(fs, distribution, annotation)
+                pdf(distribution, height = 4.5, width = 6)
+                print(vendistribution())
+                dev.off()
+                write.table(apply(selected_annoData_table()[,1:10],2,as.character), 
+                            annotation, row.names = F, col.names = T,sep = "\t", quote = F)
+              }
             }
-          }
-          
-          if(input$Species_venn != "not_selected"){
-            distribution <- paste0(input$intersect_select,"/distribution.pdf")
-            annotation <- paste0(input$intersect_select,"/annotation.txt")
-            fs <- c(fs, distribution, annotation)
-            pdf(distribution, height = 4.5, width = 6)
-            print(vendistribution())
-            dev.off()
-            write.table(apply(selected_annoData_table()[,1:10],2,as.character), 
-                        annotation, row.names = F, col.names = T,sep = "\t", quote = F)
           }
         }
         if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
