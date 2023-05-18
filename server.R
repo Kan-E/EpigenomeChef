@@ -6886,10 +6886,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(name in names(df)){
         if(!is.null(df[[name]])) {
           group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
+          if(length(group1$id) != 0){
           group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
+          group1$Group <- name
+          data <- rbind(data, group1)
+          }else group1 <-NULL
         }else group1 <- NULL
-        group1$Group <- name
-        data <- rbind(data, group1)
       }
       if(length(data$id) != 0) {
         return(data)
@@ -6905,11 +6907,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(name in names(df)){
         if(!is.null(df[[name]])) {
           group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
+          if(length(group1$id) != 0){
           group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
           if (length(group1$p_adjust_hyper) > input$enrich_showCategory){
             group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
             group1 <- group1[1:input$enrich_showCategory,]
-          }
+          }}else group1 <- NULL
         }else group1 <- NULL
         data <- rbind(data, group1)
       }
@@ -7026,7 +7029,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   output$whichGenes_enrich <- renderUI({
-    if(!is.null(input$Pathway_list_enrich) && input$Species_enrich != "not selected" && !is.null(input$Gene_set_enrich)){ 
+    if(input$Species_enrich != "not selected" && !is.null(input$Gene_set_enrich)){ 
       selectInput('intersection_enrich_fun', 'Select intersection', names(enrichment_enricher_enrich()))
     }
   })
