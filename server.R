@@ -5708,7 +5708,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   output$kmeans_cv <- renderUI({
     sliderInput("kmeans_cv", "Most variable loci:", min = 0,
-                max=10000, step = 1000,
+                max=20000, step = 1000,
                 value = 2000)
   })
   
@@ -6866,6 +6866,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   enrichment_enricher_enrich <- reactive({
     data <- Enrich_peak_call_files()
+    print(data)
     H_t2g <- Hallmark_set_enrich()
     df <- list()
     source <- ref_for_GREAT(input$Species_enrich)
