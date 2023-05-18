@@ -5711,7 +5711,21 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                 max=20000, step = 1000,
                 value = 2000)
   })
+  updateCounter_kmeans <- reactiveValues(i = 0)
   
+  observe({
+    input$kmeans_start
+    isolate({
+      updateCounter_kmeans$i <- updateCounter_kmeans$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_kmeans <- observeEvent(clustering_kmeans(), {
+    isolate(updateCounter_kmeans$i == 0)
+    updateCounter_kmeans <<- reactiveValues(i = 0)
+  }) 
   
   bw_count_clustering_cutoff <- reactive({
     data <- bw_count_clustering()
@@ -5735,6 +5749,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   clustering_kmeans <- reactive({
+    if(updateCounter_kmeans$i > 0 && input$kmeans_start > 0){
     data.z <- clustering_data_z()
     if(is.null(data.z)){
       return(NULL)
@@ -5748,7 +5763,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         ht <- draw(ht)
         return(ht)
       })
-    }
+    }}
   })
   
   clustering_kmeans_cluster <- reactive({
@@ -5785,12 +5800,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   output$clustering_select_kmean <- renderUI({
     withProgress(message = "preparing kmeans clustering",{
-    clusters <- clustering_kmeans_cluster()
+      if(updateCounter_kmeans$i > 0 && input$kmeans_start > 0){
+        clusters <- clustering_kmeans_cluster()
     if(is.null(clusters)){
       return(NULL)
     }else{
       selectInput("clustering_select_kmean", "cluster_list", choices = c(unique(clusters$Cluster)),multiple = T)
-    } 
+    } }
     })
   })
   
@@ -5834,12 +5850,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   output$clustering_kmeans_heatmap <- renderPlot({
     withProgress(message = "plot heatmap",{
+      if(input$kmeans_start > 0 && updateCounter_kmeans$i > 0){
     ht <- clustering_kmeans()
     if(is.null(ht)){
       return(NULL)
     }else{
       print(ht)
-    }
+    }}
     })
   })
   
@@ -7144,7 +7161,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
 
   enrich_motif_enrich <- reactive({
-    if(updateCounter_enrich$i && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
+    if(updateCounter_enrich$i > 0 && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
        && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
       if(input$homer_size_enrich == "given") size <- "given"
       if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich

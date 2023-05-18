@@ -1083,7 +1083,17 @@ shinyUI(
                               fluidRow(
                                 column(4, htmlOutput("clustering_kmeans_num"),
                                        htmlOutput("kmeans_cv"),
-                                       downloadButton("download_clustering_kmeans_heatmap", "Download heatmap")),
+                                       downloadButton("download_clustering_kmeans_heatmap", "Download heatmap"),
+                                       actionButton("kmeans_start", "Start"),
+                                       tags$head(tags$style("#kmeans_start{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))),
                                 column(8, plotOutput("clustering_kmeans_heatmap"))
                               ),
                               htmlOutput("clustering_select_kmean"),
