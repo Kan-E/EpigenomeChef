@@ -85,7 +85,8 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('reshape2', update = F)" && \
     R -e "BiocManager::install('ggsci', update = F)" && \
     R -e "devtools::install_github('VPetukhov/ggrastr')" && \
-    R -e "BiocManager::install('EnrichedHeatmap', update = F)"
+    R -e "BiocManager::install('EnrichedHeatmap', update = F)" && \
+    R -e "BiocManager::install('magick', update = F)"
 ##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
@@ -94,7 +95,6 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     wget http://homer.ucsd.edu/homer/configureHomer.pl && \
     perl configureHomer.pl -install && \
     perl configureHomer.pl -install hg19
-RUN R -e "devtools::install_github('VPetukhov/ggrastr')"
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/
