@@ -33,7 +33,7 @@ shinyUI(
 
     navbarPage(
       footer=p(hr(),p("Need help? Create an issue on", a("Github", href = "https://github.com/Kan-E/RNAseqChef/issues"), 
-                      "or", a("contact us", href = "kaneto@kumamoto-u.ac.jp"),".",align="center",width=4)
+                      "or", a("contact us", href = "maito:kaneto@kumamoto-u.ac.jp"),".",align="center",width=4)
       ),
       "",
       id='navBar',
@@ -52,6 +52,7 @@ shinyUI(
                         img(src="Venn.png", width = 1200,height = 700),br(),br(),hr(), 
                         h3("Clustering identifies similar samples and DNA binding patterns by clustering methods"),br(),
                         img(src="Clustering.png", width = 1000,height = 900),br(),hr(),
+                        img(src="combined.png", width = 1200,height = 600),br(),hr(),
                  )
                )
       ),
@@ -157,7 +158,8 @@ shinyUI(
                                            strong("Boxplot (with RNAseq):"), "height = 5, width = 7 <br>",
                                            strong("Barplot (with RNAseq):"), "height = 5, width = 7 <br>",
                                            strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
-                                           strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>"),trigger = "click"), 
+                                           strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>",
+                                           strong("combined heatmap:"), "height = 6, width = 10 <br>"),trigger = "click"), 
                    actionButton("goButton", "example data (hg19)"),
                    tags$head(tags$style("#goButton{color: black;
                                  font-size: 12px;
@@ -480,6 +482,50 @@ shinyUI(
                                          )
                                          
                               )
+                     ),
+                     tabPanel("Combined heatmap",
+                              textOutput("Spe_rnaseq2"),
+                                     tags$head(tags$style("#Spe_rnaseq2{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(6, htmlOutput("rnaseq_DEGs")),
+                                column(6, htmlOutput("rnaseq_count"))
+                              ),
+                              bsCollapse(id="z-score_count",open="z-score_multiple_count_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Uploaded DEG result files",
+                                                         value="Uploaded_DEGs",
+                                                         dataTableOutput('rnaseq_DEGs_output')
+                                         ),
+                                         bsCollapsePanel(title="z-score of uploaded count files",
+                                                         value="z-score_multiple_count_panel",
+                                                         dataTableOutput('rnaseq_count_output')
+                                         )
+                              ),
+                              fluidRow(
+                                column(4, htmlOutput("integrated_bw1")),
+                                column(4, htmlOutput("integrated_bw2")),
+                                column(4, htmlOutput("integrated_bw3"))
+                              ),
+                              fluidRow(
+                                column(4, actionButton("integrated_heatmapButton", "Start"),
+                                       tags$head(tags$style("#integrated_heatmapButton{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                ),
+                                column(4, downloadButton("download_integrated_heatmap","Download heatmap"))
+                              ),
+                              div(
+                                plotOutput('integrated_heatmap', height = "100%"),
+                                style = "height: calc(75vh  - 75px)"
+                              ),
                      )
                    )
                  ) # main panel
@@ -540,7 +586,8 @@ shinyUI(
                                            strong("Barplot (with RNAseq):"), "height = 5, width = 7 <br>",
                                            strong("Boxplot (with RNAseq):"), "height = 5, width = 6 <br>",
                                            strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
-                                           strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>"),trigger = "click"), 
+                                           strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>",
+                                           strong("combined heatmap:"), "height = 6, width = 10 <br>"),trigger = "click"), 
                    actionButton("goButton_venn", "example data (hg19)"),
                    tags$head(tags$style("#goButton_venn{color: black;
                                  font-size: 12px;
@@ -802,6 +849,57 @@ shinyUI(
                                          )
                                          
                               )
+                     ),
+                     tabPanel("Combined heatmap",
+                              textOutput("Spe_rnaseq2_venn"),
+                              tags$head(tags$style("#Spe_rnaseq2_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(6, htmlOutput("venn_heatmap_group"),
+                                       tags$head(tags$style("#venn_heatmap_group{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
+                              fluidRow(
+                                column(6, htmlOutput("rnaseq_DEGs_venn")),
+                                column(6, htmlOutput("rnaseq_count_venn"))
+                              ),
+                              bsCollapse(id="z-score_count_venn",open="z-score_multiple_count_venn_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Uploaded DEG result files",
+                                                         value="Uploaded_DEGs_venn",
+                                                         dataTableOutput('rnaseq_DEGs_output_venn')
+                                         ),
+                                         bsCollapsePanel(title="z-score of uploaded count files",
+                                                         value="z-score_multiple_count_venn_panel",
+                                                         dataTableOutput('rnaseq_count_output_venn')
+                                         )
+                              ),
+                              fluidRow(
+                                column(4, htmlOutput("integrated_bw2_venn")),
+                                column(4, htmlOutput("integrated_bw3_venn")),
+                                column(4, htmlOutput("integrated_bw4_venn"))
+                              ),
+                              fluidRow(
+                                column(4, actionButton("integrated_heatmapButton_venn", "Start"),
+                                       tags$head(tags$style("#integrated_heatmapButton_venn{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                ),
+                                column(4, downloadButton("download_integrated_heatmap_venn","Download heatmap"))
+                              ),
+                              div(
+                                plotOutput('integrated_heatmap_venn', height = "100%"),
+                                style = "height: calc(75vh  - 75px)"
+                              ),
                      )
                    )
                  ) #sidebarLayout
@@ -1167,7 +1265,8 @@ shinyUI(
                              content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
                                            "Default size: <br>",
                                            "Dotplot:", "height = 5, width = 6.5 <br>", 
-                                           "cnet plot:","height = 6, width = 6 <br><br>"), trigger = "click"), 
+                                           "cnet plot:","height = 6, width = 6 <br><br>",
+                                           "combined heatmap:", "height = 6, width = 10 <br>"), trigger = "click"), 
                    actionButton("goButton_enrich", "example data (hg19)"),
                    tags$head(tags$style("#goButton_enrich{color: black;
                                  font-size: 12px;
@@ -1265,6 +1364,53 @@ shinyUI(
                                          )
                               )
                      ),
+                     tabPanel("Combined heatmap",
+                              textOutput("Spe_rnaseq2_enrich"),
+                              tags$head(tags$style("#Spe_rnaseq2_enrich{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              fluidRow(
+                                column(6, htmlOutput("integrated_bw1_enrich"))
+                              ),
+                              fluidRow(
+                                column(6, htmlOutput("rnaseq_DEGs_enrich")),
+                                column(6, htmlOutput("rnaseq_count_enrich"))
+                              ),
+                              bsCollapse(id="z-score_count_enrich",open="z-score_multiple_count_enrich_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Uploaded DEG result files",
+                                                         value="Uploaded_DEGs_enrich",
+                                                         dataTableOutput('rnaseq_DEGs_output_enrich')
+                                         ),
+                                         bsCollapsePanel(title="z-score of uploaded count files",
+                                                         value="z-score_multiple_count_enrich_panel",
+                                                         dataTableOutput('rnaseq_count_output_enrich')
+                                         )
+                              ),
+                              fluidRow(
+                                column(4, htmlOutput("integrated_bw2_enrich")),
+                                column(4, htmlOutput("integrated_bw3_enrich")),
+                                column(4, htmlOutput("integrated_bw4_enrich"))
+                              ),
+                              fluidRow(
+                                column(4, actionButton("integrated_heatmapButton_enrich", "Start"),
+                                       tags$head(tags$style("#integrated_heatmapButton_enrich{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                ),
+                                column(4, downloadButton("download_integrated_heatmap_enrich","Download heatmap"))
+                              ),
+                              div(
+                                plotOutput('integrated_heatmap_enrich', height = "100%"),
+                                style = "height: calc(75vh  - 75px)"
+                              ),
+                     )
                    )
                  )
                ) #sidebarLayout

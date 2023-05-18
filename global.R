@@ -72,6 +72,7 @@ library(venn)
 library(reshape2)
 library(ggsci)
 library(ggrastr) ##devtools::install_github('VPetukhov/ggrastr')
+library(EnrichedHeatmap)
 options('homer_path' = "/usr/local/homer")
 check_homer()
 jscode <- "shinyjs.closeWindow = function() { window.close(); }"
@@ -111,7 +112,39 @@ org <- function(Species){
     return(org)
   }
 }
-
+read_df <- function(tmp, Species=NULL){
+  if(is.null(tmp)) {
+    return(NULL)
+  }else{
+    if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+    if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
+    if(tools::file_ext(tmp) == "txt" || tools::file_ext(tmp) == "tsv") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
+    rownames(df) = gsub("\"", "", rownames(df))
+    rownames(df) = gsub(":", ".", rownames(df))
+    rownames(df) = gsub("\\\\", ".", rownames(df))
+    if(length(grep("SYMBOL", colnames(df))) != 0){
+      df <- df[, - which(colnames(df) == "SYMBOL")]
+    }
+    if(length(colnames(df)) != 0){
+      if(str_detect(colnames(df)[1], "^X\\.")){
+        colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+      }
+    }
+    return(df)
+  }
+}
+read_dfs <- function(tmp, Species=NULL){
+  name = c()
+  upload = list()
+  for(nr in 1:length(tmp[, 1])){
+    df <- read_df(tmp[[nr, 'datapath']])
+    file_name <- gsub(paste0("\\.",tools::file_ext(tmp[[nr, 'datapath']]),"$"), "", tmp[nr,]$name)
+    name <- c(name, file_name)
+    upload[[nr]] <- df
+  }
+  names(upload) <- name
+  return(upload)
+}
 txdb_function <- function(Species){
   if(Species == "Xenopus laevis (xenLae2)"){
     xenLae2<-makeTxDbFromUCSC(genome="xenLae2", tablename="ncbiRefSeq",
@@ -140,7 +173,29 @@ txdb_function <- function(Species){
           "Arabidopsis thaliana (tair10)" = txdb <- TxDb.Athaliana.BioMart.plantsmart51)
   return(txdb)
 }
-
+files_name2ENTREZID <- function(files,Species){
+  df2 <- list()
+  for (name in names(files)) {
+    count <- files[[name]]
+    if(!is.na(suppressWarnings(as.numeric(rownames(count)[1]))) == TRUE){
+      df2[[name]] <- count
+    }else{
+      if(str_detect(rownames(count)[1], "ENS") || str_detect(rownames(count)[1], "FBgn")){
+        my.symbols <- gsub("\\..*","", rownames(count))
+        gene_id <-id_convert(my.symbols,Species = Species,type = "ENSEMBL2ENTREZID")
+        gene_id <- gene_id %>% distinct(ENSEMBL, .keep_all = T) %>% na.omit()
+        gene_id <- data.frame(ENTREZID = gene_id$ENTREZID, row.names = gene_id$ENSEMBL)
+        count2 <- merge(gene_id,count,by=0)
+      }else{
+        #symbol
+        count2 <- symbol2gene_id(data = count,org=org(Species))
+        colnames(count2)[1]<-"ENTREZID"
+      }
+      df2[[name]] <- count2
+    }
+  }
+  return(df2)
+}
 promoter <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM){
   if(input_type == "Promoter"){
   return(promoters(genes(txdb),upstream = upstream, downstream = downstream))
@@ -1048,6 +1103,7 @@ symbol2gene_id <- function(data,org){
   gene_IDs <- gene_IDs %>% distinct(SYMBOL, .keep_all = T) %>% na.omit()
   gene_IDs <- data.frame(gene_id = gene_IDs$gene_id, row.names = gene_IDs$SYMBOL)
   data <- merge(gene_IDs,data,by=0)
+  rownames(data)<-data$Row.names
   data <- data[,-1]
   return(data)
 }
@@ -1225,6 +1281,10 @@ id_convert <- function(my.symbols,Species,type){
       column <- c("ENSEMBL","SYMBOL","ENTREZID")
       key <- "ENSEMBL"
     }
+    if(type == "ENSEMBL2ENTREZID"){
+      column <- c("ENSEMBL","ENTREZID")
+      key <- "ENSEMBL"
+    }
   }else {
     if(type == "ENTREZID"){
     column <- c("SYMBOL", "ENSEMBL")
@@ -1240,6 +1300,10 @@ id_convert <- function(my.symbols,Species,type){
     }
     if(type == "ENSEMBL"){
       column <- c("ENSEMBL","SYMBOL")
+      key <- "ENSEMBL"
+    }
+    if(type == "ENSEMBL2ENTREZID"){
+      column <- c("ENSEMBL","ENTREZID")
       key <- "ENSEMBL"
     }
   }
@@ -1429,4 +1493,58 @@ pdf_w <- function(rowlist){
   if (length(rowlist) == 1) pdf_wsize <- 4
   if (length(rowlist) > 200) pdf_wsize <- 30
   return(pdf_wsize)
+}
+
+batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
+                          color=c("white", "red"),signal="signal"){
+  ht_list <- NULL
+  perc <- 0
+  withProgress(message = "Preparing heatmap",{
+  for(k in 1:length(names(files_bw))){
+    perc<-perc+1
+    num_list <- c()
+    glist <- list()
+    for(i in 1:length(names(files2))){
+      feature.recentered <- reCenterPeaks(files2[[i]], width=1)
+      num <- dim(as.data.frame(feature.recentered))[1]
+      num_list <- c(num_list, rep(names(files2)[[i]],num))
+      glist[[i]] <- feature.recentered
+    }
+    target <- unlist(as(glist,"GRangesList"))
+    mat1 = normalizeToMatrix(import(files_bw[[k]],as="GRanges"), target = target, value_column = "score",
+                             extend = 2000, mean_mode = "absolute", w = 20, keep = c(0, 0.99))
+    axis_name <- c("-2000","summit","2000")
+    if(!is.null(type)){
+    if(type == "Promoter"){
+      axis_name <- c("-2000","TSS","2000")
+    }}
+    name <- gsub("\\..+$", "", names(files_bw)[[k]])
+    name <- gsub("_", " ", name)
+    name <- gsub("-", " ", name)
+    name <- paste(strwrap(name, width = 8),collapse = "\n")
+    name <- gsub(" ", "\\_", name)
+    ht <- EnrichedHeatmap(mat1, split = num_list, col = color,name=name,
+                          axis_name = axis_name,pos_line = F,
+                          column_title =name,
+                          top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:4, lty = 1),
+                                                                                      axis_param = list(side = "right", facing = "inside"))))
+    ht_list <- ht_list + ht
+    list <- list()
+    list[["heatmap"]] <- ht_list
+    list[["mat"]] <- mat1
+    incProgress(1/length(names(files_bw)), message = paste("Finish '", names(files_bw)[k], "', ", 
+                                                            perc, "/", length(names(files_bw)),sep = ""))
+  }
+  })
+  return(list)  
+}
+lgd <- function(files2){
+  leg_name <- gsub("\\..+$", "",names(files2))
+  leg_name <- gsub("_", " ",leg_name)
+  for(i in 1:length(leg_name)){
+    leg_name[i] <- paste(strwrap(leg_name[i], width = 15),collapse = "\n")
+  }
+  lgd = Legend(at = leg_name, title = "Group", 
+               type = "lines", legend_gp = gpar(col = 1:8))
+  return(lgd)
 }

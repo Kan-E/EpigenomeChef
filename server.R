@@ -26,6 +26,12 @@ shinyServer(function(input, output, session) {
   output$Spe_int <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
   })
+  output$Spe_rnaseq2 <- renderText({
+    if(input$Species == "not selected") print("Please select 'Species'")
+  })
+  output$Spe_rnaseq2_enrich <- renderText({
+    if(input$Species_enrich == "not selected") print("Please select 'Species'")
+  })
   output$Spe_clustering <- renderText({
     if(input$Species_clustering == "not selected" && input$Genomic_region_clustering == "Promoter") print("Please select 'Species'")
   })
@@ -450,6 +456,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  
   output$DEG_result <- DT::renderDT({
     if(!is.null(deg_result())){
       if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
@@ -465,9 +472,420 @@ shinyServer(function(input, output, session) {
       }
     }
   })
+  
+  uniqueID_DAR<- reactive({
+    if(input$Genomic_region == "Promoter"){
+      data <- data_degcount2()
+      data <- data %>% dplyr::filter(!is.na(ENTREZID))
+      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
+      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
+      colnames(tss)[6]<-"ENTREZID"
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+      print(head(up))
+    }else{
+    data <- data_degcount2_anno()
+    data <- data %>% dplyr::filter(!is.na(ENTREZID))
+    up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
+    down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
+    }
+    up_gr <- with(up, GRanges(seqnames = seqnames, 
+                                 ranges = IRanges(start,end),
+                              strand = strand))
+    down_gr <- with(down, GRanges(seqnames = seqnames, 
+                              ranges = IRanges(start,end),
+                              strand = strand))
+    names(up_gr) <- paste0(up$ENTREZID,"_",up$locus)
+    names(down_gr) <- paste0(down$ENTREZID,"_",down$locus)
+    list <- list()
+    list[["Up"]] <- up_gr
+    list[["Down"]] <- down_gr
+    print(list)
+    return(list)
+  })
+  integrate_h <- reactive({
+    h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = bws(),type=input$Genomic_region)
+    return(h)
+  })
+  integrated_legend <- reactive({
+    lgd <- lgd(files2 = uniqueID_DAR())
+    return(lgd)
+  })
+  
+  integrated_heatlist <- reactive({
+    if(input$integrated_heatmapButton > 0 && updateCounter_int$i > 0){
+    ht_list <- NULL
+    if(!is.null(integrate_h())) ht_list <- ht_list + integrate_h()[["heatmap"]]
+    if(!is.null(integrated_heatmap_add1())) ht_list <- ht_list + integrated_heatmap_add1()[["heatmap"]]
+    if(!is.null(integrated_heatmap_add2())) ht_list <- ht_list + integrated_heatmap_add2()[["heatmap"]]
+    if(!is.null(integrated_heatmap_add3())) ht_list <- ht_list + integrated_heatmap_add3()[["heatmap"]]
+    if(!is.null(rnaseq_DEGs_heatmap())) ht_list <- ht_list + rnaseq_DEGs_heatmap()
+    if(!is.null(rnaseq_count_heatmap())) ht_list <- ht_list + rnaseq_count_heatmap()
+    return(ht_list)
+    }else return(NULL)
+  })
+  updateCounter_int <- reactiveValues(i = 0)
+  
+  observe({
+    input$integrated_heatmapButton
+    isolate({
+      updateCounter_int$i <- updateCounter_int$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues <- observeEvent(integrated_heatlist(), {
+    isolate(updateCounter_int$i == 0)
+    updateCounter_int <<- reactiveValues(i = 0)
+  }) 
+  output$integrated_heatmap <- renderPlot({
+    if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
+       !is.null(integrated_heatlist())){
+      draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
+                                      heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+    }
+  })
+  output$download_integrated_heatmap = downloadHandler(
+    filename = "Integrated_heatmap.pdf",
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 10
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
+                   heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$rnaseq_count <- renderUI({
+    if(input$Species != "not_selected"){
+    fileInput("pair_rnaseq_count",
+              "Select RNA-seq normalized count files",
+              accept = c("txt","csv","xlsx"),
+              multiple = TRUE,
+              width = "90%")
+    }
+  })
+  output$rnaseq_DEGs <- renderUI({
+    if(input$Species != "not_selected"){
+      fileInput("pair_rnaseq_DEGs",
+                "Select RNA-seq DEG result files",
+                accept = c("txt","csv","xlsx"),
+                multiple = TRUE,
+                width = "90%")
+    }
+  })
+  rnaseq_count <- reactive({
+    withProgress(message = "Importing row count matrix, please wait",{
+      tmp <- input$pair_rnaseq_count
+      upload = list()
+      if(is.null(input$pair_rnaseq_count) && input$goButton > 0 )  {
+        tmp = "data/RNAseq_count.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  rnaseq_DEGs <- reactive({
+    withProgress(message = "Importing DEG result files, please wait",{
+      tmp <- input$pair_rnaseq_DEGs
+      upload = list()
+      if(is.null(input$pair_rnaseq_DEGs) && input$goButton > 0 )  {
+        tmp = "data/RNAseq.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  rnaseq_DEGs2 <- reactive({
+    files <- rnaseq_DEGs()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species)
+      if(length(names(df)) != 1){
+        matrix_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix[is.na(matrix)] <- 0
+          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_list[[name]] <- matrix
+        }
+        base <- matrix_list[[1]]
+        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
+        rownames(base) <- base$Row.names
+        colnames(base) <- gsub("\\.y$", "", colnames(base))
+        rna <- as.data.frame(base[,-1])
+        print(head(rna))
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      rna <- dplyr::select(rna, contains("log2FoldChange"))
+      return(rna)
+    }
+  })
+  rnaseq_count2 <- reactive({
+    files <- rnaseq_count()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species)
+      if(length(names(df)) != 1){
+        matrix_z_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix_z <- genescale(matrix, axis = 1, method = "Z")
+          print(head(matrix_z))
+          matrix_z[is.na(matrix_z)] <- 0
+          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_z_list[[name]] <- matrix_z
+        }
+        base_z <- matrix_z_list[[1]]
+        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+        rownames(base_z) <- base_z$Row.names
+        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
+        rna <- as.data.frame(base_z[,-1])
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna <- genescale(rna, axis = 1, method = "Z")
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      return(rna)
+    }
+  })
+  observeEvent(input$pair_rnaseq_DEGs, ({
+    updateCollapse(session,id =  "z-score_count", open="Uploaded_DEGs")
+  }))
+  observeEvent(input$pair_rnaseq_count, ({
+    updateCollapse(session,id =  "z-score_count", open="z-score_multiple_count_panel")
+  }))
+  output$rnaseq_count_output <- renderDataTable({
+    if(input$Species != "not_selected" && !is.null(rnaseq_count())){
+    rnaseq_count2()
+    }
+  })
+  output$rnaseq_DEGs_output <- renderDataTable({
+    if(input$Species != "not_selected" && !is.null(rnaseq_DEGs())){
+      rnaseq_DEGs2()
+    }
+  })
+  
   output$Normalized_Count_matrix <- DT::renderDataTable({
     deg_norm_count()
   })
+  rnaseq_count_heatmap <- reactive({
+    rna <-  rnaseq_count2()
+    if(input$Genomic_region == "Promoter"){
+      data <- data_degcount2()
+      data <- data %>% dplyr::filter(!is.na(ENTREZID))
+      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
+      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
+      colnames(tss)[6]<-"ENTREZID"
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+    }else{
+    data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
+    up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
+    down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
+    }
+  
+    rna$ENTREZID <- rownames(rna)
+    up_m <- merge(rna,up,by="ENTREZID",all=T)
+    up_m <- up_m %>% dplyr::filter(!is.na(locus))
+    rownames(up_m) <- paste0(up_m$ENTREZID,"_",up_m$locus)
+    up_m <- up_m[,2:length(colnames(rna))]
+    up_m[is.na(up_m)] <- 0
+
+    down_m <- merge(rna,down,by="ENTREZID",all=T)
+    down_m <- down_m %>% dplyr::filter(!is.na(locus))
+    rownames(down_m) <- paste0(down_m$ENTREZID,"_",down_m$locus)
+    down_m <- down_m[,2:length(colnames(rna))]
+    down_m[is.na(down_m)] <- 0
+
+    m_z <- rbind(up_m,down_m)
+    mat <- integrate_h()[["mat"]]
+    
+    cond <- gsub(".+\\.", "", colnames(m_z))
+    cond <- gsub("\\_.+$", "", cond)
+    cond <- factor(cond, levels = unique(cond), ordered = TRUE)
+    cond_color <- rainbow_hcl(length(unique(cond)),c=100)
+    names(cond_color) <- unique(cond)
+    if(length(names(rnaseq_count())) == 1){
+      file_name <- NULL
+      file_name_color <- NULL
+    }else{
+    file_name <- gsub("\\..+$", "", colnames(m_z))
+    file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
+    file_name_color <- rainbow_hcl(length(file_name))
+    names(file_name_color) <- file_name
+    }
+    withProgress(message = "Heatmap of RNA-seq count data",{
+    ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
+                  top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                     col = list(files = file_name_color,
+                                                                condition = cond_color)),
+                  show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+    })
+    return(ht)
+  })
+  rnaseq_DEGs_heatmap <- reactive({
+    rna <-  rnaseq_DEGs2()
+    if(input$Genomic_region == "Promoter"){
+      data <- data_degcount2()
+      data <- data %>% dplyr::filter(!is.na(ENTREZID))
+      data <- data[,- which(colnames(data) == "log2FoldChange")]
+      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
+      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
+      colnames(tss)[6]<-"ENTREZID"
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+    }else{
+      data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
+      data <- data[,- which(colnames(data) == "log2FoldChange")]
+      up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
+      down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
+    }
+    
+    rna$ENTREZID <- rownames(rna)
+    up_m <- merge(rna,up,by="ENTREZID",all=T)
+    up_m <- up_m %>% dplyr::filter(!is.na(locus))
+    rownames(up_m) <- paste0(up_m$ENTREZID,"_",up_m$locus)
+    
+    down_m <- merge(rna,down,by="ENTREZID",all=T)
+    down_m <- down_m %>% dplyr::filter(!is.na(locus))
+    rownames(down_m) <- paste0(down_m$ENTREZID,"_",down_m$locus)
+    m_z <- rbind(up_m,down_m)
+    m_z[is.na(m_z)] <- 0
+    m_z <- as.data.frame(m_z[,1:length(colnames(rna))])
+    for(i in 1:length(colnames(rna))){
+      m_z[,i] <- -1 * as.numeric(m_z[,i])
+    }
+    m_z[m_z > 5]<- 5
+    m_z[m_z < -5]<- -5
+    print(head(m_z))
+    mat <- integrate_h()[["mat"]]
+    colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
+    withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
+    ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
+                  show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
+                  use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
+                  col = c("blue","white","gold"))
+    return(ht)
+    })
+  })
+  
+  output$integrated_bw1 <- renderUI({
+    fileInput("integrated_bw_1",
+              "Option: Select additional bigwig files (blue)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw2 <- renderUI({
+    fileInput("integrated_bw_2",
+              "Option: Select additional bigwig files (green)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw3 <- renderUI({
+    fileInput("integrated_bw_3",
+              "Option: Select additional bigwig files (purple)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  integrated_additional1 <-reactive({
+    if(!is.null(input$integrated_bw_1)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_1[, 1])){
+        file <- input$integrated_bw_1[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_1[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional2 <-reactive({
+    if(!is.null(input$integrated_bw_2)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_2[, 1])){
+        file <- input$integrated_bw_2[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional3 <-reactive({
+    if(!is.null(input$integrated_bw_3)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_3[, 1])){
+        file <- input$integrated_bw_3[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_heatmap_add1 <- reactive({
+    if(!is.null(integrated_additional1())){
+        h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional1(),
+                           color = c("white","darkblue"),signal = "darkblue",type=input$Genomic_region)
+        return(h)
+    }
+  })
+  integrated_heatmap_add2 <- reactive({
+    if(!is.null(integrated_additional2())){
+        h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional2(),
+                           color = c("white","darkgreen"),signal = "green",type=input$Genomic_region)
+        return(h)
+    }
+  })
+  integrated_heatmap_add3 <- reactive({
+    if(!is.null(integrated_additional3())){
+        h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional3(),
+                           color = c("white", "purple"),signal = "purple",type=input$Genomic_region)
+        return(h)
+    }
+  })
+  
   output$download_pair_DEG_result = downloadHandler(
     filename = function() {
       if (input$Genomic_region=='Promoter'){
@@ -1622,7 +2040,7 @@ shinyServer(function(input, output, session) {
 
         fs <- c(DEG, up,down,count,bed,input_list,PCA,PCA_table)
         print(fs)
-        if(input$Species != "not selected") process_num <- 8 else process_num <- 3
+        if(input$Species != "not selected") process_num <- 9 else process_num <- 3
         pdf(PCA, height = 3.5, width = 9)
         print(PCAplot(data = deg_norm_count(),plot=TRUE))
         dev.off()
@@ -1750,7 +2168,7 @@ shinyServer(function(input, output, session) {
             })
           }
           incProgress(1/process_num)
-          if(!is.null(input$peak_distance) && !is.null(input$pair_DEG_result) && !is.na(input$DEG_fdr) && 
+          if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && !is.na(input$DEG_fdr) && 
              !is.na(input$DEG_fc)){
             withProgress(message = "withRNAseq",{
               dirname <- paste0("withRNAseq_range-",input$peak_distance,"kb_fc",input$DEG_fc,"_fdr",input$DEG_fdr,"_RNAseq-",input$pair_DEG_result$name,"/")
@@ -1770,11 +2188,11 @@ shinyServer(function(input, output, session) {
               gridExtra::grid.arrange(RNAseq_popu(), ChIPseq_popu(), ncol = 1)
               dev.off()
               write.table(RP_all_table(), RP_all, row.names = F, sep = "\t", quote = F)
-              dir.create(paste0(dirname,"selected_bed/"),showWarnings = FALSE)
-              dir.create(paste0(dirname,"selected_table/"),showWarnings = FALSE)
+              dir.create(paste0(dirname,"selected_bed(RNA-epigenome)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname,"selected_table(RNA-epigenome)/"),showWarnings = FALSE)
               for(name in unique(RP_all_table()$Group)){
-                RP_selected <- paste0(dirname,"selected_table/RNA-epi_",name,".txt")
-                RP_selected_bed <- paste0(dirname,"selected_bed/RNA-epi_",name,".bed")
+                RP_selected <- paste0(dirname,"selected_table(RNA-epigenome)/",name,".txt")
+                RP_selected_bed <- paste0(dirname,"selected_bed(RNA-epigenome)/",name,".bed")
                 fs <- c(fs, RP_selected,RP_selected_bed)
                 table <- RP_all_table() %>% dplyr::filter(Group == name)
                 write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
@@ -1839,6 +2257,16 @@ shinyServer(function(input, output, session) {
             })
           }
           incProgress(1/process_num)
+          if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
+             !is.null(integrated_heatlist())){
+            dir.create("combined_heatmap",showWarnings = FALSE)
+            intheatmap <- paste0("combined_heatmap/","combined_heatmap.pdf")
+            fs <- c(fs, intheatmap)
+            pdf(intheatmap, height = 6, width = 10)
+            draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
+                 heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+            dev.off()
+          }
         }
       })
         zip(zipfile=fname, files=fs)
@@ -3086,6 +3514,16 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
             dev.off()
             write.table(int_enrich_table_venn(), intenrichtable, row.names = F, sep = "\t", quote = F)
           }
+        }
+        if(input$integrated_heatmapButton_venn > 0 && !is.null(bws_venn()) && 
+           !is.null(integrated_heatlist_venn()) && !is.null(input$venn_heatmap_group)){
+          dir.create("combined_heatmap",showWarnings = FALSE)
+          intheatmap <- paste0("combined_heatmap/","combined_heatmap.pdf")
+          fs <- c(fs, intheatmap)
+          pdf(intheatmap, height = 6, width = 10)
+          draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
+               heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+          dev.off()
         }
         incProgress(1)
       })
@@ -4440,6 +4878,404 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     content = function(file){write.table(int_enrich_table_venn(), file, row.names = F, sep = "\t", quote = F)}
   )
+  
+  #heatmap--------
+  ##heatmap----------
+  Venn_peak_call_files_locus <- reactive({
+    data <- Venn_peak_call_files_geneId()
+    df <- list()
+    for(name in names(data)){
+      data2 <- data[[name]]
+      data2_gr <- with(data2, GRanges(seqnames = seqnames, 
+                                      ranges = IRanges(start,end),
+                                      strand = strand))
+      names(data2_gr) <- paste0(data2$ENTREZID,"_",data2$locus)
+      df[[name]] <- data2_gr
+    }
+    return(df)
+  })
+  
+  integrated_legend_venn <- reactive({
+    lgd <- lgd(files2 = Venn_peak_call_files_locus())
+    return(lgd)
+  })
+  
+  integrated_heatlist_venn <- reactive({
+    if(input$integrated_heatmapButton_venn > 0 && updateCounter_int_venn$i > 0){
+      ht_list <- NULL
+      if(!is.null(integrated_heatmap_add1_venn())) ht_list <- ht_list + integrated_heatmap_add1_venn()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add2_venn())) ht_list <- ht_list + integrated_heatmap_add2_venn()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add3_venn())) ht_list <- ht_list + integrated_heatmap_add3_venn()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add4_venn())) ht_list <- ht_list + integrated_heatmap_add4_venn()[["heatmap"]]
+      if(!is.null(rnaseq_DEGs2_venn())) ht_list <- ht_list + rnaseq_DEGs_heatmap_venn()
+      if(!is.null(rnaseq_count2_venn())) ht_list <- ht_list + rnaseq_count_heatmap_venn()
+      return(ht_list)
+    }else return(NULL)
+  })
+  updateCounter_int_venn <- reactiveValues(i = 0)
+  
+  observe({
+    input$integrated_heatmapButton_venn
+    isolate({
+      updateCounter_int_venn$i <- updateCounter_int_venn$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_venn <- observeEvent(integrated_heatlist_venn(), {
+    isolate(updateCounter_int_venn$i == 0)
+    updateCounter_int_venn <<- reactiveValues(i = 0)
+  }) 
+  output$integrated_heatmap_venn <- renderPlot({
+    if(!is.null(input$venn_heatmap_group)){
+    if(input$integrated_heatmapButton_venn > 0 && !is.null(Venn_peak_call_files_locus()) &&
+       !is.null(integrated_heatlist_venn())){
+      draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
+           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+    }
+    }
+  })
+  output$download_integrated_heatmap_venn = downloadHandler(
+    filename = "Integrated_heatmap.pdf",
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$venn_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$enrich_pdf_height
+        if(input$venn_pdf_width == 0){
+          pdf_width <- 10
+        }else pdf_width <- input$enrich_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
+             heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$rnaseq_count_venn <- renderUI({
+    if(input$Species_venn != "not_selected"){
+      fileInput("pair_rnaseq_count_venn",
+                "Select RNA-seq normalized count files",
+                accept = c("txt","csv","xlsx"),
+                multiple = TRUE,
+                width = "90%")
+    }
+  })
+  output$rnaseq_DEGs_venn <- renderUI({
+    if(input$Species_venn != "not_selected"){
+      fileInput("pair_rnaseq_DEGs_venn",
+                "Select RNA-seq DEG result files",
+                accept = c("txt","csv","xlsx"),
+                multiple = TRUE,
+                width = "90%")
+    }
+  })
+  rnaseq_count_venn <- reactive({
+    withProgress(message = "Importing row count matrix, please wait",{
+      tmp <- input$pair_rnaseq_count_venn
+      upload = list()
+      if(is.null(input$pair_rnaseq_count_venn) && input$goButton_venn > 0 )  {
+        tmp = "data/RNAseq_count.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  rnaseq_DEGs_venn <- reactive({
+    withProgress(message = "Importing DEG result files, please wait",{
+      tmp <- input$pair_rnaseq_DEGs_venn
+      upload = list()
+      if(is.null(input$pair_rnaseq_DEGs_venn) && input$goButton_venn > 0 )  {
+        tmp = "data/RNAseq.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  rnaseq_DEGs2_venn <- reactive({
+    files <- rnaseq_DEGs_venn()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species_venn)
+      if(length(names(df)) != 1){
+        matrix_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix[is.na(matrix)] <- 0
+          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_list[[name]] <- matrix
+        }
+        base <- matrix_list[[1]]
+        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
+        rownames(base) <- base$Row.names
+        colnames(base) <- gsub("\\.y$", "", colnames(base))
+        rna <- as.data.frame(base[,-1])
+        print(head(rna))
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      rna <- dplyr::select(rna, contains("log2FoldChange"))
+      return(rna)
+    }
+  })
+  rnaseq_count2_venn <- reactive({
+    files <- rnaseq_count_venn()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species_venn)
+      if(length(names(df)) != 1){
+        matrix_z_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix_z <- genescale(matrix, axis = 1, method = "Z")
+          print(head(matrix_z))
+          matrix_z[is.na(matrix_z)] <- 0
+          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_z_list[[name]] <- matrix_z
+        }
+        base_z <- matrix_z_list[[1]]
+        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+        rownames(base_z) <- base_z$Row.names
+        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
+        rna <- as.data.frame(base_z[,-1])
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna <- genescale(rna, axis = 1, method = "Z")
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      return(rna)
+    }
+  })
+  observeEvent(input$pair_rnaseq_DEGs_venn, ({
+    updateCollapse(session,id =  "z-score_count_venn", open="Uploaded_DEGs_venn")
+  }))
+  observeEvent(input$pair_rnaseq_count_venn, ({
+    updateCollapse(session,id =  "z-score_count_venn", open="z-score_multiple_count_venn_panel")
+  }))
+  output$rnaseq_count_output_venn <- renderDataTable({
+    if(input$Species_venn != "not_selected" && !is.null(rnaseq_count_venn())){
+      rnaseq_count2_venn()
+    }
+  })
+  output$rnaseq_DEGs_output_venn <- renderDataTable({
+    if(input$Species_venn != "not_selected" && !is.null(rnaseq_DEGs_venn())){
+      rnaseq_DEGs2_venn()
+    }
+  })
+  output$venn_heatmap_group <- renderUI({
+    if(!is.null(Venn_peak_call_files())){
+      if(!is.null(venn_overlap())){
+        selectInput("venn_heatmap_group", "Select intersects", choices = c(names(venn_overlap()$peaklist)),multiple = TRUE)
+      }
+    }
+  })
+  selected_grange_venn_list_for_heatmap <- reactive({
+    if(!is.null(input$venn_heatmap_group)){
+      Glist <- list()
+      for(name in input$venn_heatmap_group){
+        data <- venn_overlap()$peaklist[[name]]
+        Glist[[name]] <- data
+      }
+      return(Glist)
+    }
+  })
+  Venn_peak_call_files_geneId <- reactive({
+    peaks <- selected_grange_venn_list_for_heatmap()
+    df <- list()
+    for(name in names(peaks)){
+      data <- peaks[[name]]
+      data2 <- as.data.frame(as.GRanges(annotatePeak(peak = data, TxDb = txdb_venn())))
+      data2 <- data2 %>% dplyr::filter(!is.na(geneId))
+      data2$locus <- paste0(data2$seqnames,":",data2$start,"-",data2$end)
+      colnames(data2)[which(colnames(data2) == "geneId")] <- "ENTREZID"
+      df[[name]] <- data2
+    }
+    return(df)
+  })
+  rnaseq_count_heatmap_venn <- reactive({
+    rna <-  rnaseq_count2_venn()
+    peaks <- Venn_peak_call_files_geneId()
+    rna$ENTREZID <- rownames(rna)
+    m_z <- data.frame(matrix(rep(NA, length(colnames(rna))), nrow=1))[numeric(0), ]
+    for(name in names(peaks)){
+      data <- peaks[[name]]
+      data_m <- merge(rna, data, by="ENTREZID",all=T)
+      data_m <- data_m %>% dplyr::filter(!is.na(locus))
+      rownames(data_m) <- paste0(data_m$ENTREZID,"_",data_m$locus)
+      data_m <- data_m[,2:length(colnames(rna))]
+      data_m[is.na(data_m)] <- 0
+      m_z <- rbind(m_z,data_m)
+    }
+    cond <- gsub(".+\\.", "", colnames(m_z))
+    cond <- gsub("\\_.+$", "", cond)
+    cond <- factor(cond, levels = unique(cond), ordered = TRUE)
+    cond_color <- rainbow_hcl(length(unique(cond)),c=100)
+    names(cond_color) <- unique(cond)
+    if(length(names(rnaseq_count_venn())) == 1){
+      file_name <- NULL
+      file_name_color <- NULL
+    }else{
+      file_name <- gsub("\\..+$", "", colnames(m_z))
+      file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
+      file_name_color <- rainbow_hcl(length(file_name))
+      names(file_name_color) <- file_name
+    }
+    mat <- integrated_heatmap_add1_venn()[["mat"]]
+    withProgress(message = "Heatmap of RNA-seq count data",{
+    ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
+                  top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                     col = list(files = file_name_color,
+                                                                condition = cond_color)),
+                  show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+    return(ht)
+    })
+  })
+  rnaseq_DEGs_heatmap_venn <- reactive({
+    rna <-  rnaseq_DEGs2_venn()
+    peaks <- Venn_peak_call_files_geneId()
+    rna$ENTREZID <- rownames(rna)
+    m_z <- data.frame(matrix(rep(NA, length(colnames(rna))), nrow=1))[numeric(0), ]
+    for(name in names(peaks)){
+      data <- peaks[[name]]
+      data_m <- merge(rna, data, by="ENTREZID",all=T)
+      data_m <- data_m %>% dplyr::filter(!is.na(locus))
+      rownames(data_m) <- paste0(data_m$ENTREZID,"_",data_m$locus)
+      data_m <- data_m[,1:length(colnames(rna))]
+      data_m[is.na(data_m)] <- 0
+      m_z <- rbind(m_z,data_m)
+    }
+    for(i in 1:length(colnames(rna))){
+      m_z[,i] <- -1 * as.numeric(m_z[,i])
+    }
+    m_z[m_z > 5]<- 5
+    m_z[m_z < -5]<- -5
+    colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
+    mat <- integrated_heatmap_add1_venn()[["mat"]]
+    withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
+    ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
+                  show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
+                  use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
+                  col = c("blue","white","gold"))
+    return(ht)
+    })
+  })
+  
+  output$integrated_bw2_venn <- renderUI({
+    fileInput("integrated_bw_2_venn",
+              "Option: Select additional bigwig files (blue)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw3_venn <- renderUI({
+    fileInput("integrated_bw_3_venn",
+              "Option: Select additional bigwig files (green)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw4_venn <- renderUI({
+    fileInput("integrated_bw_4_venn",
+              "Option: Select additional bigwig files (purple)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+
+  integrated_additional2_venn <-reactive({
+    if(!is.null(input$integrated_bw_2_venn)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_2_venn[, 1])){
+        file <- input$integrated_bw_2_venn[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2_venn[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional3_venn <-reactive({
+    if(!is.null(input$integrated_bw_3_venn)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_3_venn[, 1])){
+        file <- input$integrated_bw_3_venn[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3_venn[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional4_venn <-reactive({
+    if(!is.null(input$integrated_bw_4_venn)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_4_venn[, 1])){
+        file <- input$integrated_bw_4_venn[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_4_venn[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_heatmap_add1_venn <- reactive({
+    if(!is.null(bws_venn())){
+      h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = bws_venn(),
+                         color = c("white","red"),signal = "red")
+      return(h)
+    }
+  })
+  integrated_heatmap_add2_venn <- reactive({
+    if(!is.null(integrated_additional2_venn())){
+      h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = integrated_additional2_venn(),
+                         color = c("white","darkblue"),signal = "darkblue")
+      return(h)
+    }
+  })
+  integrated_heatmap_add3_venn <- reactive({
+    if(!is.null(integrated_additional3_venn())){
+      h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = integrated_additional3_venn(),
+                         color = c("white","darkgreen"),signal = "green")
+      return(h)
+    }
+  })
+  integrated_heatmap_add4_venn <- reactive({
+    if(!is.null(integrated_additional4_venn())){
+      h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = integrated_additional4_venn(),
+                         color = c("white","purple"),signal = "purple")
+      return(h)
+    }
+  })
   
   ##Clustering--------
   # input data ------------------------------------------------------------------------------
@@ -6402,6 +7238,410 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     contentType = "application/zip"
   )
+  
+  ##heatmap----------
+  Enrich_peak_call_files_locus <- reactive({
+    data <- Enrich_peak_call_files_geneId()
+    df <- list()
+    for(name in names(data)){
+    data2 <- data[[name]]
+    data2_gr <- with(data2, GRanges(seqnames = seqnames, 
+                              ranges = IRanges(start,end),
+                              strand = strand))
+    names(data2_gr) <- paste0(data2$ENTREZID,"_",data2$locus)
+    df[[name]] <- data2_gr
+    }
+    return(df)
+  })
+  
+  integrated_legend_enrich <- reactive({
+    lgd <- lgd(files2 = Enrich_peak_call_files_locus())
+    return(lgd)
+  })
+  
+  integrated_heatlist_enrich <- reactive({
+    if(input$integrated_heatmapButton_enrich > 0 && updateCounter_int_enrich$i > 0){
+      ht_list <- NULL
+      if(!is.null(integrated_heatmap_add1_enrich())) ht_list <- ht_list + integrated_heatmap_add1_enrich()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add2_enrich())) ht_list <- ht_list + integrated_heatmap_add2_enrich()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add3_enrich())) ht_list <- ht_list + integrated_heatmap_add3_enrich()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add4_enrich())) ht_list <- ht_list + integrated_heatmap_add4_enrich()[["heatmap"]]
+      if(!is.null(rnaseq_DEGs2_enrich())) ht_list <- ht_list + rnaseq_DEGs_heatmap_enrich()
+      if(!is.null(rnaseq_count2_enrich())) ht_list <- ht_list + rnaseq_count_heatmap_enrich()
+      return(ht_list)
+    }else return(NULL)
+  })
+  updateCounter_int_enrich <- reactiveValues(i = 0)
+  
+  observe({
+    input$integrated_heatmapButton_enrich
+    isolate({
+      updateCounter_int_enrich$i <- updateCounter_int_enrich$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_enrich <- observeEvent(integrated_heatlist_enrich(), {
+    isolate(updateCounter_int_enrich$i == 0)
+    updateCounter_int_enrich <<- reactiveValues(i = 0)
+  }) 
+  output$integrated_heatmap_enrich <- renderPlot({
+    if(input$integrated_heatmapButton_enrich > 0 && !is.null(Enrich_peak_call_files_locus()) &&
+       !is.null(integrated_heatlist_enrich())){
+      draw(integrated_heatlist_enrich(),annotation_legend_list = list(integrated_legend_enrich()),
+           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+    }
+  })
+  output$download_integrated_heatmap_enrich = downloadHandler(
+    filename = "Integrated_heatmap.pdf",
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$enrich_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$enrich_pdf_height
+        if(input$enrich_pdf_width == 0){
+          pdf_width <- 10
+        }else pdf_width <- input$enrich_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        draw(integrated_heatlist_enrich(),annotation_legend_list = list(integrated_legend_enrich()),
+             heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$rnaseq_count_enrich <- renderUI({
+    if(input$Species_enrich != "not_selected"){
+      fileInput("pair_rnaseq_count_enrich",
+                "Select RNA-seq normalized count files",
+                accept = c("txt","csv","xlsx"),
+                multiple = TRUE,
+                width = "90%")
+    }
+  })
+  output$rnaseq_DEGs_enrich <- renderUI({
+    if(input$Species_enrich != "not_selected"){
+      fileInput("pair_rnaseq_DEGs_enrich",
+                "Select RNA-seq DEG result files",
+                accept = c("txt","csv","xlsx"),
+                multiple = TRUE,
+                width = "90%")
+    }
+  })
+  rnaseq_count_enrich <- reactive({
+    withProgress(message = "Importing row count matrix, please wait",{
+      tmp <- input$pair_rnaseq_count_enrich
+      upload = list()
+      if(is.null(input$pair_rnaseq_count_enrich) && input$goButton_enrich > 0 )  {
+        tmp = "data/RNAseq_count.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  rnaseq_DEGs_enrich <- reactive({
+    withProgress(message = "Importing DEG result files, please wait",{
+      tmp <- input$pair_rnaseq_DEGs_enrich
+      upload = list()
+      if(is.null(input$pair_rnaseq_DEGs_enrich) && input$goButton_enrich > 0 )  {
+        tmp = "data/RNAseq.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  rnaseq_DEGs2_enrich <- reactive({
+    files <- rnaseq_DEGs_enrich()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich)
+      if(length(names(df)) != 1){
+        matrix_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix[is.na(matrix)] <- 0
+          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_list[[name]] <- matrix
+        }
+        base <- matrix_list[[1]]
+        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
+        rownames(base) <- base$Row.names
+        colnames(base) <- gsub("\\.y$", "", colnames(base))
+        rna <- as.data.frame(base[,-1])
+        print(head(rna))
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      rna <- dplyr::select(rna, contains("log2FoldChange"))
+      return(rna)
+    }
+  })
+  rnaseq_count2_enrich <- reactive({
+    files <- rnaseq_count_enrich()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich)
+      if(length(names(df)) != 1){
+        matrix_z_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix_z <- genescale(matrix, axis = 1, method = "Z")
+          print(head(matrix_z))
+          matrix_z[is.na(matrix_z)] <- 0
+          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_z_list[[name]] <- matrix_z
+        }
+        base_z <- matrix_z_list[[1]]
+        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+        rownames(base_z) <- base_z$Row.names
+        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
+        rna <- as.data.frame(base_z[,-1])
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna <- genescale(rna, axis = 1, method = "Z")
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      return(rna)
+    }
+  })
+  observeEvent(input$pair_rnaseq_DEGs_enrich, ({
+    updateCollapse(session,id =  "z-score_count_enrich", open="Uploaded_DEGs_enrich")
+  }))
+  observeEvent(input$pair_rnaseq_count_enrich, ({
+    updateCollapse(session,id =  "z-score_count_enrich", open="z-score_multiple_count_enrich_panel")
+  }))
+  output$rnaseq_count_output_enrich <- renderDataTable({
+    if(input$Species_enrich != "not_selected" && !is.null(rnaseq_count_enrich())){
+      rnaseq_count2_enrich()
+    }
+  })
+  output$rnaseq_DEGs_output_enrich <- renderDataTable({
+    if(input$Species_enrich != "not_selected" && !is.null(rnaseq_DEGs_enrich())){
+      rnaseq_DEGs2_enrich()
+    }
+  })
+  Enrich_peak_call_files_geneId <- reactive({
+    peaks <- Enrich_peak_call_files()
+    df <- list()
+    for(name in names(peaks)){
+      data <- peaks[[name]]
+      data2 <- as.data.frame(as.GRanges(annotatePeak(peak = data, TxDb = txdb_enrich())))
+      data2 <- data2 %>% dplyr::filter(!is.na(geneId))
+      data2$locus <- paste0(data2$seqnames,":",data2$start,"-",data2$end)
+      colnames(data2)[which(colnames(data2) == "geneId")] <- "ENTREZID"
+      df[[name]] <- data2
+    }
+    return(df)
+  })
+  rnaseq_count_heatmap_enrich <- reactive({
+    rna <-  rnaseq_count2_enrich()
+    peaks <- Enrich_peak_call_files_geneId()
+    rna$ENTREZID <- rownames(rna)
+    m_z <- data.frame(matrix(rep(NA, length(colnames(rna))), nrow=1))[numeric(0), ]
+    for(name in names(peaks)){
+      data <- peaks[[name]]
+      data_m <- merge(rna, data, by="ENTREZID",all=T)
+      data_m <- data_m %>% dplyr::filter(!is.na(locus))
+      rownames(data_m) <- paste0(data_m$ENTREZID,"_",data_m$locus)
+      data_m <- data_m[,2:length(colnames(rna))]
+      data_m[is.na(data_m)] <- 0
+      m_z <- rbind(m_z,data_m)
+    }
+    cond <- gsub(".+\\.", "", colnames(m_z))
+    cond <- gsub("\\_.+$", "", cond)
+    cond <- factor(cond, levels = unique(cond), ordered = TRUE)
+    cond_color <- rainbow_hcl(length(unique(cond)),c=100)
+    names(cond_color) <- unique(cond)
+    if(length(names(rnaseq_count_enrich())) == 1){
+      file_name <- NULL
+      file_name_color <- NULL
+    }else{
+      file_name <- gsub("\\..+$", "", colnames(m_z))
+      file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
+      file_name_color <- rainbow_hcl(length(file_name))
+      names(file_name_color) <- file_name
+    }
+    mat <- integrated_heatmap_add1_enrich()[["mat"]]
+    withProgress(message = "Heatmap of RNA-seq count data",{
+    ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
+                  top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                     col = list(files = file_name_color,
+                                                                condition = cond_color)),
+                  show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+    })
+    return(ht)
+  })
+  rnaseq_DEGs_heatmap_enrich <- reactive({
+    rna <-  rnaseq_DEGs2_enrich()
+    peaks <- Enrich_peak_call_files_geneId()
+    rna$ENTREZID <- rownames(rna)
+    m_z <- data.frame(matrix(rep(NA, length(colnames(rna))), nrow=1))[numeric(0), ]
+    for(name in names(peaks)){
+      data <- peaks[[name]]
+      data_m <- merge(rna, data, by="ENTREZID",all=T)
+      data_m <- data_m %>% dplyr::filter(!is.na(locus))
+      rownames(data_m) <- paste0(data_m$ENTREZID,"_",data_m$locus)
+      data_m <- data_m[,1:length(colnames(rna))]
+      data_m[is.na(data_m)] <- 0
+      m_z <- rbind(m_z,data_m)
+    }
+    for(i in 1:length(colnames(rna))){
+      m_z[,i] <- -1 * as.numeric(m_z[,i])
+    }
+    m_z[m_z > 5]<- 5
+    m_z[m_z < -5]<- -5
+    colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
+    mat <- integrated_heatmap_add1_enrich()[["mat"]]
+    withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
+    ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
+                  show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
+                  use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
+                  col = c("blue","white","gold"))
+    return(ht)
+    })
+  })
+  
+  output$integrated_bw1_enrich <- renderUI({
+    fileInput("integrated_bw_1_enrich",
+              "Select bigwig files (red)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw2_enrich <- renderUI({
+    fileInput("integrated_bw_2_enrich",
+              "Option: Select additional bigwig files (blue)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw3_enrich <- renderUI({
+    fileInput("integrated_bw_3_enrich",
+              "Option: Select additional bigwig files (green)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw4_enrich <- renderUI({
+    fileInput("integrated_bw_4_enrich",
+              "Option: Select additional bigwig files (purple)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  integrated_additional1_enrich <-reactive({
+    if(!is.null(input$integrated_bw_1_enrich)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_1_enrich[, 1])){
+        file <- input$integrated_bw_1_enrich[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_1_enrich[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }else{
+      if(input$goButton_enrich > 0 ){
+        file <- c("data/bigwig/A_1.BigWig",
+                  "data/bigwig/B_1.BigWig")
+        names(file) <- c("A_1.bw","B_1.bw")
+        return(file)
+      }
+    }
+  })
+  integrated_additional2_enrich <-reactive({
+    if(!is.null(input$integrated_bw_2_enrich)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_2_enrich[, 1])){
+        file <- input$integrated_bw_2_enrich[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2_enrich[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional3_enrich <-reactive({
+    if(!is.null(input$integrated_bw_3_enrich)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_3_enrich[, 1])){
+        file <- input$integrated_bw_3_enrich[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3_enrich[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional4_enrich <-reactive({
+    if(!is.null(input$integrated_bw_4_enrich)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_4_enrich[, 1])){
+        file <- input$integrated_bw_4_enrich[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_4_enrich[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_heatmap_add1_enrich <- reactive({
+    if(!is.null(integrated_additional1_enrich())){
+      h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional1_enrich(),
+                         color = c("white","red"),signal = "red")
+      return(h)
+    }
+  })
+  integrated_heatmap_add2_enrich <- reactive({
+    if(!is.null(integrated_additional2_enrich())){
+      h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional2_enrich(),
+                         color = c("white","darkblue"),signal = "darkblue")
+      return(h)
+    }
+  })
+  integrated_heatmap_add3_enrich <- reactive({
+    if(!is.null(integrated_additional3_enrich())){
+      h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional3_enrich(),
+                         color = c("white","darkgreen"),signal = "green")
+      return(h)
+    }
+  })
+  integrated_heatmap_add4_enrich <- reactive({
+    if(!is.null(integrated_additional4_enrich())){
+      h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional4_enrich(),
+                         color = c("white","purple"),signal = "purple")
+      return(h)
+    }
+  })
   
   ##More-------------
   #Bed tool----------
