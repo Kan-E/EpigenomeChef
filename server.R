@@ -2258,7 +2258,10 @@ shinyServer(function(input, output, session) {
                 write.table(int_enrich_table(), intenrichtable, row.names = F, sep = "\t", quote = F)
               }
             })
-          }else dirname_withRNA <- NULL
+          }else {
+            dirname_withRNA <- NULL
+            gene <- NULL
+          }
           incProgress(1/process_num)
           if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
              !is.null(integrated_heatlist())){
@@ -2790,6 +2793,8 @@ shinyServer(function(input, output, session) {
     return(p)
   })
   RP_all_table <- reactive({
+    if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && 
+       !is.na(input$DEG_fdr) && !is.na(input$DEG_fc) && !is.null(bw_count()) && input$Species != "not selected"){
     target_result <- regulatory_potential()$data
     target_result$epigenome_category <- "up"
     target_result$epigenome_category[target_result$sumRP < 0] <- "down"
@@ -2827,6 +2832,7 @@ shinyServer(function(input, output, session) {
       }
     }
     return(table)
+    }
   })
   
   RP_selected_table <- reactive({
