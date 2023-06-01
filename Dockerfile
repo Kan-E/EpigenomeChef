@@ -103,6 +103,7 @@ COPY navAppend.js /srv/shiny-server/EpigenomeChef/
 COPY navAppend2.js /srv/shiny-server/EpigenomeChef/
 COPY data /srv/shiny-server/EpigenomeChef/data/
 COPY www /srv/shiny-server/EpigenomeChef/www/
+COPY pair_report.Rmd /srv/shiny-server/EpigenomeChef/
 COPY shiny-server.conf /etc/shiny-server/
 ENV PATH $PATH:/usr/local/homer/bin
 ENV PERL5LIB $PERL5LIB:/usr/local/homer/bin
