@@ -1,0 +1,331 @@
+---
+title: "Pair-wise analysis with EpigenomeChef v1.0.0-beta"
+date: '`r format(Sys.time(), "%y/%m/%d %H:%M")`'
+params:
+    raw_count: [some object]
+    input: [some object]
+    norm_count: [some object]
+    deg_norm_count: [some object]
+    input_list_data_pair: [some object]
+    enrichment_1_1: [some object]
+    region_gene_associate: [some object]
+    enrich_motif: [some object]
+    base_dir: [some object]
+    RNAseqDEG: [some object]
+    dirname_withRNA: [some object]
+    RP_all_table: [some object]
+    int_goi_promoter_position: [some object]
+    int_goi_gene_position: [some object]
+    gene: [some object]
+    int_enrich_table: [some object]
+    integrated_heatlist: [some object]
+output:
+  word_document
+fontsize: 12pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Parameters
+ - Uploaded file name:
+```{r echo = FALSE}
+knitr::kable(params$input_list_data_pair)
+```
+ 
+ - Experimental condition: 
+ **`r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[1]` vs `r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[2]`**
+ - Species: 
+ **`r params$input$Species`**
+ - Cut-off condition: 
+ FoldChange = **`r params$input$fc`**, FDR = **`r params$input$fdr`**, 
+ Basemean = **`r params$input$basemean`**
+ - tested count data
+```{r echo = FALSE}
+knitr::kable(head(params$deg_norm_count))
+```
+
+
+\newpage
+
+## Result overview
+ - Clustering (PCA, MDS, dendrogram (ward.D2)) (Clustering/pca.pdf)
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+magick::image_read_pdf("./Clustering/clustering.pdf")
+```
+ - PCA_table (Clustering/pca.txt)
+
+ - Volcano plot (DAR_result/volcano_plot.pdf)
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(!is.null(params$input$xrange)){
+magick::image_read_pdf("./DAR_result/volcano_plot.pdf")
+}else print("No plot")
+```
+ 
+ - Result table (DAR_result/DAR_result.txt)
+ - Up DAR (DAR_result/up.bed)
+ - Down DAR (DAR_result/down.bed)
+\newpage
+
+## Peak distribution
+ - Annotation of up DARs (peak_distribution/up_annotation.pdf)
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$Species != "not selected"){
+          if(params$input$Genomic_region == "Genome-wide"){
+magick::image_read_pdf("./peak_distribution/up_annotation.pdf")
+          }}else print("No plot")
+```
+
+ - Annotation of down DARs (peak_distribution/down_annotation.pdf)
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$Species != "not selected"){
+          if(params$input$Genomic_region == "Genome-wide"){
+magick::image_read_pdf("./peak_distribution/down_annotation.pdf")
+          }}else print("No plot")
+```
+
+・Gene level
+
+Promoter = 2000 bp upstream to 100 bp downstream of the transcription start site (TSS)
+
+Downstream = Up to 1000 bp downstream of the gene (not downstream of the ORF, but downstream of the transcription end site, TES)
+
+Gene body = Transcribed region excluding the promoter and downstream regions (including introns)
+
+Distal intergenic = Genomic regions not included in the promoter, downstream, or gene body regions
+
+・Exon/Intron/Intergenic level (intermediate pie chart)
+
+Exon = Exonic regions
+
+Intron = Intronic regions
+
+Intergenic = Regions outside of exons and introns
+
+・Exon level
+
+CDS = Coding sequence
+
+5’UTR = Upstream region of exons, preceding the CDS
+
+3’UTR = Downstream region of exons, following the CDS
+
+Other exon = Regions that are classified as exons but do not correspond to CDS, 5’UTR, or 3’UTR based on TxDb (annotation 
+information), including single exon transcripts such as "short noncoding."
+
+\newpage
+
+## Peak pattern
+
+ - Peak pattern of up DARs (line plot: peak_pattern/up_lineplot.pdf, heatmap: peak_pattern/up_heatmap.pdf)
+ 
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(!is.null(params$input$peak_up_range)){
+  heatmap <- magick::image_read_pdf("./peak_pattern/up_heatmap.pdf")
+  heatmap
+          }else print("No plot")
+```
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(!is.null(params$input$peak_up_range)){
+  line <- magick::image_read_pdf("./peak_pattern/up_lineplot.pdf")
+  line
+          }else print("No plot")
+```
+ 
+ - Peak pattern of down DARs (line plot: peak_pattern/down_lineplot.pdf, heatmap: peak_pattern/down_heatmap.pdf)
+ 
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(!is.null(params$input$peak_down_range)){
+  heatmap <- magick::image_read_pdf("./peak_pattern/down_heatmap.pdf")
+  heatmap
+          }else print("No plot")
+```
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(!is.null(params$input$peak_down_range)){
+  line <- magick::image_read_pdf("./peak_pattern/down_lineplot.pdf")
+  line
+          }else print("No plot")
+```
+
+\newpage
+
+## GREAT
+
+ - Gene set: `r params$input$Gene_set`
+ - Dotplot (GREAT/dotplot_`r params$input$Gene_set`.pdf)
+ 
+```{r, out.height=255.68181, out.width=306.818172, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && params$input$Genomic_region == "Genome-wide"){
+magick::image_read_pdf(paste0("GREAT/dotplot_",input$Gene_set,".pdf"))
+          }else print("No plot")
+```
+ - table data (GREAT/enrichment_`r params$input$Gene_set`.txt)
+ 
+```{r echo = FALSE}
+knitr::kable(as.data.frame(params$enrichment_1_1))
+```
+
+ - Pathway_list: `r params$input$Pathway_list`
+ - Which_group: `r params$input$Up_or_Down`
+ - region associate plot (GREAT/"`r params$input$Gene_set`_`r params$input$Pathway_list`_`r params$input$Up_or_Down`.pdf)
+ 
+```{r, out.height=255.68181, out.width=613.636344, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && params$input$Genomic_region == "Genome-wide"){
+magick::image_read_pdf(paste0("GREAT/",params$input$Gene_set,"_",params$input$Pathway_list,"_",params$input$Up_or_Down,".pdf"))
+          }else print("No plot")
+```
+ - table data (GREAT/"`r params$input$Gene_set`_`r params$input$Pathway_list`_`r params$input$Up_or_Down`.txt)
+ 
+```{r echo = FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && params$input$Genomic_region == "Genome-wide"){
+knitr::kable(as.data.frame(params$region_gene_associate))
+}
+```
+ 
+\newpage
+
+## HOMER
+
+ - Type of enrichment analysis: `r params$input$homer_unknown`
+ - Type of the region for motif finding: `r params$input$homer_size`
+ - Size of the region for motif finding: `r params$input$homer_size2`
+ - Background sequence: `r params$input$homer_bg`
+ - Dotplot (`r params$base_dir`/homer_dotplot.pdf)
+ 
+```{r, out.height=306.818172, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
+             !is.null(params$input$homer_unknown)){
+magick::image_read_pdf(paste0(params$base_dir,"/homer_dotplot",".pdf"))
+          }else print("No plot")
+```
+- known motif of down DAR (`r params$base_dir`/Up/knownResults.html)
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
+             !is.null(params$input$homer_unknown)){
+knitr::include_url(paste0(params$base_dir,"/Up/knownResults.html"))
+          }else print("Not performed")
+```
+- known motif of down DAR (`r params$base_dir`/Down/knownResults.html)
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
+             !is.null(params$input$homer_unknown)){
+knitr::include_url(paste0(params$base_dir,"/Down/knownResults.html"))
+          }else print("Not performed")
+```
+- unknown motif of down DAR (`r params$base_dir`/Up/homerResults.html)
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
+             params$input$homer_unknown == "known and de novo motifs"){
+knitr::include_url(paste0(params$base_dir,"/Up/homerResults.html"))
+          }else print("Not performed")
+```
+- unknown motif of down DAR (`r params$base_dir`/Down/homerResults.html)
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
+             params$input$homer_unknown == "known and de novo motifs"){
+knitr::include_url(paste0(params$base_dir,"/Down/homerResults.html"))
+          }else print("Not performed")
+```
+ 
+ 
+ 
+\newpage
+
+## withRNAseq
+
+ - Uploaded RNAseq DEG result (file: `r params$input$pair_DEG_result$name`)
+ 
+```{r echo = FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc)){
+knitr::kable(head(params$RNAseqDEG))
+}
+```
+ 
+ 
+ - Parameters: range = `r params$input$peak_distance`kb, FoldChange = `r params$input$DEG_fc`, FDR = `r params$input$DEG_fdr`
+
+ - KS plot and barplot (`r params$dirname_withRNA`/KSplot.pdf and barplot.pdf)
+ 
+```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc)){
+    bar <- magick::image_read_pdf(paste0("./",params$dirname_withRNA,"barplot.pdf"))
+    bar
+          }else print("Not performed")
+```
+```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc)){
+    ks <- magick::image_read_pdf(paste0("./",params$dirname_withRNA,"KSplot.pdf"))
+    ks
+          }else print("Not performed")
+```
+
+ - Boxplot (`r params$dirname_withRNA`boxplot.pdf)
+```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc)){
+ path = paste0("./",params$dirname_withRNA,"boxplot.pdf")
+ magick::image_read_pdf(path,density = 300)
+          }else print("Not performed")
+```
+
+ - summary table (paste0(dirname_withRNA,"RP_summary.txt"))
+```{r echo = FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc)){
+knitr::kable(head(params$RP_all_table))
+}
+```
+ 
+ - Selected table (.bed) (`r params$dirname_withRNA`/selected_bed(RNA-epigenome)/)
+ - Selected table (.txt) (`r params$dirname_withRNA`/selected_table(RNA-epigenome)/)
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c(""), echo=FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc) && !is.null(params$input$RP_table_rows_selected) && 
+   !is.null(params$int_goi_promoter_position) && !is.null(params$int_goi_gene_position) &&
+   !is.null(params$input$int_igv_uprange)){
+  print(paste0("Trackplot of ", params$gene, " (",paste0(params$dirname_withRNA,params$gene,".pdf"),")"))
+  magick::image_read_pdf(paste0("./",params$dirname_withRNA,params$gene,".pdf"),density = 300)
+          }else print("Trackplot: Not performed")
+```
+
+ - Enrichment analysis: Gene set: `r params$input$intGeneset`, tested groups: `r params$input$intGroup` `r paste0(params$dirname_withRNA,"enrichment_analysis/dotplot_",params$input$intGeneset,".pdf")`
+ - Dotplot (`r paste0(params$dirname_withRNA,"enrichment_analysis/dotplot_",params$input$intGeneset,".pdf")`)
+```{r, out.height=255.68181, out.width=409.090896, include=TRUE, fig.align="center", fig.cap=c(""), echo=FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc) && !is.null(params$input$intGeneset) && !is.null(params$input$intGroup)){
+magick::image_read_pdf(paste0(params$dirname_withRNA,"enrichment_analysis/dotplot_",params$input$intGeneset,".pdf"))
+}
+```
+
+ - Table data (`r paste0(params$dirname_withRNA,"enrichment_analysis/enrichment_",params$input$intGeneset,".txt")`)
+```{r echo = FALSE}
+if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc)){
+table <- params$int_enrich_table[,-3:-6]
+table$Group <- gsub("\n","",table$Group)
+knitr::kable(table, escape = F)
+}
+```
+ 
+ 
+\newpage
+
+## Combined heatmap
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c(""), echo=FALSE}
+if(params$input$Species != "not selected" && params$input$integrated_heatmapButton > 0 && 
+   !is.null(params$integrated_heatlist)){
+magick::image_read_pdf(paste0("combined_heatmap/","combined_heatmap.pdf"))
+}else print("Not performed")
+```
+
+

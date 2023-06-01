@@ -68,6 +68,8 @@ shinyServer(function(input, output, session) {
            detach,character.only = TRUE,
            unload = TRUE)
   })
+  
+  
   # pair-wise ------------------------------------------------------------------------------
   org1 <- reactive({
     return(org(Species = input$Species))
@@ -1406,6 +1408,7 @@ shinyServer(function(input, output, session) {
   
   enrichment_1_1 <- reactive({
     df <- enrichment_enricher()
+    if(!is.null(df)){
     if(input$Genomic_region == "Promoter"){
       if(!is.null(input$Gene_set) && input$Species != "not selected" && !is.null(df)){
         data <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
@@ -1440,7 +1443,7 @@ shinyServer(function(input, output, session) {
           return(data)
         }else return(NULL)
       }else{return(NULL)}
-    }
+    }}
   })
   
   pair_enrich1_H <- reactive({
@@ -2026,18 +2029,18 @@ shinyServer(function(input, output, session) {
       withProgress(message = "Preparing download, please wait for a few minutes.",{
         fs <- c()
         print(fs)
-        dir.create("DEG_result",showWarnings = FALSE)
+        dir.create("DAR_result",showWarnings = FALSE)
         dir.create("Input",showWarnings = FALSE)
         dir.create("Clustering/",showWarnings = FALSE)
-        DEG <- "DEG_result/DEG_result.txt"
-        up <- "DEG_result/up_DAR.bed"
-        down <- "DEG_result/down_DAR.bed"
+        DEG <- "DAR_result/DAR_result.txt"
+        up <- "DAR_result/up_DAR.bed"
+        down <- "DAR_result/down_DAR.bed"
         input_list <- "Input/input_list.txt"
         count <- "Input/count.txt"
         bed <- "Input/filtered_merged_peak_call.bed"
         PCA <- "Clustering/clustering.pdf"
         PCA_table <- "Clustering/pca.txt"
-
+        
         fs <- c(DEG, up,down,count,bed,input_list,PCA,PCA_table)
         print(fs)
         if(input$Species != "not selected") process_num <- 9 else process_num <- 3
@@ -2047,7 +2050,7 @@ shinyServer(function(input, output, session) {
         write.table(PCAplot(data = deg_norm_count(),plot=FALSE), PCA_table, row.names = T, sep = "\t", quote = F)
         write.table(input_list_data_pair(), input_list, row.names = F, sep = "\t", quote = F)
         write.table(deg_norm_count(), count, row.names = T, sep = "\t", quote = F)
-        withProgress(message = "DEG_result",{
+        withProgress(message = "DAR_result",{
           if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
             write.table(deg_result(), DEG, row.names = T, sep = "\t", quote = F)
           }else{
@@ -2095,7 +2098,7 @@ shinyServer(function(input, output, session) {
         incProgress(1/process_num)
         if(!is.null(input$xrange)){
           withProgress(message = "volcano plot",{
-        volcano <- "DEG_result/volcano_plot.pdf"
+        volcano <- "DAR_result/volcano_plot.pdf"
         fs <- c(fs, volcano)
             pdf(volcano, height = 4, width = 4)
             print(pair_volcano())
@@ -2166,17 +2169,17 @@ shinyServer(function(input, output, session) {
               print(p1)
               dev.off()
             })
-          }
+          }else base_dir <- NULL
           incProgress(1/process_num)
           if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && !is.na(input$DEG_fdr) && 
              !is.na(input$DEG_fc)){
             withProgress(message = "withRNAseq",{
-              dirname <- paste0("withRNAseq_range-",input$peak_distance,"kb_fc",input$DEG_fc,"_fdr",input$DEG_fdr,"_RNAseq-",input$pair_DEG_result$name,"/")
-              dir.create(dirname,showWarnings = FALSE)
-              ksplot <- paste0(dirname,"KSplot.pdf")
-              RNAseq_boxplot <- paste0(dirname,"boxplot.pdf")
-              RNAseq_barplot <- paste0(dirname,"barplot.pdf")
-              RP_all <- paste0(dirname,"RP_summary.txt")
+              dirname_withRNA <- paste0("withRNAseq_range-",input$peak_distance,"kb_fc",input$DEG_fc,"_fdr",input$DEG_fdr,"_RNAseq-",input$pair_DEG_result$name,"/")
+              dir.create(dirname_withRNA,showWarnings = FALSE)
+              ksplot <- paste0(dirname_withRNA,"KSplot.pdf")
+              RNAseq_boxplot <- paste0(dirname_withRNA,"boxplot.pdf")
+              RNAseq_barplot <- paste0(dirname_withRNA,"barplot.pdf")
+              RP_all <- paste0(dirname_withRNA,"RP_summary.txt")
               fs <- c(fs, ksplot, RNAseq_boxplot, RNAseq_barplot,RP_all)
               pdf(ksplot, height = 5, width = 7)
               print(regulatory_potential())
@@ -2188,11 +2191,11 @@ shinyServer(function(input, output, session) {
               gridExtra::grid.arrange(RNAseq_popu(), ChIPseq_popu(), ncol = 1)
               dev.off()
               write.table(RP_all_table(), RP_all, row.names = F, sep = "\t", quote = F)
-              dir.create(paste0(dirname,"selected_bed(RNA-epigenome)/"),showWarnings = FALSE)
-              dir.create(paste0(dirname,"selected_table(RNA-epigenome)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname_withRNA,"selected_table(RNA-epigenome)/"),showWarnings = FALSE)
               for(name in unique(RP_all_table()$Group)){
-                RP_selected <- paste0(dirname,"selected_table(RNA-epigenome)/",name,".txt")
-                RP_selected_bed <- paste0(dirname,"selected_bed(RNA-epigenome)/",name,".bed")
+                RP_selected <- paste0(dirname_withRNA,"selected_table(RNA-epigenome)/",name,".txt")
+                RP_selected_bed <- paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/",name,".bed")
                 fs <- c(fs, RP_selected,RP_selected_bed)
                 table <- RP_all_table() %>% dplyr::filter(Group == name)
                 write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
@@ -2224,7 +2227,7 @@ shinyServer(function(input, output, session) {
                  !is.null(input$int_igv_uprange)){
                 print(RP_selected_table()[input$RP_table_rows_selected,])
                 gene <- RP_selected_table()[input$RP_table_rows_selected,]$Symbol
-                inttrack <- paste0(dirname,gene,".pdf")
+                inttrack <- paste0(dirname_withRNA,gene,".pdf")
                 fs <- c(fs, inttrack)
                 pdf(inttrack, height = 4, width = 7)
                 if(!is.null(int_highlight_trackplot())){
@@ -2243,9 +2246,9 @@ shinyServer(function(input, output, session) {
                 dev.off()
               }
               if(!is.null(input$intGeneset) && !is.null(input$intGroup)){
-                dir.create(paste0(dirname,"enrichment_analysis/"),showWarnings = FALSE)
-                intdotplot <- paste0(dirname,"enrichment_analysis/dotplot_",input$intGeneset,".pdf")
-                intenrichtable <- paste0(dirname,"enrichment_analysis/enrichment_",input$intGeneset,".txt")
+                dir.create(paste0(dirname_withRNA,"enrichment_analysis/"),showWarnings = FALSE)
+                intdotplot <- paste0(dirname_withRNA,"enrichment_analysis/dotplot_",input$intGeneset,".pdf")
+                intenrichtable <- paste0(dirname_withRNA,"enrichment_analysis/enrichment_",input$intGeneset,".txt")
                 fs <- c(fs, intdotplot,intenrichtable)
                 pdf(intdotplot, height = 5, width = 8)
                 dotplot_for_output(data = int_enrich(),
@@ -2255,7 +2258,7 @@ shinyServer(function(input, output, session) {
                 write.table(int_enrich_table(), intenrichtable, row.names = F, sep = "\t", quote = F)
               }
             })
-          }
+          }else dirname_withRNA <- NULL
           incProgress(1/process_num)
           if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
              !is.null(integrated_heatlist())){
@@ -2267,7 +2270,32 @@ shinyServer(function(input, output, session) {
                  heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
             dev.off()
           }
-        }
+        }else {
+          base_dir <- NULL
+          dirname_withRNA <- NULL
+          }
+        report_name <- paste0(format(Sys.time(), "%Y%m%d_"),"pairwise_report",".docx")
+        tempReport <- file.path(tempdir(),"pair_report.Rmd")
+        file.copy("pair_report.Rmd", tempReport, overwrite = TRUE)
+        rmarkdown::render("pair_report.Rmd", output_format = "word_document", output_file = report_name,
+                          params = list(input = input,
+                                        deg_norm_count = deg_norm_count(),
+                                        input_list_data_pair = input_list_data_pair(),
+                                        enrichment_1_1 = enrichment_1_1(),
+                                        region_gene_associate = region_gene_associate(),
+                                        enrich_motif = enrich_motif(),
+                                        base_dir = base_dir,
+                                        RNAseqDEG = RNAseqDEG(),
+                                        dirname_withRNA = dirname_withRNA,
+                                        RP_all_table = RP_all_table(),
+                                        int_goi_promoter_position = int_goi_promoter_position(),
+                                        int_goi_gene_position = int_goi_gene_position(),
+                                        gene = gene,
+                                        int_enrich_table = int_enrich_table(),
+                                        integrated_heatlist = integrated_heatlist()), 
+                          envir = new.env(parent = globalenv()),intermediates_dir = tempdir(),encoding="utf-8"
+        )
+        fs <- c(fs, report_name)
       })
         zip(zipfile=fname, files=fs)
     },
@@ -3932,7 +3960,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      files3 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+      if(length(names(files2)) > 1){
+      files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+      }
       return(files3)
     }
   })
@@ -7152,8 +7182,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
-      files3 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
-      return(files3)
+      if(length(names(files2)) > 1){
+      files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+      }
+      return(files2)
     }
   })
   output$homer_unknown_enrich <- renderUI({
