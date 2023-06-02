@@ -157,7 +157,7 @@ if(!is.null(params$input$peak_down_range)){
  
 ```{r, out.height=255.68181, out.width=306.818172, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && params$input$Genomic_region == "Genome-wide"){
-magick::image_read_pdf(paste0("GREAT/dotplot_",input$Gene_set,".pdf"))
+magick::image_read_pdf(paste0("GREAT/dotplot_",params$input$Gene_set,".pdf"))
           }else print("No plot")
 ```
  - table data (GREAT/enrichment_`r params$input$Gene_set`.txt)

@@ -96,6 +96,8 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     wget http://homer.ucsd.edu/homer/configureHomer.pl && \
     perl configureHomer.pl -install && \
     perl configureHomer.pl -install hg19
+RUN apt-get install -y libmagick++-dev libpoppler-dev libpoppler-cpp-dev
+RUN R -e "install.packages('pdftools', repos = 'https://ropensci.r-universe.dev')"
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/
@@ -105,8 +107,6 @@ COPY data /srv/shiny-server/EpigenomeChef/data/
 COPY www /srv/shiny-server/EpigenomeChef/www/
 COPY pair_report.Rmd /srv/shiny-server/EpigenomeChef/
 COPY shiny-server.conf /etc/shiny-server/
-RUN apt-get install -y libmagick++-dev
-RUN apt-get install -y libpoppler-dev
 ENV PATH $PATH:/usr/local/homer/bin
 ENV PERL5LIB $PERL5LIB:/usr/local/homer/bin
 RUN chown -R shiny:shiny /srv/shiny-server && \

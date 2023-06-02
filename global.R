@@ -73,6 +73,8 @@ library(reshape2)
 library(ggsci)
 library(ggrastr) ##devtools::install_github('VPetukhov/ggrastr')
 library(EnrichedHeatmap)
+library(pdftools)
+library(magick)
 options('homer_path' = "/usr/local/homer")
 check_homer()
 jscode <- "shinyjs.closeWindow = function() { window.close(); }"
