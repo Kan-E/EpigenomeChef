@@ -21,11 +21,9 @@ params:
     integrated_heatlist: [some object]
 output:
   word_document
-fontsize: 12pt
+fontsize: 10pt
 ---
-```{r echo = FALSE}
-try(webshot("http://www.rstudio.com/",file="img1.png"))
-```
+
 ## Parameters
  - Uploaded file name:
 ```{r echo = FALSE}

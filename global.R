@@ -75,6 +75,8 @@ library(ggrastr) ##devtools::install_github('VPetukhov/ggrastr')
 library(EnrichedHeatmap)
 library(pdftools)
 library(magick)
+library(webshot)
+Sys.setenv(OPENSSL_CONF="/dev/null")
 options('homer_path' = "/usr/local/homer")
 check_homer()
 jscode <- "shinyjs.closeWindow = function() { window.close(); }"

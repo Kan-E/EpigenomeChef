@@ -98,6 +98,12 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     perl configureHomer.pl -install hg19
 RUN apt-get install -y libmagick++-dev libpoppler-dev libpoppler-cpp-dev
 RUN R -e "install.packages('pdftools', repos = 'https://ropensci.r-universe.dev')"
+RUN cd ~ && export PHANTOM_JS="phantomjs-2.1.1-linux-x86_64" && \
+    wget https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 && \
+    tar xvjf $PHANTOM_JS.tar.bz2 && \
+    mv $PHANTOM_JS /usr/local/share && \
+    ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/local/bin
+RUN R -e "BiocManager::install('webshot', update = F)"
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/
