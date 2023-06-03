@@ -2166,14 +2166,12 @@ shinyServer(function(input, output, session) {
                 }
               }
               motif <- paste0(base_dir,"/homer_dotplot",".pdf")
-              print(base_dir)
               p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
               pdf(motif, height = 6, width = 7)
-              print(path_list)
+              print(p1)
               dev.off()
             })
           }else {
-            path_list <-NULL
             base_dir <- NULL
           }
           incProgress(1/process_num)
@@ -2282,7 +2280,6 @@ shinyServer(function(input, output, session) {
         }else {
           base_dir <- NULL
           dirname_withRNA <- NULL
-          path_list <- NULL
           }
         report_name <- paste0(format(Sys.time(), "%Y%m%d_"),"pairwise_report",".docx")
         tempReport <- file.path(tempdir(),"pair_report.Rmd")
@@ -2302,8 +2299,7 @@ shinyServer(function(input, output, session) {
                                         int_goi_gene_position = int_goi_gene_position(),
                                         gene = gene,
                                         int_enrich_table = int_enrich_table(),
-                                        integrated_heatlist = integrated_heatlist(),
-                                        enrich_motif = enrich_motif()), 
+                                        integrated_heatlist = integrated_heatlist()), 
                           envir = new.env(parent = globalenv()),intermediates_dir = tempdir(),encoding="utf-8"
         )
         fs <- c(fs, report_name)
