@@ -1651,7 +1651,8 @@ shinyServer(function(input, output, session) {
   })
   region_gene_associate_plot <- reactive({
     if(input$Genomic_region == "Genome-wide" && !is.null(input$Pathway_list) && 
-       !is.null(input$Up_or_Down) && !is.null(enrichment_enricher())){
+       !is.null(input$Up_or_Down) && !is.na(input$Up_or_Down) && input$Up_or_Down != "" && 
+       !is.null(enrichment_enricher())){
       set_list <- input$Pathway_list
       df <- enrichment_enricher()
       name <- input$Up_or_Down
@@ -1663,7 +1664,8 @@ shinyServer(function(input, output, session) {
   })
   output$region_gene_associations_plot <- renderPlot({
     if(input$Genomic_region == "Genome-wide" && !is.null(input$Pathway_list) && 
-       !is.null(input$Up_or_Down) && !is.null(enrichment_enricher())){
+       !is.null(input$Up_or_Down) && !is.na(input$Up_or_Down) && input$Up_or_Down != "" &&  
+       !is.null(enrichment_enricher())){
     if(class(try(region_gene_associate_plot())) !="try-error") region_gene_associate_plot()
     }
   })
@@ -2164,12 +2166,16 @@ shinyServer(function(input, output, session) {
                 }
               }
               motif <- paste0(base_dir,"/homer_dotplot",".pdf")
+              print(base_dir)
               p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
               pdf(motif, height = 6, width = 7)
-              print(p1)
+              print(path_list)
               dev.off()
             })
-          }else base_dir <- NULL
+          }else {
+            path_list <-NULL
+            base_dir <- NULL
+          }
           incProgress(1/process_num)
           if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && !is.na(input$DEG_fdr) && 
              !is.na(input$DEG_fc)){
@@ -2276,6 +2282,7 @@ shinyServer(function(input, output, session) {
         }else {
           base_dir <- NULL
           dirname_withRNA <- NULL
+          path_list <- NULL
           }
         report_name <- paste0(format(Sys.time(), "%Y%m%d_"),"pairwise_report",".docx")
         tempReport <- file.path(tempdir(),"pair_report.Rmd")
@@ -2295,7 +2302,8 @@ shinyServer(function(input, output, session) {
                                         int_goi_gene_position = int_goi_gene_position(),
                                         gene = gene,
                                         int_enrich_table = int_enrich_table(),
-                                        integrated_heatlist = integrated_heatlist()), 
+                                        integrated_heatlist = integrated_heatlist(),
+                                        enrich_motif = enrich_motif()), 
                           envir = new.env(parent = globalenv()),intermediates_dir = tempdir(),encoding="utf-8"
         )
         fs <- c(fs, report_name)

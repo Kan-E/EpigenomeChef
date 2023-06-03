@@ -23,17 +23,15 @@ output:
   word_document
 fontsize: 12pt
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r echo = FALSE}
+try(webshot("http://www.rstudio.com/",file="img1.png"))
 ```
-
 ## Parameters
  - Uploaded file name:
 ```{r echo = FALSE}
 knitr::kable(params$input_list_data_pair)
 ```
- 
+
  - Experimental condition: 
  **`r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[1]` vs `r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[2]`**
  - Species: 
@@ -45,7 +43,6 @@ knitr::kable(params$input_list_data_pair)
 ```{r echo = FALSE}
 knitr::kable(head(params$deg_norm_count))
 ```
-
 
 \newpage
 
@@ -160,6 +157,7 @@ if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && 
 magick::image_read_pdf(paste0("GREAT/dotplot_",params$input$Gene_set,".pdf"))
           }else print("No plot")
 ```
+
  - table data (GREAT/enrichment_`r params$input$Gene_set`.txt)
  
 ```{r echo = FALSE}
@@ -175,11 +173,14 @@ if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && 
 magick::image_read_pdf(paste0("GREAT/",params$input$Gene_set,"_",params$input$Pathway_list,"_",params$input$Up_or_Down,".pdf"))
           }else print("No plot")
 ```
+
  - table data (GREAT/"`r params$input$Gene_set`_`r params$input$Pathway_list`_`r params$input$Up_or_Down`.txt)
  
 ```{r echo = FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && params$input$Genomic_region == "Genome-wide"){
-knitr::kable(as.data.frame(params$region_gene_associate))
+table <- as.data.frame(params$region_gene_associate)
+table$Group <- gsub("\n","",table$Group)
+knitr::kable(table)
 }
 ```
  
@@ -199,36 +200,41 @@ if(params$input$motifButton > 0 && !is.null(params$enrich_motif) &&
 magick::image_read_pdf(paste0(params$base_dir,"/homer_dotplot",".pdf"))
           }else print("No plot")
 ```
-- known motif of down DAR (`r params$base_dir`/Up/knownResults.html)
 
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+- known motif of up DAR (`r params$base_dir`/Up/knownResults.html)
+
+```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
              !is.null(params$input$homer_unknown)){
-knitr::include_url(paste0(params$base_dir,"/Up/knownResults.html"))
+  try(print(paste0(params$enrich_motif[[1]],"/knownResults.html")))
+try(webshot(paste0("./",params$enrich_motif[[1]],"/knownResults.html"),file="img1.png"))
           }else print("Not performed")
 ```
+
 - known motif of down DAR (`r params$base_dir`/Down/knownResults.html)
 
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
              !is.null(params$input$homer_unknown)){
-knitr::include_url(paste0(params$base_dir,"/Down/knownResults.html"))
+try(webshot(paste0("./",params$enrich_motif[[2]],"/knownResults.html"),file="img2.png"))
           }else print("Not performed")
 ```
-- unknown motif of down DAR (`r params$base_dir`/Up/homerResults.html)
 
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+- unknown motif of up DAR (`r params$base_dir`/Up/homerResults.html)
+
+```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
              params$input$homer_unknown == "known and de novo motifs"){
-knitr::include_url(paste0(params$base_dir,"/Up/homerResults.html"))
+webshot(paste0("./",params$enrich_motif[[1]],"/homerResults.html"),file="img3.png")
           }else print("Not performed")
 ```
+
 - unknown motif of down DAR (`r params$base_dir`/Down/homerResults.html)
 
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
              params$input$homer_unknown == "known and de novo motifs"){
-knitr::include_url(paste0(params$base_dir,"/Down/homerResults.html"))
+webshot(paste0("./",params$enrich_motif[[2]],"/homerResults.html"),file="img4.png")
           }else print("Not performed")
 ```
  
