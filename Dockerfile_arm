@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     libgit2-dev \
     libharfbuzz-dev \
     libfribidi-dev \
+    libfreetype6 \
     libfreetype6-dev \
     libpng-dev \
     libtiff5-dev \
@@ -19,7 +20,20 @@ RUN apt-get update && apt-get install -y \
     libcurl4-gnutls-dev \
     r-cran-devtools \
     wget \
-    git
+    git \
+    libpoppler-dev \
+    libpoppler-cpp-dev \
+    libmagick++-dev \
+    chrpath \
+    libxft-dev \
+    libfontconfig1 \
+    libfontconfig1-dev
+RUN cd ~ && export PHANTOM_JS="phantomjs-2.1.1-linux-x86_64" && \
+    wget https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 && \
+    tar xvjf $PHANTOM_JS.tar.bz2 && \
+    mv $PHANTOM_JS /usr/local/share && \
+    ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/local/bin
+RUN R -e "install.packages('vctrs',repos='http://cran.rstudio.com/')"
 RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('devtools', update = F)" && \
     R -e "devtools::install_github('haizi-zh/bedtorch')" && \
@@ -91,7 +105,15 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('ggcorrplot', update = F)" && \
     R -e "BiocManager::install('RColorBrewer', update = F)" && \
     R -e "BiocManager::install('plyranges', update = F)" && \
-    R -e "BiocManager::install('ggvenn', update = F)"
+    R -e "BiocManager::install('venn', update = F)" && \
+    R -e "BiocManager::install('reshape2', update = F)" && \
+    R -e "BiocManager::install('ggsci', update = F)" && \
+    R -e "devtools::install_github('VPetukhov/ggrastr')" && \
+    R -e "BiocManager::install('EnrichedHeatmap', update = F)" && \
+    R -e "BiocManager::install('pdftools', update = F)" && \
+    R -e "install.packages('pdftools', repos = 'https://ropensci.r-universe.dev')" && \
+    R -e "BiocManager::install('magick')" && \
+    R -e "BiocManager::install('webshot')"
 ##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
@@ -99,17 +121,7 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     cd /usr/local/homer && \
     wget http://homer.ucsd.edu/homer/configureHomer.pl && \
     perl configureHomer.pl -install && \
-    perl configureHomer.pl -install hg19 && \
-    perl configureHomer.pl -install hg38 && \
-    perl configureHomer.pl -install mm10 && \
-    perl configureHomer.pl -install rn6 && \
-    perl configureHomer.pl -install ce11 && \
-    perl configureHomer.pl -install dm6 && \
-    perl configureHomer.pl -install canFam3 && \
-    perl configureHomer.pl -install galGal4 && \
-    perl configureHomer.pl -install danRer10 && \
-    perl configureHomer.pl -install rheMac8 && \
-    perl configureHomer.pl -install panTro4
+    perl configureHomer.pl -install hg19
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/
@@ -118,6 +130,7 @@ COPY navAppend2.js /srv/shiny-server/EpigenomeChef/
 COPY data /srv/shiny-server/EpigenomeChef/data/
 COPY www /srv/shiny-server/EpigenomeChef/www/
 COPY shiny-server.conf /etc/shiny-server/
+COPY pair_report.Rmd /srv/shiny-server/EpigenomeChef/
 ENV PATH $PATH:/usr/local/homer/bin
 ENV PERL5LIB $PERL5LIB:/usr/local/homer/bin
 RUN chown -R shiny:shiny /srv/shiny-server && \
