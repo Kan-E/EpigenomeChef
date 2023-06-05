@@ -8,8 +8,15 @@ RUN apt-get update && apt-get install -y \
     libgsl-dev \
     r-cran-gsl \
     wget \
-    git
-
+    git \
+    libmagick++-dev \
+    libpoppler-dev \
+    libpoppler-cpp-dev
+RUN cd ~ && export PHANTOM_JS="phantomjs-2.1.1-linux-x86_64" && \
+    wget https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 && \
+    tar xvjf $PHANTOM_JS.tar.bz2 && \
+    mv $PHANTOM_JS /usr/local/share && \
+    ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/local/bin
 RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('devtools', update = F)" && \
     R -e "devtools::install_github('haizi-zh/bedtorch')" && \
@@ -87,7 +94,9 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "devtools::install_github('VPetukhov/ggrastr')" && \
     R -e "BiocManager::install('EnrichedHeatmap', update = F)" && \
     R -e "BiocManager::install('magick', update = F)" && \
-    R -e "BiocManager::install('pdftools', update = F)"
+    R -e "BiocManager::install('pdftools', update = F)" && \
+    R -e "install.packages('pdftools', repos = 'https://ropensci.r-universe.dev')" && \
+    R -e "BiocManager::install('webshot', update = F)"
 ##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
@@ -95,15 +104,7 @@ RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     cd /usr/local/homer && \
     wget http://homer.ucsd.edu/homer/configureHomer.pl && \
     perl configureHomer.pl -install && \
-    perl configureHomer.pl -install hg19
-RUN apt-get install -y libmagick++-dev libpoppler-dev libpoppler-cpp-dev
-RUN R -e "install.packages('pdftools', repos = 'https://ropensci.r-universe.dev')"
-RUN cd ~ && export PHANTOM_JS="phantomjs-2.1.1-linux-x86_64" && \
-    wget https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 && \
-    tar xvjf $PHANTOM_JS.tar.bz2 && \
-    mv $PHANTOM_JS /usr/local/share && \
-    ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/local/bin
-RUN R -e "BiocManager::install('webshot', update = F)"
+    perl configureHomer.pl -install mm10
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/
