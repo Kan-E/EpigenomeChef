@@ -159,7 +159,7 @@ try(magick::image_read_pdf(paste0("GREAT/dotplot_",params$input$Gene_set,".pdf")
  - table data (GREAT/enrichment_`r params$input$Gene_set`.txt)
  
 ```{r echo = FALSE}
-try(knitr::kable(as.data.frame(params$enrichment_1_1)))
+try(knitr::kable(as.data.frame(params$enrichment_1_1),row.names=FALSE))
 ```
 
  - Pathway_list: `r params$input$Pathway_list`
