@@ -992,13 +992,13 @@ shinyUI(
                    ),
                    fluidRow(
                      column(12, selectInput("Species_clustering", "Species", species_list, selected = "not selected"))),
-                   strong(span("Output plot size setting for pdf (0: default)"),
-                          span(icon("info-circle"), id = "clustering_pdf_icon", 
-                               options = list(template = popoverTempate))),
                    fluidRow(
                      column(4, numericInput("fc_clustering", "Fold Change", min   = 1, max   = NA, value = 2)),
                      column(4, numericInput("basemean_clustering", "Basemean", min   = 0, max   = NA, value = 0))
                    ),
+                   strong(span("Output plot size setting for pdf (0: default)"),
+                          span(icon("info-circle"), id = "clustering_pdf_icon", 
+                               options = list(template = popoverTempate))),
                    fluidRow(
                      column(5, numericInput("clustering_pdf_height", "pdf_height", value = 0, min = 0)),
                      column(5, numericInput("clustering_pdf_width", "pdf_width", value = 0, min = 0))
