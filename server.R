@@ -5699,6 +5699,33 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   )
   
   #Clustering kmeans--------
+  updateCounter_kmeans <- reactiveValues(i = 0)
+  
+  observe({
+    input$kmeans_start
+    isolate({
+      updateCounter_kmeans$i <- updateCounter_kmeans$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_kmeans <- observeEvent(clustering_kmeans(), {
+    isolate(updateCounter_kmeans$i == 0)
+    updateCounter_kmeans <<- reactiveValues(i = 0)
+  }) 
+  
+  output$selectFC <- renderUI({
+    if(is.null(bw_count_clustering())){
+      return(NULL)
+    }else{
+      selectizeInput("selectFC", "Select a pair for fold change cut-off", c(unique(unique(gsub("\\_.*","", colnames(bw_count_clustering()))))),
+                     selected = "", multiple = TRUE, 
+                     options = list(maxItems = 2))
+    }
+  })
+  
+  
   bw_count_clustering_anno <- reactive({
     if(!is.null(bw_count_clustering()) && !is.null(txdb_clustering())){
       withProgress(message = "preparing annotation",{
@@ -5752,9 +5779,38 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                 value = 2000)
   })
   
+  bw_count_clustering_fc_basemean_cutoff <- reactive({
+    data <- as.data.frame(bw_count_clustering())
+    if(is.null(data) || is.null(input$kmeans_cv) || length(input$selectFC) != 2){
+      return(NULL)
+    }else{
+      print(input$basemean_clustering)
+      data2 <- data %>% dplyr::filter(apply(.,1,mean) > input$basemean_clustering)
+      if(dim(data2)[1] != 0){
+      cond1 <- input$selectFC[1]
+      cond2 <- input$selectFC[2]
+      cond1_num <- data %>% dplyr::select(.,starts_with(cond1)) %>% colnames() %>% length()
+      cond2_num <- data %>% dplyr::select(.,starts_with(cond2)) %>% colnames() %>% length()
+      cond1_ave <- data %>% dplyr::select(starts_with(cond1)) %>% rowSums(na.rm=TRUE)/cond1_num
+      cond2_ave <- data %>% dplyr::select(starts_with(cond2)) %>% rowSums(na.rm=TRUE)/cond2_num
+      Log2FoldChange <- log((cond1_ave + 0.01)/(cond2_ave + 0.01),2)
+      data2$Log2FoldChange <- Log2FoldChange
+      data3 <- data2 %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
+      data3 <- data3[, - which(colnames(data3) == "Log2FoldChange")]
+      }else data3 <- NULL
+      return(data3)
+    }
+  })
+  output$filtered_region <- renderText({
+    if(is.null(bw_count_clustering_fc_basemean_cutoff())){
+      return(NULL)
+    }else{ 
+      print(paste0("The number of genomic regions after the filtration: ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+    }
+  })
   
   bw_count_clustering_cutoff <- reactive({
-    data <- bw_count_clustering()
+    data <- bw_count_clustering_fc_basemean_cutoff()
     if(is.null(data) || is.null(input$kmeans_cv)){
       return(NULL)
     }else{
@@ -5776,7 +5832,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   clustering_kmeans <- reactive({
     data.z <- clustering_data_z()
-    if(is.null(data.z)){
+    if(is.null(data.z) || length(input$selectFC) != 2 || 
+       input$kmeans_start == 0 || updateCounter_kmeans$i == 0){
       return(NULL)
     }else{
       withProgress(message = "k-means clustering",{
@@ -5826,7 +5883,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$clustering_select_kmean <- renderUI({
     withProgress(message = "preparing kmeans clustering",{
     clusters <- clustering_kmeans_cluster()
-    if(is.null(clusters)){
+    if(is.null(clusters) || length(input$selectFC) != 2 || input$kmeans_start == 0){
       return(NULL)
     }else{
       selectInput("clustering_select_kmean", "cluster_list", choices = c(unique(clusters$Cluster)),multiple = T)
@@ -5851,7 +5908,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   output$clustering_kmeans_extract_table <- renderDT({
-    if(!is.null(input$clustering_select_kmean)){
+    if(!is.null(input$clustering_select_kmean) && length(input$selectFC) == 2 && input$kmeans_start > 0){
       if(input$Genomic_region_clustering == "Genome-wide"){
     if(input$Species_clustering == "not selected"){
       clustering_kmeans_pattern_extract() %>%
@@ -5875,7 +5932,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$clustering_kmeans_heatmap <- renderPlot({
     withProgress(message = "plot heatmap",{
     ht <- clustering_kmeans()
-    if(is.null(ht)){
+    if(is.null(ht) || input$kmeans_start == 0){
       return(NULL)
     }else{
       print(ht)
@@ -7185,7 +7242,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
 
   enrich_motif_enrich <- reactive({
-    if(updateCounter_enrich$i && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
+    if(updateCounter_enrich$i > 0 && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
        && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
       if(input$homer_size_enrich == "given") size <- "given"
       if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich

@@ -996,6 +996,10 @@ shinyUI(
                           span(icon("info-circle"), id = "clustering_pdf_icon", 
                                options = list(template = popoverTempate))),
                    fluidRow(
+                     column(4, numericInput("fc_clustering", "Fold Change", min   = 1, max   = NA, value = 2)),
+                     column(4, numericInput("basemean_clustering", "Basemean", min   = 0, max   = NA, value = 0))
+                   ),
+                   fluidRow(
                      column(5, numericInput("clustering_pdf_height", "pdf_height", value = 0, min = 0)),
                      column(5, numericInput("clustering_pdf_width", "pdf_width", value = 0, min = 0))
                    ),
@@ -1081,7 +1085,14 @@ shinyUI(
                               )),
                      tabPanel("k-means clustering",
                               fluidRow(
-                                column(4, htmlOutput("clustering_kmeans_num"),
+                                column(4, 
+                                       htmlOutput("selectFC"),
+                                       textOutput("filtered_region"),
+                                       tags$head(tags$style("#filtered_region{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }")),
+                                       htmlOutput("clustering_kmeans_num"),
                                        htmlOutput("kmeans_cv"),
                                        downloadButton("download_clustering_kmeans_heatmap", "Download heatmap"),
                                        actionButton("kmeans_start", "Start"),
