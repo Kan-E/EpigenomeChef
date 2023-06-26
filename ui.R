@@ -3,6 +3,14 @@ popoverTempate <-
 
 shinyUI(
   fluidPage(
+    tags$head(
+      tags$style(HTML("
+      .shiny-output-error-validation {
+        color: #ff0000;
+        font-weight: bold;
+      }
+    "))
+    ),
     useShinyjs(),
     extendShinyjs(text = jscode, functions = c("closeWindow")),
     actionButton("close", "",icon = icon("window-close")),
@@ -1307,6 +1315,22 @@ shinyUI(
                      type = "tabs",
                      tabPanel("Input list",
                               dataTableOutput('enrichment_input')
+                     ),
+                     tabPanel("Peak distribution",
+                              downloadButton("download_input_peak_distribution_enrich", "Download distribution"),
+                              textOutput("Spe_dist_enrich"),
+                              tags$head(tags$style("#Spe_dist_enrich{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                              plotOutput("input_peak_distribution_enrich"),
+                              bsCollapsePanel(title="Annotation:",
+                                              value="annotation_enrich_panel",
+                                              fluidRow(
+                                                column(4, htmlOutput("annotation_select_enrich"))
+                                              ),
+                              DTOutput("enrich_annotation")
+                              )
                      ),
                      tabPanel("GREAT",
                               fluidRow(

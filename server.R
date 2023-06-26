@@ -11,6 +11,9 @@ shinyServer(function(input, output, session) {
   output$Spe_dist <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
   })
+  output$Spe_dist_enrich <- renderText({
+    if(input$Species_enrich == "not selected") print("Please select 'Species'")
+  })
   output$Spe_dist_promoter <- renderText({
     if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, this function is not available. This function is for 'Genome-wide' mode. ")
   })
@@ -3300,7 +3303,7 @@ shinyServer(function(input, output, session) {
   
   venn_overlap <- reactive({
     withProgress(message = "Preparing intersection, takes a few minutes",{
-    ol <- findOverlapsOfPeaks(Venn_peak_call_files())
+    ol <- findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
     names(ol$peaklist) <- gsub("///","-",names(ol$peaklist))
     return(ol)
     })
@@ -6949,6 +6952,85 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     uploaded_files = names(Enrich_peak_call_files())
     as.data.frame(uploaded_files)
   })
+  
+  #Annotation-----------
+  updistribution_enrich <- reactive({
+    return(genomicElementDistribution(GRangesList(Enrich_peak_call_files()), 
+                                      TxDb = txdb_enrich()))
+  })
+  output$input_peak_distribution_enrich <- renderPlot({
+    if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich())){
+      withProgress(message = "Preparing peak distribution",{
+        updistribution_enrich()
+      })
+    }
+  })
+  
+
+  selected_annoData_table_enrich <- reactive({
+    withProgress(message = "Preparing annotation",{
+      peak_list <- updistribution_enrich()$peaks
+      df <- list()
+      for(name in names(peak_list)){
+        peak <- annotatePeak(peak_list[[name]],TxDb = txdb_enrich()) %>% as.data.frame()
+      my.symbols <- peak$geneId
+      gene_IDs<-id_convert(my.symbols,input$Species_enrich,type="ENTREZID")
+      colnames(gene_IDs) <- c("geneId","NearestGene")
+      data <- merge(gene_IDs,peak,by="geneId")
+      data <- data[,2:10] %>% as.data.frame()
+      df[[name]] <- data
+      }
+      return(df)
+    })
+  })
+  output$enrich_annotation <- DT::renderDT({
+    if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich()) && !is.null(updistribution_enrich()) &&
+       input$Species_enrich != "not selected" && !is.null(input$annotation_select_enrich)){
+      selected_annoData_table_enrich()[[input$annotation_select_enrich]] %>%
+        datatable(
+          selection = "single",
+          filter = "top")
+    }
+  })
+  output$annotation_select_enrich <- renderUI({
+    if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich()) && !is.null(updistribution_enrich()) &&
+       input$Species_enrich != "not selected" ){
+    selectInput('annotation_select_enrich', 'Select bed file', names(updistribution_enrich()$peaks),multiple = F)
+    }
+  })
+  
+  output$download_input_peak_distribution_enrich = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"_annotation_from_enrichment_viewer",".zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download, please wait",{
+        fs <- c()
+        setwd(tempdir())
+        peak_list <- updistribution_enrich()$peaks
+        dir.create("Annotation/",showWarnings = FALSE)
+        for(name in names(peak_list)){
+        file_name <- paste0("Annotation/",name,".txt")
+        peak <- selected_annoData_table_enrich()[[name]]
+        fs <- c(fs, file_name)
+        write.table(peak, file_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
+        }
+        if(input$enrich_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$enrich_pdf_height
+        if(input$enrich_pdf_width == 0){
+          pdf_width <- 10
+        }else pdf_width <- input$enrich_pdf_width
+        plot_name <- paste0("Annotation/","annotation.pdf")
+        fs <- c(fs, plot_name)
+        pdf(plot_name, height = pdf_height, width = pdf_width)
+        print(updistribution_enrich())
+        dev.off()
+        zip(zipfile=fname, files=fs)
+      })
+    },
+    contentType = "application/zip"
+  )
   
   #Enrichment viewer functional analysis------
   output$Gene_set_enrich <- renderUI({

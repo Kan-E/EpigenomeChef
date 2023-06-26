@@ -238,7 +238,10 @@ withProgress(message = "converting BigWig to gene count data",{
 for(i in seq_len(length(bw))) {
     perc <- perc + 1
   last=1 	 
-  coverage <- import(bw[[i]], as = 'RleList')
+  coverage <- try(import(bw[[i]], as = 'RleList'))
+  if(class(coverage) == "try-error") {
+    validate(paste0("Error: the uploaded bigwig files are in an unexpected format. The original error message is as follows:\n",print(coverage)))
+  }
   for(j in chromnames){
     range_vals=ranges(bed[seqnames(bed)==j])
     cur_coverage=coverage[[j]] 
