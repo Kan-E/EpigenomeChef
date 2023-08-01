@@ -464,8 +464,9 @@ shinyServer(function(input, output, session) {
   
   output$DEG_result <- DT::renderDT({
     if(!is.null(deg_result())){
+      if(dim(brush_info())[1] == 0){
       if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
-        deg_result() %>%
+        deg_result() %>% 
           datatable(
             selection = "single",
             filter = "top")
@@ -474,6 +475,21 @@ shinyServer(function(input, output, session) {
           datatable(
             selection = "single",
             filter = "top")
+      }
+      }else{
+        if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
+          deg_result() %>% 
+            dplyr::filter(rownames(.) %in% brush_info()$Row.names) %>%
+            datatable(
+              selection = "single",
+              filter = "top")
+        }else{
+          deg_result2()  %>%
+            dplyr::filter(rownames(.) %in% brush_info()$Row.names) %>%
+            datatable(
+              selection = "single",
+              filter = "top")
+        }
       }
     }
   })
@@ -981,17 +997,29 @@ shinyServer(function(input, output, session) {
                 value = max)
     }
   })
+  brush_info <- reactive({
+    if(!is.null(input$xrange) && !is.null(input$yrange) && !is.null(data_degcount())){
+      data <- as.data.frame(data_degcount())
+      data$padj[data$padj == 0] <- 10^(-300)
+      data$minusLog10padj<- -log10(data$padj)
+      return(brushedPoints(data, input$plot1_brush,xvar = "log2FoldChange",yvar="minusLog10padj"))
+    }else return(data.frame())
+  })
   
   pair_volcano <- reactive({
     if(!is.null(input$xrange) && !is.null(input$yrange)){
       withProgress(message = "volcano plot",{
         data <- as.data.frame(data_degcount())
         count <- deg_norm_count()
+        if(dim(brush_info())[1]!=0){
+            label_data <- brush_info()$Row.names
+        }else{
         if(!is.null(input$DEG_result_rows_selected)){
           if(input$Genomic_region == "Promoter"){
             label_data <- rownames(deg_result()[input$DEG_result_rows_selected,])
           }else label_data <- rownames(deg_result2()[input$DEG_result_rows_selected,])
         }else label_data <- NULL
+        }
         data$color <- "NS"
         data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr] <- paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]))
         data$color[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr] <- paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))
@@ -1010,8 +1038,8 @@ shinyServer(function(input, output, session) {
                                                       "NS", paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
           if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("darkgray","red")
         }
-        
-        v <- ggplot(data, aes(x = log2FoldChange, y = -log10(padj))) + ggrastr::geom_point_rast(aes(color = color),size = 0.4)
+        data$minusLog10padj<--log10(data$padj)
+        v <- ggplot(data, aes(x = log2FoldChange, y = minusLog10padj)) + ggrastr::geom_point_rast(aes(color = color),size = 0.4)
         v <- v  + geom_vline(xintercept = c(-log2(input$fc), log2(input$fc)), linetype = c(2, 2), color = c("black", "black")) +
           geom_hline(yintercept = c(-log10(input$fdr)), linetype = 2, color = c("black"))
         v <- v +theme_bw()+ scale_color_manual(values = Color)+
@@ -1035,16 +1063,13 @@ shinyServer(function(input, output, session) {
   })
   
   output$volcano1 <- renderPlot({
-    withProgress(message = "Preparing results",{
     if(!is.null(input$xrange)){
       if(is.null(bw_count())){
         return(NULL)
       }else{
-        
-        print(pair_volcano())
+pair_volcano()
       }
     }
-    })
   })
   
   
@@ -5792,10 +5817,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       if(dim(data2)[1] != 0){
       cond1 <- input$selectFC[1]
       cond2 <- input$selectFC[2]
-      cond1_num <- data %>% dplyr::select(.,starts_with(cond1)) %>% colnames() %>% length()
-      cond2_num <- data %>% dplyr::select(.,starts_with(cond2)) %>% colnames() %>% length()
-      cond1_ave <- data %>% dplyr::select(starts_with(cond1)) %>% rowSums(na.rm=TRUE)/cond1_num
-      cond2_ave <- data %>% dplyr::select(starts_with(cond2)) %>% rowSums(na.rm=TRUE)/cond2_num
+      cond1_num <- data2 %>% dplyr::select(.,starts_with(cond1)) %>% colnames() %>% length()
+      cond2_num <- data2 %>% dplyr::select(.,starts_with(cond2)) %>% colnames() %>% length()
+      cond1_ave <- data2 %>% dplyr::select(starts_with(cond1)) %>% rowSums(na.rm=TRUE)/cond1_num
+      cond2_ave <- data2 %>% dplyr::select(starts_with(cond2)) %>% rowSums(na.rm=TRUE)/cond2_num
       Log2FoldChange <- log((cond1_ave + 0.01)/(cond2_ave + 0.01),2)
       data2$Log2FoldChange <- Log2FoldChange
       data3 <- data2 %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))

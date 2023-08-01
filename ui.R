@@ -230,7 +230,7 @@ shinyUI(
                               fluidRow(
                                 column(6, htmlOutput("volcano_x")),
                                 column(6, htmlOutput("volcano_y"))),
-                              plotOutput("volcano1"),
+                              plotOutput("volcano1",brush = "plot1_brush"),
                               bsCollapse(id="input_collapse_pair_DEG",open="DEG_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Trackplot:",
                                                          value="Trackplot_panel",
