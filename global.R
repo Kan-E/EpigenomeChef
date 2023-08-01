@@ -224,8 +224,8 @@ promoter_clustering <- function(txdb, upstream, downstream,input_type = "Promote
 
 Bigwig2count <- function(bw, promoter, Species, input_type = "Promoter"){
 bed1<-promoter
-write.table(bed1,file = "bed.bed",sep = "\t")
-bed1 <- read.table("bed.bed",header = T)
+write.table(bed1,file = paste0(tempdir(),"bed.bed"),sep = "\t")
+bed1 <- read.table(paste0(tempdir(),"bed.bed"),header = T)
 bed1 <- dplyr::arrange(bed1, seqnames)
 data <- as.data.frame(bed1)[,1:3]
 colnames(data)<-c("chr","start","end")
@@ -756,8 +756,8 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
           data <- anno_data %>% dplyr::filter(! locus %in% rownames(data))
           data2 <- range_changer(data)
           bg <- data.frame(seqnames = data2$chr,start=data2$start,end=data2$end)
-          write.table(bg,"bed.bed",row.names = F,col.names = F,quote = F, sep = "\t")
-          bg <- "bed.bed"
+          write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
+          bg <- paste0(tempdir(),"bed.bed")
         }
           }
         if(type== "Promoter") {
@@ -766,16 +766,16 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
           bg <- with(bg, GRanges(seqnames = seqnames, 
                               ranges = IRanges(start,end)))
           bg <- as.data.frame(bg)
-          write.table(bg,"bed.bed",row.names = F,col.names = F,quote = F, sep = "\t")
-          bg <- "bed.bed"
+          write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
+          bg <- paste0(tempdir(),"bed.bed")
         }
         if(type=="Other"){
           if(back == "random"){
             bg <-'automatic'
           }else{
             bg <- as.data.frame(other_data)
-            write.table(bg,"bed.bed",row.names = F,col.names = F,quote = F, sep = "\t")
-            bg <- "bed.bed"
+            write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
+            bg <- paste0(tempdir(),"bed.bed")
           }
             }
         print(head(bg))

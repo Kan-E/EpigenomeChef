@@ -2058,7 +2058,6 @@ pair_volcano()
     content = function(fname){
       withProgress(message = "Preparing download, please wait for a few minutes.",{
         fs <- c()
-        print(fs)
         dir.create("DAR_result",showWarnings = FALSE)
         dir.create("Input",showWarnings = FALSE)
         dir.create("Clustering/",showWarnings = FALSE)
@@ -2310,6 +2309,7 @@ pair_volcano()
           dirname_withRNA <- NULL
           }
         report_name <- paste0(format(Sys.time(), "%Y%m%d_"),"pairwise_report",".docx")
+        fs <- c(fs, report_name)
         tempReport <- file.path(tempdir(),"pair_report.Rmd")
         file.copy("pair_report.Rmd", tempReport, overwrite = TRUE)
         rmarkdown::render("pair_report.Rmd", output_format = "word_document", output_file = report_name,
@@ -2330,7 +2330,6 @@ pair_volcano()
                                         integrated_heatlist = integrated_heatlist()), 
                           envir = new.env(parent = globalenv()),intermediates_dir = tempdir(),encoding="utf-8"
         )
-        fs <- c(fs, report_name)
       })
         zip(zipfile=fname, files=fs)
     },
@@ -7031,7 +7030,6 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     content = function(fname){
       withProgress(message = "Preparing download, please wait",{
         fs <- c()
-        setwd(tempdir())
         peak_list <- updistribution_enrich()$peaks
         dir.create("Annotation/",showWarnings = FALSE)
         for(name in names(peak_list)){
