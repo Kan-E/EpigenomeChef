@@ -121,6 +121,13 @@ shinyServer(function(input, output, session) {
       }
     }
   })
+  bws_order<-reactive({
+    if(!is.null(bws())){
+      order <- input$sample_order
+      bws <- bws()[order]
+      return(bws)
+    }
+  })
   bws_count <- reactive({
     tmp <- input$file1_count$datapath
     if(is.null(input$file1_count) && input$goButton > 0 )  tmp = "data/bws_count.txt"
@@ -827,7 +834,7 @@ pair_volcano()
     if(!is.null(input$DEG_result_rows_selected)){
       return(data_trac(y=goi_promoter_position(),gene_position=goi_gene_position(),
                        gen=ref(),txdb=txdb(),org=org1(),filetype=input$data_file_type,
-                       bw_files=bws(),bam_files=bam(),
+                       bw_files=bws_order(),bam_files=bam(),
                        track_additional_files=track_additional_files()))
     }
   })
@@ -1664,7 +1671,7 @@ pair_volcano()
   pair_pattern_range_up <- reactive({
     rg <- c()
     if(is.null(bws())) validate("Bigwig files are required.")
-    sig <- peak_pattern_function(grange=peak_up_grange(), files=bws(),
+    sig <- peak_pattern_function(grange=peak_up_grange(), files=bws_order(),
                                  additional=up_additional(),plot = FALSE)
     for(name in names(sig)){
       rg <- c(rg, mean(sig[[name]][,50]))
@@ -1675,7 +1682,7 @@ pair_volcano()
   pair_pattern_range_down <- reactive({
     rg <- c()
     if(is.null(bws())) validate("Bigwig files are required.")
-    sig <- peak_pattern_function(grange=peak_down_grange(), files=bws(),
+    sig <- peak_pattern_function(grange=peak_down_grange(), files=bws_order(),
                                  additional=up_additional(),plot = FALSE)
     for(name in names(sig)){
       rg <- c(rg, mean(sig[[name]][,50]))
@@ -1699,7 +1706,7 @@ pair_volcano()
   
   peak_up_alinedHeatmap <- reactive({
     if(!is.null(input$peak_up_range) && input$peak_up_range > 0){
-      bigwig <- bigwig_breakline(bws())
+      bigwig <- bigwig_breakline(bws_order())
       heatmap <- peak_pattern_function(grange=peak_up_grange(), files=bigwig,
                                        additional=up_additional(),rg = input$peak_up_range)
       return(heatmap)
@@ -1790,7 +1797,7 @@ pair_volcano()
   
   peak_down_alinedHeatmap <- reactive({
     if(!is.null(input$peak_down_range) && input$peak_down_range > 0){
-      bigwig <- bigwig_breakline(bws())
+      bigwig <- bigwig_breakline(bws_order())
       heatmap <- peak_pattern_function(grange=peak_down_grange(), files=bigwig,
                                        additional=up_additional(),rg = input$peak_down_range)
       return(heatmap)
@@ -2418,7 +2425,7 @@ pair_volcano()
     if(!is.null(input$RP_table_rows_selected)){
       return(data_trac(y=int_goi_promoter_position(),gene_position=int_goi_gene_position(),
                        gen=ref(),txdb=txdb(),org=org1(),filetype=input$data_file_type,
-                       bw_files=bws(),bam_files=bam(),
+                       bw_files=bws_order(),bam_files=bam(),
                        track_additional_files=int_track_additional_files()))
     }
   })
@@ -3059,7 +3066,7 @@ pair_volcano()
   ##Pair-wise Report---------
   input_list_data_pair <- reactive({
     if(input$data_file_type == "Row1" || input$data_file_type == "Row1_count"){
-      if(!is.null(bws())) bw_files = as.data.frame(names(bw_files())) else bw_files = NA
+      if(!is.null(bws())) bw_files = as.data.frame(names(bws_order())) else bw_files = NA
     }else{
       bw_files = as.data.frame(names(bam()))
     }
@@ -5554,6 +5561,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
     }
   })
+  bws_order_clustering<-reactive({
+    if(!is.null(bws_clustering())){
+      order <- input$sample_order_clustering
+      bws <- bws_clustering()[order]
+      return(bws)
+    }
+  })
   bam_clustering <- reactive({
     if(input$data_file_type_clustering == "Row2"){
       if(is.null(input$file_bam_clustering)){
@@ -6211,7 +6225,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   kmeans_pattern_range <- reactive({
     rg <- c()
-    sig <- peak_pattern_function(grange=peak_kmeans_grange(), files=bws_clustering(),
+    sig <- peak_pattern_function(grange=peak_kmeans_grange(), files=bws_order_clustering(),
                                  additional=kmeans_additional(),plot = FALSE)
     for(name in names(sig)){
       rg <- c(rg, mean(sig[[name]][,50]))
@@ -6234,7 +6248,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   peak_kmeans_alinedHeatmap <- reactive({
     if(!is.null(input$peak_kmeans_range) && input$peak_kmeans_range > 0){
-      bigwig <- bigwig_breakline(bws_clustering())
+      bigwig <- bigwig_breakline(bws_order_clustering())
       heatmap <- peak_pattern_function(grange=peak_kmeans_grange(), files=bigwig,
                                        additional=kmeans_additional(),rg = input$peak_kmeans_range)
       return(heatmap)
@@ -6402,7 +6416,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$clustering_kmeans_extract_table_rows_selected)){
       return(data_trac(y=goi_promoter_position_clustering(),gene_position=goi_gene_position_clustering(),
                        gen=ref_clustering(),txdb=txdb_clustering(),org=org1_clustering(),filetype=input$data_file_type_clustering,
-                       bw_files=bws_clustering(),bam_files=bam_clustering(),
+                       bw_files=bws_order_clustering(),bam_files=bam_clustering(),
                        track_additional_files=track_additional_files_clustering()))
     }
   })
@@ -6930,7 +6944,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$RP_table_clustering_rows_selected)){
       return(data_trac(y=int_goi_promoter_position_clustering(),gene_position=int_goi_gene_position_clustering(),
                        gen=ref_clustering(),txdb=txdb_clustering(),org=org1_clustering(),filetype=input$data_file_type_clustering,
-                       bw_files=bws_clustering(),bam_files=bam_clustering(),
+                       bw_files=bws_order_clustering(),bam_files=bam_clustering(),
                        track_additional_files=int_track_additional_files_clustering()))
     }
   })
