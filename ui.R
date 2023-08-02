@@ -158,6 +158,7 @@ shinyUI(
                                                             img(src="pair_peakcallfilter.png", width = 200,height = 400)),
                                               placement = "right",options = list(container = "body"))
                    ),
+                   selectizeInput("sample_order", "Sample order:", choices = "", multiple = T),
                    fluidRow(
                      column(12, selectInput("Species", "Species", species_list, selected = "not selected"))),
                    fluidRow(
@@ -1019,6 +1020,7 @@ shinyUI(
                                                             "The third column is end position on the chromosome.<br>"), 
                                               placement = "right",options = list(container = "body")),
                    ),
+                   selectizeInput("sample_order_clustering", "Sample order:", choices = "", multiple = T),
                    fluidRow(
                      column(12, selectInput("Species_clustering", "Species", species_list, selected = "not selected"))),
                    fluidRow(

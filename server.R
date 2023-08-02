@@ -196,6 +196,10 @@ shinyServer(function(input, output, session) {
       as.data.frame(uploaded_files) 
     }
   })
+  observeEvent(pre_bw_count(),({
+    updateSelectizeInput(session,inputId = "sample_order","Sample order:",
+                         choices = colnames(pre_bw_count()),selected = colnames(pre_bw_count()))
+  }))
   
   output$input_peak_call_files <- DT::renderDataTable({
     if(input$Genomic_region == "Genome-wide"){
@@ -204,7 +208,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  bw_count <- reactive({
+  pre_bw_count <- reactive({
     if(input$data_file_type == "Row1" && !is.null(bw_files())){
       if(input$Genomic_region == "Promoter"){
         if(input$Species != "not selected"){
@@ -249,6 +253,16 @@ shinyServer(function(input, output, session) {
         }
       })
     }
+  })
+  bw_count <- reactive({
+  count <- pre_bw_count()
+  order <- input$sample_order
+  if(!is.null(count)){
+    if(dim(count)[2] == length(order)){
+      data <- count[,order]
+      return(data)
+    }
+  }
   })
   output$raw_count_table <- DT::renderDataTable({
     bw_count()
@@ -5674,7 +5688,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       })
     }
   })
-  bw_count_clustering <- reactive({
+  pre_bw_count_clustering <- reactive({
     if(input$data_file_type_clustering == "Row1" && !is.null(bw_files_clustering())){
       if(input$Genomic_region_clustering == "Promoter"){
         if(input$Species_clustering != "not selected"){
@@ -5696,6 +5710,20 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(bw_count_clustering2())
     }
   })
+  bw_count_clustering <- reactive({
+    count <- pre_bw_count_clustering()
+    order <- input$sample_order_clustering
+    if(!is.null(count)){
+      if(dim(count)[2] == length(order)){
+        data <- count[,order]
+        return(data)
+      }
+    }
+  })
+  observeEvent(pre_bw_count_clustering(),({
+    updateSelectizeInput(session,inputId = "sample_order_clustering","Sample order:",
+                         choices = colnames(pre_bw_count_clustering()),selected = colnames(pre_bw_count_clustering()))
+  }))
   output$raw_count_table_clustering <- DT::renderDataTable({
     bw_count_clustering()
   })
