@@ -2843,6 +2843,7 @@ pair_volcano()
           rownames(rna) <- rna$ENTREZID
           rna <- rna[,-1]
         }
+        print(head(rna))
         rna <- genescale(rna, axis = 1, method = "Z")
         rna[is.na(rna)] <- 0
         rna <- as.data.frame(rna)
@@ -3062,13 +3063,20 @@ pair_volcano()
     }else{
       bw_files = as.data.frame(names(bam()))
     }
+    print("1")
     if(!is.null(peak_call_files())) peak_files = as.data.frame(names(peak_call_files())) else peak_files = NA
-    if(!is.na(bw_files) && !is.na(peak_files)) list <- data.frame(bw = bw_files[,1], peak_call = peak_files[,1])
-    if(!is.na(bw_files) && is.na(peak_files)) list <- data.frame(bw = bw_files[,1])
-    if(is.na(bw_files) && is.na(peak_files)) list <- NULL
-    if(input$data_file_type == "Row2"){
-      colnames(list)[1] <- "Bam"
+    print("2")
+    if(input$data_file_type == "Row1" || input$data_file_type == "Row2"){
+      if(input$Genomic_region == "Genome-wide"){
+        list <- data.frame(bw = bw_files[,1], peak_call = peak_files[,1])
+        if(input$data_file_type == "Row2") colnames(list)[1] <- "Bam"
+      }else{
+        list <- data.frame(bw = bw_files[,1])
+      }
     }
+    if(input$data_file_type == "Row1_count"){
+      if(!is.null(bws())) list <- data.frame(bw = bw_files[,1])
+    }else list <- NULL
     return(list)
   })
   

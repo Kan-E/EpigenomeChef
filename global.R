@@ -188,7 +188,7 @@ files_name2ENTREZID <- function(files,Species,gene_type){
       if(gene_type[name] != "SYMBOL"){
         if(str_detect(rownames(count)[1], "FBgn")){
           count$ENTREZID <- rownames(count)
-          count2 <- count
+          count2 <- count %>% dplyr::select(ENTREZID, everything())
         }else{
         my.symbols <- gsub("\\..*","", rownames(count))
         gene_id <-id_convert(my.symbols,Species = Species,type = "ENSEMBL2ENTREZID")
