@@ -97,7 +97,7 @@ shinyServer(function(input, output, session) {
   })
   
   bws <- reactive({
-    if(input$data_file_type == "Row1"){
+    if(input$data_file_type == "Row1" || input$data_file_type == "Row1_count"){
       if(is.null(input$file1)){
         if(input$goButton > 0 ){
           df<-list()
@@ -120,6 +120,11 @@ shinyServer(function(input, output, session) {
         return(files)
       }
     }
+  })
+  bws_count <- reactive({
+    tmp <- input$file1_count$datapath
+    if(is.null(input$file1_count) && input$goButton > 0 )  tmp = "data/bws_count.txt"
+    if(!is.null(tmp)) return(read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = ""))
   })
   bam <- reactive({
     if(input$data_file_type == "Row2"){
@@ -148,7 +153,7 @@ shinyServer(function(input, output, session) {
   })
   
   peak_call_files <- reactive({
-    if(input$Genomic_region == "Genome-wide"){
+    if(input$Genomic_region == "Genome-wide" && input$data_file_type != "Row1_count"){
       if(is.null(input$peak_call_file1)){
         if(input$goButton > 0 ){
           df <- list()
@@ -183,7 +188,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$input_bw_files <- DT::renderDataTable({
-    if(input$data_file_type == "Row1"){
+    if(input$data_file_type == "Row1" || input$data_file_type == "Row1_count"){
       uploaded_files = names(bw_files())
       as.data.frame(uploaded_files)
     }else{
@@ -198,21 +203,6 @@ shinyServer(function(input, output, session) {
       as.data.frame(uploaded_files)
     }
   })
-  input_list_data_pair <- reactive({
-    if(input$data_file_type == "Row1"){
-      bw_files = as.data.frame(names(bw_files()))
-    }else{
-      bw_files = as.data.frame(names(bam()))
-    }
-    if(input$Genomic_region == "Genome-wide"){
-      peak_files = as.data.frame(names(peak_call_files()))
-      list <- data.frame(bw = bw_files[,1], peak_call = peak_files[,1])
-    }else list <- data.frame(bw = bw_files[,1])
-    if(input$data_file_type != "Row1"){
-      colnames(list)[1] <- "Bam"
-    }
-    return(list)
-  })
   
   bw_count <- reactive({
     if(input$data_file_type == "Row1" && !is.null(bw_files())){
@@ -226,6 +216,9 @@ shinyServer(function(input, output, session) {
           return(Bigwig2count(bw = bw_files(),promoter_region(),input_type =input$Genomic_region))
         }
       }
+    }
+    if(input$data_file_type == "Row1_count" && !is.null(bws_count())){
+      return(bws_count())
     }
     if(input$Species != "not selected" && input$data_file_type == "Row2" && 
        !is.null(bam())){
@@ -332,6 +325,18 @@ shinyServer(function(input, output, session) {
       if(input$data_file_type == "Row1"){
         res <- dds_limma()
       }
+      if(input$data_file_type == "Row1_count"){
+        if(input$count_file_type == "Norm") {
+          res <- dds_limma()
+        }else{
+          count <- bw_count()
+          collist <- gsub("\\_.+$", "", colnames(count))
+          dds <- dds()
+          contrast <- c("con", unique(collist))
+          res <- results(dds,  contrast = contrast)
+          res <- as.data.frame(res)
+          }
+      }
       return(res)
     }
   })
@@ -351,6 +356,17 @@ shinyServer(function(input, output, session) {
       if(input$data_file_type == "Row1"){
         normalized_counts <- count
       }
+      if(input$data_file_type == "Row1_count"){
+        if(input$count_file_type == "Norm") {
+          normalized_counts <- count
+        }else{
+          collist <- gsub("\\_.+$", "", colnames(count))
+          group <- data.frame(con = factor(collist))
+          dds <- dds()
+          contrast <- c("con", unique(collist))
+          normalized_counts <- counts(dds, normalized=TRUE)
+          }
+      }
       return(normalized_counts)
     }
   })
@@ -363,6 +379,9 @@ shinyServer(function(input, output, session) {
   }))
   observeEvent(peak_call_files(), ({
     updateCollapse(session,id =  "input_collapse_panel", open="peak_call_files_panel")
+  }))
+  observeEvent(bws_count(), ({
+    updateCollapse(session,id =  "input_collapse_panel", open="raw_count_panel")
   }))
   
   data_degcount <- reactive({
@@ -426,7 +445,11 @@ shinyServer(function(input, output, session) {
   deg_result_anno <- reactive({
     if(!is.null(deg_result())){
       withProgress(message = "preparing annotation",{
-        data <- promoter_region()
+        if(input$data_file_type == "Row1_count" && input$Genomic_region == "Genome-wide"){
+          data <- range_changer(bws_count())
+          data <- with(data, GRanges(seqnames = chr,ranges = IRanges(start=start,
+                                                                  end=end)))
+        }else data <- promoter_region()
         data2 <- annotatePeak(data, TxDb= txdb())
         return(data2)
       })
@@ -491,419 +514,6 @@ shinyServer(function(input, output, session) {
               filter = "top")
         }
       }
-    }
-  })
-  
-  uniqueID_DAR<- reactive({
-    if(input$Genomic_region == "Promoter"){
-      data <- data_degcount2()
-      data <- data %>% dplyr::filter(!is.na(ENTREZID))
-      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
-      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
-      colnames(tss)[6]<-"ENTREZID"
-      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
-      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
-      print(head(up))
-    }else{
-    data <- data_degcount2_anno()
-    data <- data %>% dplyr::filter(!is.na(ENTREZID))
-    up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
-    down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
-    }
-    up_gr <- with(up, GRanges(seqnames = seqnames, 
-                                 ranges = IRanges(start,end),
-                              strand = strand))
-    down_gr <- with(down, GRanges(seqnames = seqnames, 
-                              ranges = IRanges(start,end),
-                              strand = strand))
-    names(up_gr) <- paste0(up$ENTREZID,"_",up$locus)
-    names(down_gr) <- paste0(down$ENTREZID,"_",down$locus)
-    list <- list()
-    list[["Up"]] <- up_gr
-    list[["Down"]] <- down_gr
-    print(list)
-    return(list)
-  })
-  integrate_h <- reactive({
-    h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = bws(),type=input$Genomic_region)
-    return(h)
-  })
-  integrated_legend <- reactive({
-    lgd <- lgd(files2 = uniqueID_DAR())
-    return(lgd)
-  })
-  
-  integrated_heatlist <- reactive({
-    if(input$integrated_heatmapButton > 0 && updateCounter_int$i > 0){
-    ht_list <- NULL
-    if(!is.null(integrate_h())) ht_list <- ht_list + integrate_h()[["heatmap"]]
-    if(!is.null(integrated_heatmap_add1())) ht_list <- ht_list + integrated_heatmap_add1()[["heatmap"]]
-    if(!is.null(integrated_heatmap_add2())) ht_list <- ht_list + integrated_heatmap_add2()[["heatmap"]]
-    if(!is.null(integrated_heatmap_add3())) ht_list <- ht_list + integrated_heatmap_add3()[["heatmap"]]
-    if(!is.null(rnaseq_DEGs_heatmap())) ht_list <- ht_list + rnaseq_DEGs_heatmap()
-    if(!is.null(rnaseq_count_heatmap())) ht_list <- ht_list + rnaseq_count_heatmap()
-    return(ht_list)
-    }else return(NULL)
-  })
-  updateCounter_int <- reactiveValues(i = 0)
-  
-  observe({
-    input$integrated_heatmapButton
-    isolate({
-      updateCounter_int$i <- updateCounter_int$i + 1
-    })
-  })
-  
-  
-  #Restart
-  defaultvalues <- observeEvent(integrated_heatlist(), {
-    isolate(updateCounter_int$i == 0)
-    updateCounter_int <<- reactiveValues(i = 0)
-  }) 
-  output$integrated_heatmap <- renderPlot({
-    if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
-       !is.null(integrated_heatlist())){
-      draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
-                                      heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
-    }
-  })
-  output$download_integrated_heatmap = downloadHandler(
-    filename = "Integrated_heatmap.pdf",
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        if(input$pair_pdf_height == 0){
-          pdf_height <- 6
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
-          pdf_width <- 10
-        }else pdf_width <- input$pair_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
-                   heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
-        dev.off()
-        incProgress(1)
-      })
-    }
-  )
-  output$rnaseq_count <- renderUI({
-    if(input$Species != "not_selected"){
-    fileInput("pair_rnaseq_count",
-              "Select RNA-seq normalized count files",
-              accept = c("txt","csv","xlsx"),
-              multiple = TRUE,
-              width = "90%")
-    }
-  })
-  output$rnaseq_DEGs <- renderUI({
-    if(input$Species != "not_selected"){
-      fileInput("pair_rnaseq_DEGs",
-                "Select RNA-seq DEG result files",
-                accept = c("txt","csv","xlsx"),
-                multiple = TRUE,
-                width = "90%")
-    }
-  })
-  rnaseq_count <- reactive({
-    withProgress(message = "Importing row count matrix, please wait",{
-      tmp <- input$pair_rnaseq_count
-      upload = list()
-      if(is.null(input$pair_rnaseq_count) && input$goButton > 0 )  {
-        tmp = "data/RNAseq_count.txt"
-        upload[["rna"]]<- read_df(tmp)
-        return(upload)
-      }else if(is.null(tmp)) {
-        return(NULL)
-      }else{
-        return(read_dfs(tmp))
-      }
-    })
-  })
-  rnaseq_DEGs <- reactive({
-    withProgress(message = "Importing DEG result files, please wait",{
-      tmp <- input$pair_rnaseq_DEGs
-      upload = list()
-      if(is.null(input$pair_rnaseq_DEGs) && input$goButton > 0 )  {
-        tmp = "data/RNAseq.txt"
-        upload[["rna"]]<- read_df(tmp)
-        return(upload)
-      }else if(is.null(tmp)) {
-        return(NULL)
-      }else{
-        return(read_dfs(tmp))
-      }
-    })
-  })
-  rnaseq_DEGs2 <- reactive({
-    files <- rnaseq_DEGs()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species)
-      if(length(names(df)) != 1){
-        matrix_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix[is.na(matrix)] <- 0
-          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_list[[name]] <- matrix
-        }
-        base <- matrix_list[[1]]
-        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
-        rownames(base) <- base$Row.names
-        colnames(base) <- gsub("\\.y$", "", colnames(base))
-        rna <- as.data.frame(base[,-1])
-        print(head(rna))
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      rna <- dplyr::select(rna, contains("log2FoldChange"))
-      return(rna)
-    }
-  })
-  rnaseq_count2 <- reactive({
-    files <- rnaseq_count()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species)
-      if(length(names(df)) != 1){
-        matrix_z_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix_z <- genescale(matrix, axis = 1, method = "Z")
-          print(head(matrix_z))
-          matrix_z[is.na(matrix_z)] <- 0
-          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_z_list[[name]] <- matrix_z
-        }
-        base_z <- matrix_z_list[[1]]
-        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
-        rownames(base_z) <- base_z$Row.names
-        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
-        rna <- as.data.frame(base_z[,-1])
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        rna <- genescale(rna, axis = 1, method = "Z")
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      return(rna)
-    }
-  })
-  observeEvent(input$pair_rnaseq_DEGs, ({
-    updateCollapse(session,id =  "z-score_count", open="Uploaded_DEGs")
-  }))
-  observeEvent(input$pair_rnaseq_count, ({
-    updateCollapse(session,id =  "z-score_count", open="z-score_multiple_count_panel")
-  }))
-  output$rnaseq_count_output <- renderDataTable({
-    if(input$Species != "not_selected" && !is.null(rnaseq_count())){
-    rnaseq_count2()
-    }
-  })
-  output$rnaseq_DEGs_output <- renderDataTable({
-    if(input$Species != "not_selected" && !is.null(rnaseq_DEGs())){
-      rnaseq_DEGs2()
-    }
-  })
-  
-  output$Normalized_Count_matrix <- DT::renderDataTable({
-    deg_norm_count()
-  })
-  rnaseq_count_heatmap <- reactive({
-    rna <-  rnaseq_count2()
-    if(input$Genomic_region == "Promoter"){
-      data <- data_degcount2()
-      data <- data %>% dplyr::filter(!is.na(ENTREZID))
-      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
-      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
-      colnames(tss)[6]<-"ENTREZID"
-      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
-      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
-    }else{
-    data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
-    up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
-    down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
-    }
-  
-    rna$ENTREZID <- rownames(rna)
-    up_m <- merge(rna,up,by="ENTREZID",all=T)
-    up_m <- up_m %>% dplyr::filter(!is.na(locus))
-    rownames(up_m) <- paste0(up_m$ENTREZID,"_",up_m$locus)
-    up_m <- up_m[,2:length(colnames(rna))]
-    up_m[is.na(up_m)] <- 0
-
-    down_m <- merge(rna,down,by="ENTREZID",all=T)
-    down_m <- down_m %>% dplyr::filter(!is.na(locus))
-    rownames(down_m) <- paste0(down_m$ENTREZID,"_",down_m$locus)
-    down_m <- down_m[,2:length(colnames(rna))]
-    down_m[is.na(down_m)] <- 0
-
-    m_z <- rbind(up_m,down_m)
-    mat <- integrate_h()[["mat"]]
-    
-    cond <- gsub(".+\\.", "", colnames(m_z))
-    cond <- gsub("\\_.+$", "", cond)
-    cond <- factor(cond, levels = unique(cond), ordered = TRUE)
-    cond_color <- rainbow_hcl(length(unique(cond)),c=100)
-    names(cond_color) <- unique(cond)
-    if(length(names(rnaseq_count())) == 1){
-      file_name <- NULL
-      file_name_color <- NULL
-    }else{
-    file_name <- gsub("\\..+$", "", colnames(m_z))
-    file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
-    file_name_color <- rainbow_hcl(length(file_name))
-    names(file_name_color) <- file_name
-    }
-    withProgress(message = "Heatmap of RNA-seq count data",{
-    ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
-                  top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
-                                                     col = list(files = file_name_color,
-                                                                condition = cond_color)),
-                  show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
-    })
-    return(ht)
-  })
-  rnaseq_DEGs_heatmap <- reactive({
-    rna <-  rnaseq_DEGs2()
-    if(input$Genomic_region == "Promoter"){
-      data <- data_degcount2()
-      data <- data %>% dplyr::filter(!is.na(ENTREZID))
-      data <- data[,- which(colnames(data) == "log2FoldChange")]
-      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
-      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
-      colnames(tss)[6]<-"ENTREZID"
-      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
-      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
-    }else{
-      data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
-      data <- data[,- which(colnames(data) == "log2FoldChange")]
-      up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
-      down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
-    }
-    
-    rna$ENTREZID <- rownames(rna)
-    up_m <- merge(rna,up,by="ENTREZID",all=T)
-    up_m <- up_m %>% dplyr::filter(!is.na(locus))
-    rownames(up_m) <- paste0(up_m$ENTREZID,"_",up_m$locus)
-    
-    down_m <- merge(rna,down,by="ENTREZID",all=T)
-    down_m <- down_m %>% dplyr::filter(!is.na(locus))
-    rownames(down_m) <- paste0(down_m$ENTREZID,"_",down_m$locus)
-    m_z <- rbind(up_m,down_m)
-    m_z[is.na(m_z)] <- 0
-    m_z <- as.data.frame(m_z[,1:length(colnames(rna))])
-    for(i in 1:length(colnames(rna))){
-      m_z[,i] <- -1 * as.numeric(m_z[,i])
-    }
-    m_z[m_z > 5]<- 5
-    m_z[m_z < -5]<- -5
-    print(head(m_z))
-    mat <- integrate_h()[["mat"]]
-    colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
-    withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
-    ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
-                  show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
-                  use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
-                  col = c("blue","white","gold"))
-    return(ht)
-    })
-  })
-  
-  output$integrated_bw1 <- renderUI({
-    fileInput("integrated_bw_1",
-              "Option: Select additional bigwig files (blue)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
-  })
-  output$integrated_bw2 <- renderUI({
-    fileInput("integrated_bw_2",
-              "Option: Select additional bigwig files (green)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
-  })
-  output$integrated_bw3 <- renderUI({
-    fileInput("integrated_bw_3",
-              "Option: Select additional bigwig files (purple)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
-  })
-  integrated_additional1 <-reactive({
-    if(!is.null(input$integrated_bw_1)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_1[, 1])){
-        file <- input$integrated_bw_1[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_1[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
-  })
-  integrated_additional2 <-reactive({
-    if(!is.null(input$integrated_bw_2)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_2[, 1])){
-        file <- input$integrated_bw_2[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
-  })
-  integrated_additional3 <-reactive({
-    if(!is.null(input$integrated_bw_3)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_3[, 1])){
-        file <- input$integrated_bw_3[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
-  })
-  integrated_heatmap_add1 <- reactive({
-    if(!is.null(integrated_additional1())){
-        h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional1(),
-                           color = c("white","darkblue"),signal = "darkblue",type=input$Genomic_region)
-        return(h)
-    }
-  })
-  integrated_heatmap_add2 <- reactive({
-    if(!is.null(integrated_additional2())){
-        h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional2(),
-                           color = c("white","darkgreen"),signal = "green",type=input$Genomic_region)
-        return(h)
-    }
-  })
-  integrated_heatmap_add3 <- reactive({
-    if(!is.null(integrated_additional3())){
-        h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional3(),
-                           color = c("white", "purple"),signal = "purple",type=input$Genomic_region)
-        return(h)
     }
   })
   
@@ -1127,6 +737,7 @@ pair_volcano()
   }))
   
   output$igv_uprange <- renderUI({
+    if(is.null(bws())) validate("Bigwig files are required.")
     if(!is.null(goi_gene_position()) && !is.null(goi_promoter_position())){
       y <- goi_promoter_position()
       gene_position <- goi_gene_position()
@@ -1176,11 +787,13 @@ pair_volcano()
     }
   })
   output$trackplot_additional <- renderUI({
+    if(!is.null(bws())){
     fileInput("trackplot_additional1",
               "Select additional bigwig files",
               accept = c("bw","BigWig"),
               multiple = TRUE,
               width = "80%")
+    }
   })
   track_additional_files <-reactive({
     if(!is.null(input$trackplot_additional1)){
@@ -1314,6 +927,7 @@ pair_volcano()
       data <- range_changer(data_degcount_up())
       data2 <- data.frame(chr = data$chr, start = data$start, end = data$end)
     }else{
+      print(head(data_degcount_up()))
       up <- symbol2gene_id(data_degcount_up(),org1())
       up2 <- subset(promoter_region(), gene_id %in% up$gene_id) %>% as.data.frame()
       data2 <- data.frame(chr = up2$seqnames, start = up2$start, end = up2$end)
@@ -1925,12 +1539,13 @@ pair_volcano()
                                TxDb = txdb()))
   })
   output$input_peak_distribution <- renderPlot({
-      if(!is.null(input_peak_list()) && !is.null(txdb()) && 
-         input$Genomic_region == "Genome-wide"){
+    if(input$Genomic_region == "Genome-wide"){
+    if(!is.null(deg_peak_list()) && input$Species != "not selected"){
         withProgress(message = "Plot peak distribution of up DAR",{
         updistribution()
         })
-      }
+    }
+    }
   })
   deg_peak_list <- reactive({
     if(!is.null(data_degcount_up()) && !is.null(data_degcount_down())){
@@ -2003,11 +1618,13 @@ pair_volcano()
   
   ###Peak pattern comparison up--------
   output$peak_pattern_up_additional <- renderUI({
+    if(!is.null(bws())){
     fileInput("peak_pattern_up_add",
               "Select additional bigwig files",
               accept = c("bw","BigWig"),
               multiple = TRUE,
               width = "80%")
+    }
   })
   up_additional <-reactive({
     if(!is.null(input$peak_pattern_up_add)){
@@ -2032,6 +1649,7 @@ pair_volcano()
   })
   pair_pattern_range_up <- reactive({
     rg <- c()
+    if(is.null(bws())) validate("Bigwig files are required.")
     sig <- peak_pattern_function(grange=peak_up_grange(), files=bws(),
                                  additional=up_additional(),plot = FALSE)
     for(name in names(sig)){
@@ -2042,6 +1660,7 @@ pair_volcano()
   })
   pair_pattern_range_down <- reactive({
     rg <- c()
+    if(is.null(bws())) validate("Bigwig files are required.")
     sig <- peak_pattern_function(grange=peak_down_grange(), files=bws(),
                                  additional=up_additional(),plot = FALSE)
     for(name in names(sig)){
@@ -2051,290 +1670,6 @@ pair_volcano()
     return(rg)
   })
   
-  output$pair_report = downloadHandler(
-    filename = function() {
-      paste0(format(Sys.time(), "%Y%m%d_"),"pairwiseDAR_report",".zip")
-    },
-    content = function(fname){
-      withProgress(message = "Preparing download, please wait for a few minutes.",{
-        fs <- c()
-        dir.create("DAR_result",showWarnings = FALSE)
-        dir.create("Input",showWarnings = FALSE)
-        dir.create("Clustering/",showWarnings = FALSE)
-        DEG <- "DAR_result/DAR_result.txt"
-        up <- "DAR_result/up_DAR.bed"
-        down <- "DAR_result/down_DAR.bed"
-        input_list <- "Input/input_list.txt"
-        count <- "Input/count.txt"
-        bed <- "Input/filtered_merged_peak_call.bed"
-        PCA <- "Clustering/clustering.pdf"
-        PCA_table <- "Clustering/pca.txt"
-        
-        fs <- c(DEG, up,down,count,bed,input_list,PCA,PCA_table)
-        print(fs)
-        if(input$Species != "not selected") process_num <- 9 else process_num <- 3
-        pdf(PCA, height = 3.5, width = 9)
-        print(PCAplot(data = deg_norm_count(),plot=TRUE))
-        dev.off()
-        write.table(PCAplot(data = deg_norm_count(),plot=FALSE), PCA_table, row.names = T, sep = "\t", quote = F)
-        write.table(input_list_data_pair(), input_list, row.names = F, sep = "\t", quote = F)
-        write.table(deg_norm_count(), count, row.names = T, sep = "\t", quote = F)
-        withProgress(message = "DAR_result",{
-          if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
-            write.table(deg_result(), DEG, row.names = T, sep = "\t", quote = F)
-          }else{
-            write.table(deg_result2(), DEG, row.names = T, sep = "\t", quote = F) 
-          }
-          write.table(data_degcount_up_bed(), up, row.names = F, col.names = F,sep = "\t", quote = F)
-          write.table(data_degcount_down_bed(), down, row.names = F, col.names = F,sep = "\t", quote = F)
-          write.table(as.data.frame(promoter_region()), bed, row.names = F,col.names=F, sep = "\t", quote = F)
-        })
-        incProgress(1/process_num)
-        if(!is.null(input$peak_up_range)){
-        withProgress(message = "Peak pattern",{
-          dir.create("peak_pattern",showWarnings = FALSE)
-          up_pattern <- "peak_pattern/up_lineplot.pdf"
-          down_pattern <- "peak_pattern/down_lineplot.pdf"
-          up_pattern_heatmap <- "peak_pattern/up_heatmap.pdf"
-          down_pattern_heatmap <- "peak_pattern/down_heatmap.pdf"
-          fs <- c(fs,up_pattern,down_pattern, up_pattern_heatmap,down_pattern_heatmap)
-          pdf(up_pattern, height = 5, width = 5)
-          matplot(peak_up_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
-                  type="l",ylab="density",lty=1,xaxt="n",)
-          axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
-          legend("topright", legend=colnames(peak_up_alinedHeatmap()[["line"]]), col=1:6,
-                 lty=1, lwd=1)
-          dev.off()
-          incProgress(1/4)
-          pdf(down_pattern, height = 5, width = 5)
-          matplot(peak_down_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
-                  type="l",ylab="density",lty=1,xaxt="n")
-          axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
-          legend("topright", legend=colnames(peak_down_alinedHeatmap()[["line"]]), col=1:6,
-                 lty=1, lwd=1)
-          dev.off()
-          incProgress(1/4)
-          pdf(up_pattern_heatmap, height = 6, width = 6)
-          print(plot_grid(peak_up_alinedHeatmap()[["heat"]]))
-          dev.off()
-          incProgress(1/4)
-          pdf(down_pattern_heatmap, height = 6, width = 6)
-          print(plot_grid(peak_down_alinedHeatmap()[["heat"]]))
-          dev.off()
-          incProgress(1/4)
-        })
-        }
-        incProgress(1/process_num)
-        if(!is.null(input$xrange)){
-          withProgress(message = "volcano plot",{
-        volcano <- "DAR_result/volcano_plot.pdf"
-        fs <- c(fs, volcano)
-            pdf(volcano, height = 4, width = 4)
-            print(pair_volcano())
-            dev.off()
-        })
-      }
-        incProgress(1/process_num)
-        if(input$Species != "not selected"){
-          if(input$Genomic_region == "Genome-wide"){
-          dir.create("peak_distribution",showWarnings = FALSE)
-          up_distribution <- "peak_distribution/up_annotation.pdf"
-          down_distribution <- "peak_distribution/down_annotation.pdf"
-          fs <- c(fs, up_distribution,down_distribution)
-          withProgress(message = "Peak distribution",{
-            pdf(up_distribution, height = 6, width = 10)
-            print(updistribution())
-            dev.off()
-            incProgress(1/2)
-            pdf(down_distribution, height = 6, width = 10)
-            print(downdistribution())
-            dev.off()
-            incProgress(1/2)
-          })
-          }
-          incProgress(1/process_num)
-          if(!is.null(input$Gene_set) && input$Genomic_region == "Genome-wide"){
-            dir.create("GREAT",showWarnings = FALSE)
-            dotplot <- paste0("GREAT/dotplot_",input$Gene_set,".pdf")
-            enrich_table <- paste0("GREAT/enrichment_",input$Gene_set,".txt")
-            fs <- c(fs, dotplot,enrich_table)
-            withProgress(message = "GREAT",{
-              write.table(as.data.frame(enrichment_1_1()), enrich_table, row.names = F, sep = "\t", quote = F)
-              p1 <- pair_enrich1_H()
-              pdf(dotplot, height = 5, width = 6)
-              print(plot_grid(p1))
-              dev.off()
-              if(!is.null(input$Pathway_list) && 
-                 !is.null(input$Up_or_Down) && !is.null(enrichment_enricher())){
-                region_associate_plot <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".pdf")
-                region_associate_table <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".txt")
-                fs <- c(fs, region_associate_plot,region_associate_table)
-                set_list <- input$Pathway_list
-                df <- enrichment_enricher()
-                name <- input$Up_or_Down
-                write.table(region_gene_associate(), region_associate_table, row.names = F, sep = "\t", quote = F)
-                pdf(region_associate_plot, height = 5, width = 12)
-                rGREAT::plotRegionGeneAssociations(df[[name]], term_id = set_list)
-                dev.off()
-              }
-            })
-          }
-          incProgress(1/process_num)
-          if(input$motifButton > 0 && !is.null(enrich_motif()) && 
-             !is.null(input$homer_unknown)){
-            withProgress(message = "HOMER",{
-              path_list <- enrich_motif()
-              base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
-              for(name in names(path_list)){
-                files <-list.files(path_list[[name]],pattern = "*.*")
-                for(i in 1:length(files)){
-                  data <- paste0(path_list[[name]],"/",files[[i]])
-                  fs <- c(fs, data)
-                }
-              }
-              motif <- paste0(base_dir,"/homer_dotplot",".pdf")
-              p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
-              pdf(motif, height = 6, width = 7)
-              print(p1)
-              dev.off()
-            })
-          }else {
-            base_dir <- NULL
-          }
-          incProgress(1/process_num)
-          if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && !is.na(input$DEG_fdr) && 
-             !is.na(input$DEG_fc)){
-            withProgress(message = "withRNAseq",{
-              dirname_withRNA <- paste0("withRNAseq_range-",input$peak_distance,"kb_fc",input$DEG_fc,"_fdr",input$DEG_fdr,"_RNAseq-",input$pair_DEG_result$name,"/")
-              dir.create(dirname_withRNA,showWarnings = FALSE)
-              ksplot <- paste0(dirname_withRNA,"KSplot.pdf")
-              RNAseq_boxplot <- paste0(dirname_withRNA,"boxplot.pdf")
-              RNAseq_barplot <- paste0(dirname_withRNA,"barplot.pdf")
-              RP_all <- paste0(dirname_withRNA,"RP_summary.txt")
-              fs <- c(fs, ksplot, RNAseq_boxplot, RNAseq_barplot,RP_all)
-              pdf(ksplot, height = 5, width = 7)
-              print(regulatory_potential())
-              dev.off()
-              pdf(RNAseq_boxplot, height = 5, width = 7)
-              print(pari_RNAseq_boxplot())
-              dev.off()
-              pdf(RNAseq_barplot, height = 5, width = 7)
-              gridExtra::grid.arrange(RNAseq_popu(), ChIPseq_popu(), ncol = 1)
-              dev.off()
-              write.table(RP_all_table(), RP_all, row.names = F, sep = "\t", quote = F)
-              dir.create(paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/"),showWarnings = FALSE)
-              dir.create(paste0(dirname_withRNA,"selected_table(RNA-epigenome)/"),showWarnings = FALSE)
-              for(name in unique(RP_all_table()$Group)){
-                RP_selected <- paste0(dirname_withRNA,"selected_table(RNA-epigenome)/",name,".txt")
-                RP_selected_bed <- paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/",name,".bed")
-                fs <- c(fs, RP_selected,RP_selected_bed)
-                table <- RP_all_table() %>% dplyr::filter(Group == name)
-                write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
-                gene <- table$gene_id
-                type <- gsub(".+\\-","", name)
-                if(type == "up") {
-                  peak <- subset(mmAnno_up(), gene_id %in% gene)
-                  up_peak2 <- as.data.frame(peak)
-                  up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-                  up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-                  up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-                  mcols(up_peak3) <- DataFrame(Group = "up")
-                  y <- as.data.frame(up_peak3)
-                }
-                if(type == "down") {
-                  peak <- subset(mmAnno_down(), gene_id %in% gene)
-                  down_peak2 <- as.data.frame(peak)
-                  down_peak2$Row.names <- paste0(down_peak2$seqnames,":",down_peak2$start,"-",down_peak2$end)
-                  down_peak2 <- down_peak2 %>% distinct(Row.names, .keep_all = T)
-                  down_peak3 <- with(down_peak2,GRanges(seqnames,IRanges(start,end)))
-                  mcols(down_peak3) <- DataFrame(Group = "up")
-                  y <- as.data.frame(down_peak3)
-                }
-                write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
-              }
-              if(!is.null(input$RP_table_rows_selected) &&
-                 !is.null(int_goi_promoter_position()) && 
-                 !is.null(int_goi_gene_position()) && 
-                 !is.null(input$int_igv_uprange)){
-                print(RP_selected_table()[input$RP_table_rows_selected,])
-                gene <- RP_selected_table()[input$RP_table_rows_selected,]$Symbol
-                inttrack <- paste0(dirname_withRNA,gene,".pdf")
-                fs <- c(fs, inttrack)
-                pdf(inttrack, height = 4, width = 7)
-                if(!is.null(int_highlight_trackplot())){
-                  plotTracks(list(gtrack(), int_highlight_trackplot()),
-                             from = input$int_igv_uprange[1], 
-                             to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
-                             type="hist")
-                }else{
-                  df <- int_data_track()
-                  df[["gtrack"]] <- gtrack()
-                  plotTracks(df,
-                             from = input$int_igv_uprange[1], 
-                             to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
-                             type="hist")
-                }
-                dev.off()
-              }
-              if(!is.null(input$intGeneset) && !is.null(input$intGroup)){
-                dir.create(paste0(dirname_withRNA,"enrichment_analysis/"),showWarnings = FALSE)
-                intdotplot <- paste0(dirname_withRNA,"enrichment_analysis/dotplot_",input$intGeneset,".pdf")
-                intenrichtable <- paste0(dirname_withRNA,"enrichment_analysis/enrichment_",input$intGeneset,".txt")
-                fs <- c(fs, intdotplot,intenrichtable)
-                pdf(intdotplot, height = 5, width = 8)
-                dotplot_for_output(data = int_enrich(),
-                                   plot_genelist = int_enrich_plot(), Gene_set = input$intGeneset, 
-                                   Species = input$Species)
-                dev.off()
-                write.table(int_enrich_table(), intenrichtable, row.names = F, sep = "\t", quote = F)
-              }
-            })
-          }else {
-            dirname_withRNA <- NULL
-            gene <- NULL
-          }
-          incProgress(1/process_num)
-          if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
-             !is.null(integrated_heatlist())){
-            dir.create("combined_heatmap",showWarnings = FALSE)
-            intheatmap <- paste0("combined_heatmap/","combined_heatmap.pdf")
-            fs <- c(fs, intheatmap)
-            pdf(intheatmap, height = 6, width = 10)
-            draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
-                 heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
-            dev.off()
-          }
-        }else {
-          base_dir <- NULL
-          dirname_withRNA <- NULL
-          }
-        report_name <- paste0(format(Sys.time(), "%Y%m%d_"),"pairwise_report",".docx")
-        fs <- c(fs, report_name)
-        tempReport <- file.path(tempdir(),"pair_report.Rmd")
-        file.copy("pair_report.Rmd", tempReport, overwrite = TRUE)
-        rmarkdown::render("pair_report.Rmd", output_format = "word_document", output_file = report_name,
-                          params = list(input = input,
-                                        deg_norm_count = deg_norm_count(),
-                                        input_list_data_pair = input_list_data_pair(),
-                                        enrichment_1_1 = enrichment_1_1(),
-                                        region_gene_associate = region_gene_associate(),
-                                        enrich_motif = enrich_motif(),
-                                        base_dir = base_dir,
-                                        RNAseqDEG = RNAseqDEG(),
-                                        dirname_withRNA = dirname_withRNA,
-                                        RP_all_table = RP_all_table(),
-                                        int_goi_promoter_position = int_goi_promoter_position(),
-                                        int_goi_gene_position = int_goi_gene_position(),
-                                        gene = gene,
-                                        int_enrich_table = int_enrich_table(),
-                                        integrated_heatlist = integrated_heatlist()), 
-                          envir = new.env(parent = globalenv()),intermediates_dir = tempdir(),encoding="utf-8"
-        )
-      })
-        zip(zipfile=fname, files=fs)
-    },
-    contentType = "application/zip"
-  )
   peak_up_grange <- reactive({
     if(!is.null(data_degcount_down())){
     if(input$Genomic_region == "Genome-wide"){
@@ -2536,6 +1871,9 @@ pair_volcano()
       }
     })
   })
+  gene_type_pair_DEG_result <- reactive({
+    return(gene_type(my.symbols=rownames(RNAseqDEG()),org=org1(),Species=input$Species))
+  })
   output$pair_DEG_result <- renderDataTable({
     if(!is.null(RNAseqDEG())){
       RNAseqDEG() 
@@ -2549,7 +1887,7 @@ pair_volcano()
       RNAdata$gene_id <- rownames(RNAdata)
       data <- RNAdata
     }else{
-    if(str_detect(rownames(RNAdata)[1], "ENS")){
+      if(gene_type_pair_DEG_result() != "SYMBOL"){
       my.symbols <- gsub("\\..*","", rownames(RNAdata))
       gene_IDs<-id_convert(my.symbols,input$Species,type="ENSEMBL")
       colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
@@ -2831,7 +2169,9 @@ pair_volcano()
     target_result$epigenome_category[target_result$sumRP < 0] <- "down"
     table <- NULL
     if(str_detect(target_result$gene_id[1], "FBgn")){
-      symbol <- target_result$gene_id
+      symbol <- id_convert(my.symbols = target_result$gene_id,Species = input$Species,type = "ENSEMBL")
+      symbol <- symbol %>% distinct(ENSEMBL, .keep_all = TRUE)
+      symbol <- symbol$SYMBOL
     }else symbol <- target_result$Symbol
     if(!is.null(mmAnno_up()) && !is.null(mmAnno_down())) {
     table <- data.frame(Symbol = symbol,
@@ -3192,8 +2532,7 @@ pair_volcano()
                                         keytype = "ENSEMBL",
                                         columns = c("ENSEMBL","ENTREZID"))
         colnames(gene_IDs) <- c("gene_id","ENTREZID")
-        gene_IDs <- gene_IDs %>% distinct("gene_id", .keep_all = T)
-        gene_IDs <- gene_IDs %>% distinct("ENTREZID", .keep_all = T)
+        gene_IDs <- gene_IDs %>% distinct(ENTREZID, .keep_all = T)
         gene_IDs <- na.omit(gene_IDs)
         table <- merge(table,gene_IDs,by="gene_id")
         entrezid <- table$ENTREZID
@@ -3254,6 +2593,763 @@ pair_volcano()
     content = function(file){write.table(int_enrich_table(), file, row.names = F, sep = "\t", quote = F)}
   )
   
+  #combined heatmap--------------
+  uniqueID_DAR<- reactive({
+    if(input$Genomic_region == "Promoter"){
+      data <- data_degcount2()
+      data <- data %>% dplyr::filter(!is.na(ENTREZID))
+      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
+      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
+      colnames(tss)[6]<-"ENTREZID"
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+      print(head(up))
+    }else{
+      data <- data_degcount2_anno()
+      data <- data %>% dplyr::filter(!is.na(ENTREZID))
+      up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
+      down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
+    }
+    up_gr <- with(up, GRanges(seqnames = seqnames, 
+                              ranges = IRanges(start,end),
+                              strand = strand))
+    down_gr <- with(down, GRanges(seqnames = seqnames, 
+                                  ranges = IRanges(start,end),
+                                  strand = strand))
+    names(up_gr) <- paste0(up$ENTREZID,"_",up$locus)
+    names(down_gr) <- paste0(down$ENTREZID,"_",down$locus)
+    list <- list()
+    list[["Up"]] <- up_gr
+    list[["Down"]] <- down_gr
+    print(list)
+    return(list)
+  })
+  integrate_h <- reactive({
+    h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = bws(),type=input$Genomic_region)
+    return(h)
+  })
+  integrated_legend <- reactive({
+    lgd <- lgd(files2 = uniqueID_DAR())
+    return(lgd)
+  })
+  
+  integrated_heatlist <- reactive({
+    if(input$integrated_heatmapButton > 0 && updateCounter_int$i > 0){
+      ht_list <- NULL
+      if(!is.null(integrate_h())) ht_list <- ht_list + integrate_h()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add1())) ht_list <- ht_list + integrated_heatmap_add1()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add2())) ht_list <- ht_list + integrated_heatmap_add2()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add3())) ht_list <- ht_list + integrated_heatmap_add3()[["heatmap"]]
+      print("DEGs")
+      if(!is.null(rnaseq_DEGs2())) ht_list <- ht_list + rnaseq_DEGs_heatmap()
+      print("Counts")
+      if(!is.null(rnaseq_count2())) ht_list <- ht_list + rnaseq_count_heatmap()
+      print("Clear")
+      return(ht_list)
+    }else return(NULL)
+  })
+  updateCounter_int <- reactiveValues(i = 0)
+  
+  observe({
+    input$integrated_heatmapButton
+    isolate({
+      updateCounter_int$i <- updateCounter_int$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues <- observeEvent(integrated_heatlist(), {
+    isolate(updateCounter_int$i == 0)
+    updateCounter_int <<- reactiveValues(i = 0)
+  }) 
+  output$integrated_heatmap <- renderPlot({
+    if(is.null(bws())) validate("Bigwig files are required.")
+    if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
+       !is.null(integrated_heatlist())){
+      draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
+           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+    }
+  })
+  output$download_integrated_heatmap = downloadHandler(
+    filename = "Integrated_heatmap.pdf",
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 10
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
+             heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$rnaseq_count <- renderUI({
+    if(input$Species != "not_selected"){
+      fileInput("pair_rnaseq_count",
+                "Select RNA-seq normalized count files",
+                accept = c("txt","csv","xlsx"),
+                multiple = TRUE,
+                width = "90%")
+    }
+  })
+  output$rnaseq_DEGs <- renderUI({
+    if(input$Species != "not_selected"){
+      fileInput("pair_rnaseq_DEGs",
+                "Select RNA-seq DEG result files",
+                accept = c("txt","csv","xlsx"),
+                multiple = TRUE,
+                width = "90%")
+    }
+  })
+  rnaseq_count <- reactive({
+    withProgress(message = "Importing row count matrix, please wait",{
+      tmp <- input$pair_rnaseq_count
+      upload = list()
+      if(is.null(input$pair_rnaseq_count) && input$goButton > 0 )  {
+        tmp = "data/RNAseq_count.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  rnaseq_DEGs <- reactive({
+    withProgress(message = "Importing DEG result files, please wait",{
+      tmp <- input$pair_rnaseq_DEGs
+      upload = list()
+      if(is.null(input$pair_rnaseq_DEGs) && input$goButton > 0 )  {
+        tmp = "data/RNAseq.txt"
+        upload[["rna"]]<- read_df(tmp)
+        return(upload)
+      }else if(is.null(tmp)) {
+        return(NULL)
+      }else{
+        return(read_dfs(tmp))
+      }
+    })
+  })
+  gene_type_rnaseq_DEGs <- reactive({
+    files <- rnaseq_DEGs()
+    gene_types <- c()
+    name_list <- c()
+    if(!is.null(files)){
+      for(name in names(files)){
+        type <- gene_type(my.symbols=rownames(files[[name]]),org=org1(),Species=input$Species)
+        gene_types <- c(gene_types, type)
+        name_list <- c(name_list,name) 
+      }
+      names(gene_types) <- name_list
+      return(gene_types)
+    }
+  })
+  rnaseq_DEGs2 <- reactive({
+    files <- rnaseq_DEGs()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species,gene_type=gene_type_rnaseq_DEGs())
+      if(length(names(df)) != 1){
+        matrix_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix[is.na(matrix)] <- 0
+          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_list[[name]] <- matrix
+        }
+        base <- matrix_list[[1]]
+        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
+        rownames(base) <- base$Row.names
+        colnames(base) <- gsub("\\.y$", "", colnames(base))
+        rna <- as.data.frame(base[,-1])
+        print(head(rna))
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      rna <- dplyr::select(rna, contains("log2FoldChange"))
+      return(rna)
+    }
+  })
+  gene_type_rnaseq_counts <- reactive({
+    files <- rnaseq_count()
+    gene_types <- c()
+    name_list <- c()
+    if(!is.null(files)){
+      for(name in names(files)){
+        type <- gene_type(my.symbols=rownames(files[[name]]),org=org1(),Species=input$Species)
+        gene_types <- c(gene_types, type)
+        name_list <- c(name_list,name) 
+      }
+      names(gene_types) <- name_list
+      return(gene_types)
+    }
+  })
+  rnaseq_count2 <- reactive({
+    files <- rnaseq_count()
+    if(!is.null(files)){
+      df <- files_name2ENTREZID(files = files,Species=input$Species,gene_type = gene_type_rnaseq_counts())
+      if(length(names(df)) != 1){
+        matrix_z_list <- list()
+        for (name in names(df)) {
+          matrix <- as.data.frame(df[name])
+          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+            rownames(matrix) <- matrix[,1]
+            matrix <- matrix[,-1]
+          }
+          matrix_z <- genescale(matrix, axis = 1, method = "Z")
+          print(head(matrix_z))
+          matrix_z[is.na(matrix_z)] <- 0
+          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+          matrix_z_list[[name]] <- matrix_z
+        }
+        base_z <- matrix_z_list[[1]]
+        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+        rownames(base_z) <- base_z$Row.names
+        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
+        rna <- as.data.frame(base_z[,-1])
+      }else{
+        rna <- df[[names(df)]]
+        if(str_detect(colnames(rna)[1], "ENTREZID")) {
+          rownames(rna) <- rna$ENTREZID
+          rna <- rna[,-1]
+        }
+        rna <- genescale(rna, axis = 1, method = "Z")
+        rna[is.na(rna)] <- 0
+        rna <- as.data.frame(rna)
+      }
+      return(rna)
+    }
+  })
+  observeEvent(input$pair_rnaseq_DEGs, ({
+    updateCollapse(session,id =  "z-score_count", open="Uploaded_DEGs")
+  }))
+  observeEvent(input$pair_rnaseq_count, ({
+    updateCollapse(session,id =  "z-score_count", open="z-score_multiple_count_panel")
+  }))
+  output$rnaseq_count_output <- renderDataTable({
+    if(input$Species != "not_selected" && !is.null(rnaseq_count())){
+      rnaseq_count2()
+    }
+  })
+  output$rnaseq_DEGs_output <- renderDataTable({
+    if(input$Species != "not_selected" && !is.null(rnaseq_DEGs())){
+      rnaseq_DEGs2()
+    }
+  })
+  
+  output$Normalized_Count_matrix <- DT::renderDataTable({
+    deg_norm_count()
+  })
+  rnaseq_count_heatmap <- reactive({
+    rna <-  rnaseq_count2()
+    if(input$Genomic_region == "Promoter"){
+      data <- data_degcount2()
+      data <- data %>% dplyr::filter(!is.na(ENTREZID))
+      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
+      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
+      colnames(tss)[6]<-"ENTREZID"
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+    }else{
+      data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
+      up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
+      down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
+    }
+    print(head(data))
+    print(head(rna))
+    rna$ENTREZID <- rownames(rna)
+    up_m <- merge(rna,up,by="ENTREZID",all=T)
+    up_m <- up_m %>% dplyr::filter(!is.na(locus))
+    rownames(up_m) <- paste0(up_m$ENTREZID,"_",up_m$locus)
+    up_m <- up_m[,2:length(colnames(rna))]
+    up_m[is.na(up_m)] <- 0
+    
+    down_m <- merge(rna,down,by="ENTREZID",all=T)
+    down_m <- down_m %>% dplyr::filter(!is.na(locus))
+    rownames(down_m) <- paste0(down_m$ENTREZID,"_",down_m$locus)
+    down_m <- down_m[,2:length(colnames(rna))]
+    down_m[is.na(down_m)] <- 0
+    
+    m_z <- rbind(up_m,down_m)
+    mat <- integrate_h()[["mat"]]
+    
+    cond <- gsub(".+\\.", "", colnames(m_z))
+    cond <- gsub("\\_.+$", "", cond)
+    cond <- factor(cond, levels = unique(cond), ordered = TRUE)
+    cond_color <- rainbow_hcl(length(unique(cond)),c=100)
+    names(cond_color) <- unique(cond)
+    if(length(names(rnaseq_count())) == 1){
+      file_name <- NULL
+      file_name_color <- NULL
+    }else{
+      file_name <- gsub("\\..+$", "", colnames(m_z))
+      file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
+      file_name_color <- rainbow_hcl(length(file_name))
+      names(file_name_color) <- file_name
+    }
+    print(head(m_z))
+    withProgress(message = "Heatmap of RNA-seq count data",{
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
+                    top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                       col = list(files = file_name_color,
+                                                                  condition = cond_color)),
+                    show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+    })
+    return(ht)
+  })
+  rnaseq_DEGs_heatmap <- reactive({
+    rna <-  rnaseq_DEGs2()
+    if(input$Genomic_region == "Promoter"){
+      data <- data_degcount2()
+      data <- data %>% dplyr::filter(!is.na(ENTREZID))
+      data <- data[,- which(colnames(data) == "log2FoldChange")]
+      tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
+      tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
+      colnames(tss)[6]<-"ENTREZID"
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+    }else{
+      data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
+      data <- data[,- which(colnames(data) == "log2FoldChange")]
+      up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
+      down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
+    }
+    
+    rna$ENTREZID <- rownames(rna)
+    up_m <- merge(rna,up,by="ENTREZID",all=T)
+    up_m <- up_m %>% dplyr::filter(!is.na(locus))
+    rownames(up_m) <- paste0(up_m$ENTREZID,"_",up_m$locus)
+    
+    down_m <- merge(rna,down,by="ENTREZID",all=T)
+    down_m <- down_m %>% dplyr::filter(!is.na(locus))
+    rownames(down_m) <- paste0(down_m$ENTREZID,"_",down_m$locus)
+    m_z <- rbind(up_m,down_m)
+    m_z[is.na(m_z)] <- 0
+    m_z <- as.data.frame(m_z[,1:length(colnames(rna))])
+    for(i in 1:length(colnames(rna))){
+      m_z[,i] <- -1 * as.numeric(m_z[,i])
+    }
+    m_z[m_z > 5]<- 5
+    m_z[m_z < -5]<- -5
+    print(head(m_z))
+    mat <- integrate_h()[["mat"]]
+    colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
+    withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
+                    show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
+                    use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
+                    col = c("blue","white","gold"))
+      return(ht)
+    })
+  })
+  
+  output$integrated_bw1 <- renderUI({
+    fileInput("integrated_bw_1",
+              "Option: Select additional bigwig files (blue)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw2 <- renderUI({
+    fileInput("integrated_bw_2",
+              "Option: Select additional bigwig files (green)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  output$integrated_bw3 <- renderUI({
+    fileInput("integrated_bw_3",
+              "Option: Select additional bigwig files (purple)",
+              accept = c("bw","BigWig"),
+              multiple = TRUE,
+              width = "80%")
+  })
+  integrated_additional1 <-reactive({
+    if(!is.null(input$integrated_bw_1)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_1[, 1])){
+        file <- input$integrated_bw_1[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_1[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional2 <-reactive({
+    if(!is.null(input$integrated_bw_2)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_2[, 1])){
+        file <- input$integrated_bw_2[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional3 <-reactive({
+    if(!is.null(input$integrated_bw_3)){
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$integrated_bw_3[, 1])){
+        file <- input$integrated_bw_3[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3[nr,]$name))
+        files <- c(files,file)
+      }
+      names(files)<-name
+      return(bigwig_breakline(files))
+    }
+  })
+  integrated_heatmap_add1 <- reactive({
+    if(!is.null(integrated_additional1())){
+      h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional1(),
+                         color = c("white","darkblue"),signal = "darkblue",type=input$Genomic_region)
+      return(h)
+    }
+  })
+  integrated_heatmap_add2 <- reactive({
+    if(!is.null(integrated_additional2())){
+      h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional2(),
+                         color = c("white","darkgreen"),signal = "green",type=input$Genomic_region)
+      return(h)
+    }
+  })
+  integrated_heatmap_add3 <- reactive({
+    if(!is.null(integrated_additional3())){
+      h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional3(),
+                         color = c("white", "purple"),signal = "purple",type=input$Genomic_region)
+      return(h)
+    }
+  })
+  
+  ##Pair-wise Report---------
+  input_list_data_pair <- reactive({
+    if(input$data_file_type == "Row1" || input$data_file_type == "Row1_count"){
+      if(!is.null(bws())) bw_files = as.data.frame(names(bw_files())) else bw_files = NA
+    }else{
+      bw_files = as.data.frame(names(bam()))
+    }
+    if(!is.null(peak_call_files())) peak_files = as.data.frame(names(peak_call_files())) else peak_files = NA
+    if(!is.na(bw_files) && !is.na(peak_files)) list <- data.frame(bw = bw_files[,1], peak_call = peak_files[,1])
+    if(!is.na(bw_files) && is.na(peak_files)) list <- data.frame(bw = bw_files[,1])
+    if(is.na(bw_files) && is.na(peak_files)) list <- NULL
+    if(input$data_file_type == "Row2"){
+      colnames(list)[1] <- "Bam"
+    }
+    return(list)
+  })
+  
+  output$pair_report = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"pairwiseDAR_report",".zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download, please wait for a few minutes.",{
+        fs <- c()
+        dir.create("DAR_result",showWarnings = FALSE)
+        dir.create("Input",showWarnings = FALSE)
+        dir.create("Clustering/",showWarnings = FALSE)
+        DEG <- "DAR_result/DAR_result.txt"
+        up <- "DAR_result/up_DAR.bed"
+        down <- "DAR_result/down_DAR.bed"
+        count <- "Input/count.txt"
+        bed <- "Input/filtered_merged_peak_call.bed"
+        PCA <- "Clustering/clustering.pdf"
+        PCA_table <- "Clustering/pca.txt"
+        
+        fs <- c(DEG, up,down,count,bed,PCA,PCA_table)
+        print(fs)
+        if(input$Species != "not selected") process_num <- 9 else process_num <- 3
+        pdf(PCA, height = 3.5, width = 9)
+        print(PCAplot(data = deg_norm_count(),plot=TRUE))
+        dev.off()
+        write.table(PCAplot(data = deg_norm_count(),plot=FALSE), PCA_table, row.names = T, sep = "\t", quote = F)
+        write.table(deg_norm_count(), count, row.names = T, sep = "\t", quote = F)
+        if(!is.null(input_list_data_pair())){
+          input_list <- "Input/input_list.txt"
+          fs <- c(fs, input_list)
+          write.table(input_list_data_pair(), input_list, row.names = F, sep = "\t", quote = F)
+        }
+        withProgress(message = "DAR_result",{
+          if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
+            write.table(deg_result(), DEG, row.names = T, sep = "\t", quote = F)
+          }else{
+            write.table(deg_result2(), DEG, row.names = T, sep = "\t", quote = F) 
+          }
+          write.table(data_degcount_up_bed(), up, row.names = F, col.names = F,sep = "\t", quote = F)
+          write.table(data_degcount_down_bed(), down, row.names = F, col.names = F,sep = "\t", quote = F)
+          if(input$data_file_type == "Row1_count" && input$Genomic_region == "Genome-wide"){
+            data <- range_changer(bws_count())
+            data <- with(data, GRanges(seqnames = chr,ranges = IRanges(start=start,
+                                                                       end=end)))
+          }else data <- promoter_region()
+          write.table(as.data.frame(data), bed, row.names = F,col.names=F, sep = "\t", quote = F)
+        })
+        incProgress(1/process_num)
+        if(!is.null(input$peak_up_range) && !is.null(bws())){
+          withProgress(message = "Peak pattern",{
+            dir.create("peak_pattern",showWarnings = FALSE)
+            up_pattern <- "peak_pattern/up_lineplot.pdf"
+            down_pattern <- "peak_pattern/down_lineplot.pdf"
+            up_pattern_heatmap <- "peak_pattern/up_heatmap.pdf"
+            down_pattern_heatmap <- "peak_pattern/down_heatmap.pdf"
+            fs <- c(fs,up_pattern,down_pattern, up_pattern_heatmap,down_pattern_heatmap)
+            pdf(up_pattern, height = 5, width = 5)
+            matplot(peak_up_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                    type="l",ylab="density",lty=1,xaxt="n",)
+            axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+            legend("topright", legend=colnames(peak_up_alinedHeatmap()[["line"]]), col=1:6,
+                   lty=1, lwd=1)
+            dev.off()
+            incProgress(1/4)
+            pdf(down_pattern, height = 5, width = 5)
+            matplot(peak_down_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                    type="l",ylab="density",lty=1,xaxt="n")
+            axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+            legend("topright", legend=colnames(peak_down_alinedHeatmap()[["line"]]), col=1:6,
+                   lty=1, lwd=1)
+            dev.off()
+            incProgress(1/4)
+            pdf(up_pattern_heatmap, height = 6, width = 6)
+            print(plot_grid(peak_up_alinedHeatmap()[["heat"]]))
+            dev.off()
+            incProgress(1/4)
+            pdf(down_pattern_heatmap, height = 6, width = 6)
+            print(plot_grid(peak_down_alinedHeatmap()[["heat"]]))
+            dev.off()
+            incProgress(1/4)
+          })
+        }
+        incProgress(1/process_num)
+        if(!is.null(input$xrange)){
+          withProgress(message = "volcano plot",{
+            volcano <- "DAR_result/volcano_plot.pdf"
+            fs <- c(fs, volcano)
+            pdf(volcano, height = 4, width = 4)
+            print(pair_volcano())
+            dev.off()
+          })
+        }
+        incProgress(1/process_num)
+        if(input$Species != "not selected"){
+          if(input$Genomic_region == "Genome-wide"){
+            dir.create("peak_distribution",showWarnings = FALSE)
+            up_distribution <- "peak_distribution/up_annotation.pdf"
+            down_distribution <- "peak_distribution/down_annotation.pdf"
+            fs <- c(fs, up_distribution,down_distribution)
+            withProgress(message = "Peak distribution",{
+              pdf(up_distribution, height = 6, width = 10)
+              print(updistribution())
+              dev.off()
+              incProgress(1/2)
+              pdf(down_distribution, height = 6, width = 10)
+              print(downdistribution())
+              dev.off()
+              incProgress(1/2)
+            })
+          }
+          incProgress(1/process_num)
+          if(!is.null(input$Gene_set) && input$Genomic_region == "Genome-wide"){
+            dir.create("GREAT",showWarnings = FALSE)
+            dotplot <- paste0("GREAT/dotplot_",input$Gene_set,".pdf")
+            enrich_table <- paste0("GREAT/enrichment_",input$Gene_set,".txt")
+            fs <- c(fs, dotplot,enrich_table)
+            withProgress(message = "GREAT",{
+              write.table(as.data.frame(enrichment_1_1()), enrich_table, row.names = F, sep = "\t", quote = F)
+              p1 <- pair_enrich1_H()
+              pdf(dotplot, height = 5, width = 6)
+              print(plot_grid(p1))
+              dev.off()
+              if(!is.null(input$Pathway_list) && 
+                 !is.null(input$Up_or_Down) && !is.null(enrichment_enricher())){
+                region_associate_plot <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".pdf")
+                region_associate_table <- paste0("GREAT/",input$Gene_set,"_",input$Pathway_list,"_",input$Up_or_Down,".txt")
+                fs <- c(fs, region_associate_plot,region_associate_table)
+                set_list <- input$Pathway_list
+                df <- enrichment_enricher()
+                name <- input$Up_or_Down
+                write.table(region_gene_associate(), region_associate_table, row.names = F, sep = "\t", quote = F)
+                pdf(region_associate_plot, height = 5, width = 12)
+                rGREAT::plotRegionGeneAssociations(df[[name]], term_id = set_list)
+                dev.off()
+              }
+            })
+          }
+          incProgress(1/process_num)
+          if(input$motifButton > 0 && !is.null(enrich_motif()) && 
+             !is.null(input$homer_unknown)){
+            withProgress(message = "HOMER",{
+              path_list <- enrich_motif()
+              base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+              for(name in names(path_list)){
+                files <-list.files(path_list[[name]],pattern = "*.*")
+                for(i in 1:length(files)){
+                  data <- paste0(path_list[[name]],"/",files[[i]])
+                  fs <- c(fs, data)
+                }
+              }
+              motif <- paste0(base_dir,"/homer_dotplot",".pdf")
+              p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
+              pdf(motif, height = 6, width = 7)
+              print(p1)
+              dev.off()
+            })
+          }else {
+            base_dir <- NULL
+          }
+          incProgress(1/process_num)
+          if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && !is.na(input$DEG_fdr) && 
+             !is.na(input$DEG_fc)){
+            withProgress(message = "withRNAseq",{
+              dirname_withRNA <- paste0("withRNAseq_range-",input$peak_distance,"kb_fc",input$DEG_fc,"_fdr",input$DEG_fdr,"_RNAseq-",input$pair_DEG_result$name,"/")
+              dir.create(dirname_withRNA,showWarnings = FALSE)
+              ksplot <- paste0(dirname_withRNA,"KSplot.pdf")
+              RNAseq_boxplot <- paste0(dirname_withRNA,"boxplot.pdf")
+              RNAseq_barplot <- paste0(dirname_withRNA,"barplot.pdf")
+              RP_all <- paste0(dirname_withRNA,"RP_summary.txt")
+              fs <- c(fs, ksplot, RNAseq_boxplot, RNAseq_barplot,RP_all)
+              pdf(ksplot, height = 5, width = 7)
+              print(regulatory_potential())
+              dev.off()
+              pdf(RNAseq_boxplot, height = 5, width = 7)
+              print(pari_RNAseq_boxplot())
+              dev.off()
+              pdf(RNAseq_barplot, height = 5, width = 7)
+              gridExtra::grid.arrange(RNAseq_popu(), ChIPseq_popu(), ncol = 1)
+              dev.off()
+              write.table(RP_all_table(), RP_all, row.names = F, sep = "\t", quote = F)
+              dir.create(paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname_withRNA,"selected_table(RNA-epigenome)/"),showWarnings = FALSE)
+              for(name in unique(RP_all_table()$Group)){
+                RP_selected <- paste0(dirname_withRNA,"selected_table(RNA-epigenome)/",name,".txt")
+                RP_selected_bed <- paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/",name,".bed")
+                fs <- c(fs, RP_selected,RP_selected_bed)
+                table <- RP_all_table() %>% dplyr::filter(Group == name)
+                write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
+                gene <- table$gene_id
+                type <- gsub(".+\\-","", name)
+                if(type == "up") {
+                  peak <- subset(mmAnno_up(), gene_id %in% gene)
+                  up_peak2 <- as.data.frame(peak)
+                  up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+                  up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+                  up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+                  mcols(up_peak3) <- DataFrame(Group = "up")
+                  y <- as.data.frame(up_peak3)
+                }
+                if(type == "down") {
+                  peak <- subset(mmAnno_down(), gene_id %in% gene)
+                  down_peak2 <- as.data.frame(peak)
+                  down_peak2$Row.names <- paste0(down_peak2$seqnames,":",down_peak2$start,"-",down_peak2$end)
+                  down_peak2 <- down_peak2 %>% distinct(Row.names, .keep_all = T)
+                  down_peak3 <- with(down_peak2,GRanges(seqnames,IRanges(start,end)))
+                  mcols(down_peak3) <- DataFrame(Group = "up")
+                  y <- as.data.frame(down_peak3)
+                }
+                write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+              }
+              if(!is.null(input$RP_table_rows_selected) &&
+                 !is.null(int_goi_promoter_position()) && 
+                 !is.null(int_goi_gene_position()) && 
+                 !is.null(input$int_igv_uprange) && !is.null(bws())){
+                print(RP_selected_table()[input$RP_table_rows_selected,])
+                gene <- RP_selected_table()[input$RP_table_rows_selected,]$Symbol
+                inttrack <- paste0(dirname_withRNA,gene,".pdf")
+                fs <- c(fs, inttrack)
+                pdf(inttrack, height = 4, width = 7)
+                if(!is.null(int_highlight_trackplot())){
+                  plotTracks(list(gtrack(), int_highlight_trackplot()),
+                             from = input$int_igv_uprange[1], 
+                             to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                             type="hist")
+                }else{
+                  df <- int_data_track()
+                  df[["gtrack"]] <- gtrack()
+                  plotTracks(df,
+                             from = input$int_igv_uprange[1], 
+                             to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                             type="hist")
+                }
+                dev.off()
+              }
+              if(!is.null(input$intGeneset) && !is.null(input$intGroup)){
+                dir.create(paste0(dirname_withRNA,"enrichment_analysis/"),showWarnings = FALSE)
+                intdotplot <- paste0(dirname_withRNA,"enrichment_analysis/dotplot_",input$intGeneset,".pdf")
+                intenrichtable <- paste0(dirname_withRNA,"enrichment_analysis/enrichment_",input$intGeneset,".txt")
+                fs <- c(fs, intdotplot,intenrichtable)
+                pdf(intdotplot, height = 5, width = 8)
+                dotplot_for_output(data = int_enrich(),
+                                   plot_genelist = int_enrich_plot(), Gene_set = input$intGeneset, 
+                                   Species = input$Species)
+                dev.off()
+                write.table(int_enrich_table(), intenrichtable, row.names = F, sep = "\t", quote = F)
+              }
+            })
+          }else {
+            dirname_withRNA <- NULL
+            gene <- NULL
+          }
+          incProgress(1/process_num)
+          if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
+             !is.null(integrated_heatlist())){
+            dir.create("combined_heatmap",showWarnings = FALSE)
+            intheatmap <- paste0("combined_heatmap/","combined_heatmap.pdf")
+            fs <- c(fs, intheatmap)
+            pdf(intheatmap, height = 6, width = 10)
+            draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
+                 heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+            dev.off()
+          }
+        }else {
+          base_dir <- NULL
+          dirname_withRNA <- NULL
+        }
+        report_name <- paste0(format(Sys.time(), "%Y%m%d_"),"pairwise_report",".docx")
+        fs <- c(fs, report_name)
+        tempReport <- file.path(tempdir(),"pair_report.Rmd")
+        file.copy("pair_report.Rmd", tempReport, overwrite = TRUE)
+        rmarkdown::render("pair_report.Rmd", output_format = "word_document", output_file = report_name,
+                          params = list(input = input,
+                                        deg_norm_count = deg_norm_count(),
+                                        input_list_data_pair = input_list_data_pair(),
+                                        enrichment_1_1 = enrichment_1_1(),
+                                        region_gene_associate = region_gene_associate(),
+                                        enrich_motif = enrich_motif(),
+                                        base_dir = base_dir,
+                                        RNAseqDEG = RNAseqDEG(),
+                                        dirname_withRNA = dirname_withRNA,
+                                        RP_all_table = RP_all_table(),
+                                        int_goi_promoter_position = int_goi_promoter_position(),
+                                        int_goi_gene_position = int_goi_gene_position(),
+                                        gene = gene,
+                                        int_enrich_table = int_enrich_table(),
+                                        integrated_heatlist = integrated_heatlist()), 
+                          envir = new.env(parent = globalenv()),intermediates_dir = tempdir(),encoding="utf-8"
+        )
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
   
   ##Venn diagram -----------
   output$Spe_motif_venn <- renderText({
@@ -4400,9 +4496,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       RNAseqDEG_venn() 
     }
   })
-  
+  gene_type_venn_DEG_result <- reactive({
+    return(gene_type(my.symbols=rownames(RNAseqDEG_venn()),org=org_venn(),Species=input$Species_venn))
+  })
   RNAseqDEG_anno_venn <- reactive({
-    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_venn(),Species=input$Species_venn))
+    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_venn(),Species=input$Species_venn,gene_type = gene_type_venn_DEG_result()))
   })
   
   mmAnno_venn <- reactive({
@@ -4516,10 +4614,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       down_per <- c(down_total-(down_epiUp), down_epiUp)
     }else down_per <- c(0,0)
     x <- data.frame(RNA = c("up", "up","down","down"), 
-                    Regulatory_potential = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:up (",up_per[2],")"),
-                                                    paste0("down:NS (",down_per[1],")"),paste0("down:up (",down_per[2],")")),
-                                                  levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:up (",up_per[2],")"),
-                                                             paste0("down:NS (",down_per[1],")"),paste0("down:up (",down_per[2],")"))),
+                    Regulatory_potential = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:intersect_associated (",up_per[2],")"),
+                                                    paste0("down:NS (",down_per[1],")"),paste0("down:intersect_associated (",down_per[2],")")),
+                                                  levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:intersect_associated (",up_per[2],")"),
+                                                             paste0("down:NS (",down_per[1],")"),paste0("down:intersect_associated (",down_per[2],")"))),
                     num = c(up_per,down_per),
                     col = c("F8766D","grey","F8766D","grey"))
     p <- ggplot(x, aes(x = RNA, y = num, fill = Regulatory_potential)) + geom_bar(stat = "identity") +
@@ -4549,9 +4647,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     RNA$gene_category[RNA$log2FoldChange < -log2(input$DEG_fc_venn) & RNA$padj < input$DEG_fdr_venn] <- "down"
     data <- merge(RNA,RP_venn(), by="gene_id")
     data$epigenome_category <- "NS"
-    data$epigenome_category[data$sumRP > 0] <- "up"
-    if(length(which(unique(data$epigenome_category) == "up")) == 1){
-      up <- data %>% dplyr::filter(epigenome_category == "up")
+    data$epigenome_category[data$sumRP > 0] <- "intersect_associated"
+    if(length(which(unique(data$epigenome_category) == "intersect_associated")) == 1){
+      up <- data %>% dplyr::filter(epigenome_category == "intersect_associated")
       up_total <- length(rownames(up))
       if(length(which(unique(up$gene_category) == "up")) == 1){
         up_RNAUp <- length(rownames(dplyr::filter(up, gene_category == "up")))
@@ -4563,9 +4661,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }else{
       up_per <- c(0,0,0)
     } 
-    x <- data.frame(Regulatory_potential = c("up", "up","up"), 
-                    RNA = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")")),
-                                 levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")"))),
+    x <- data.frame(Regulatory_potential = c("intersect_associated", "intersect_associated","intersect_associated"), 
+                    RNA = factor(c(paste0("intersect_associated:NS (",up_per[1],")"),paste0("intersect_associated:down (",up_per[2],")"),paste0("intersect_associated:up (",up_per[3],")")),
+                                 levels = c(paste0("intersect_associated:NS (",up_per[1],")"),paste0("intersect_associated:down (",up_per[2],")"),paste0("intersect_associated:up (",up_per[3],")"))),
                     num = up_per,
                     col = c("#F8766D","#00BFC4","grey"))
     p <- ggplot(x, aes(x = Regulatory_potential, y = num, fill = RNA)) + geom_bar(stat = "identity") +
@@ -4574,10 +4672,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   RP_all_table_venn <- reactive({
     target_result <- regulatory_potential_venn()$data
-    target_result$epigenome_category <- "up"
+    target_result$epigenome_category <- "intersect_associated"
     table <- NULL
-    if(length(str_detect(target_result$gene_id[1], "FBgn")) == 0){
-      symbol <- target_result$gene_id
+    if(str_detect(target_result$gene_id[1], "FBgn")){
+      symbol <- id_convert(my.symbols = target_result$gene_id,Species = input$Species_venn,type = "ENSEMBL")
+      symbol <- symbol %>% distinct(ENSEMBL, .keep_all = TRUE)
+      symbol <- symbol$SYMBOL
     }else symbol <- target_result$Symbol
     if(!is.null(mmAnno_venn())) {
       table <- data.frame(Symbol = symbol,
@@ -4889,8 +4989,19 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     colnames(df) <- c("ENTREZID","Group")
     for(name in group){
       table <- RP_all_table_venn() %>% dplyr::filter(Group == name)
-      head(table)
-      df2 <- data.frame(ENTREZID = table$gene_id, Group = table$Group)
+      entrezid <- table$gene_id
+      if(str_detect(table$gene_id[1], "FBgn")){
+        my.symbols <- gsub("\\..*","", table$gene_id)
+        gene_IDs<-AnnotationDbi::select(org(input$Species_venn),keys = my.symbols,
+                                        keytype = "ENSEMBL",
+                                        columns = c("ENSEMBL","ENTREZID"))
+        colnames(gene_IDs) <- c("gene_id","ENTREZID")
+        gene_IDs <- gene_IDs %>% distinct(ENTREZID, .keep_all = T)
+        gene_IDs <- na.omit(gene_IDs)
+        table <- merge(table,gene_IDs,by="gene_id")
+        entrezid <- table$ENTREZID
+      }
+      df2 <- data.frame(ENTREZID = entrezid, Group = table$Group)
       df <- rbind(df,df2)
     }
     return(df)
@@ -5069,10 +5180,24 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
     })
   })
+  gene_type_rnaseq_DEGs_venn <- reactive({
+    files <- rnaseq_DEGs_venn()
+    gene_types <- c()
+    name_list <- c()
+    if(!is.null(files)){
+      for(name in names(files)){
+        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_venn(),Species=input$Species_venn)
+        gene_types <- c(gene_types, type)
+        name_list <- c(name_list,name) 
+      }
+      names(gene_types) <- name_list
+      return(gene_types)
+    }
+  })
   rnaseq_DEGs2_venn <- reactive({
     files <- rnaseq_DEGs_venn()
     if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_venn)
+      df <- files_name2ENTREZID(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_DEGs_venn())
       if(length(names(df)) != 1){
         matrix_list <- list()
         for (name in names(df)) {
@@ -5104,10 +5229,24 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(rna)
     }
   })
+  gene_type_rnaseq_counts_venn <- reactive({
+    files <- rnaseq_count_venn()
+    gene_types <- c()
+    name_list <- c()
+    if(!is.null(files)){
+      for(name in names(files)){
+        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_venn(),Species=input$Species_venn)
+        gene_types <- c(gene_types, type)
+        name_list <- c(name_list,name) 
+      }
+      names(gene_types) <- name_list
+      return(gene_types)
+    }
+  })
   rnaseq_count2_venn <- reactive({
     files <- rnaseq_count_venn()
     if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_venn)
+      df <- files_name2ENTREZID(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_counts_venn())
       if(length(names(df)) != 1){
         matrix_z_list <- list()
         for (name in names(df)) {
@@ -6374,9 +6513,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       RNAseqDEG_clustering() 
     }
   })
-  
+  gene_type_clustering_DEG_result <- reactive({
+    return(gene_type(my.symbols=rownames(RNAseqDEG_clustering()),org=org1_clustering(),Species=input$Species_clustering))
+  })
   RNAseqDEG_anno_clustering <- reactive({
-    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_clustering(),Species=input$Species_clustering))
+    return(RNAseqDEG_ann(RNAdata=RNAseqDEG_clustering(),Species=input$Species_clustering,gene_type = gene_type_clustering_DEG_result()))
   })
   
   mmAnno_clustering <- reactive({
@@ -6492,10 +6633,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       down_per <- c(down_total-(down_epiUp), down_epiUp)
     }else down_per <- c(0,0)
     x <- data.frame(RNA = c("up", "up","down","down"), 
-                    Regulatory_potential = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:up (",up_per[2],")"),
-                                                    paste0("down:NS (",down_per[1],")"),paste0("down:up (",down_per[2],")")),
-                                                  levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:up (",up_per[2],")"),
-                                                             paste0("down:NS (",down_per[1],")"),paste0("down:up (",down_per[2],")"))),
+                    Regulatory_potential = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:Cluster_associated (",up_per[2],")"),
+                                                    paste0("down:NS (",down_per[1],")"),paste0("down:Cluster_associated (",down_per[2],")")),
+                                                  levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:Cluster_associated (",up_per[2],")"),
+                                                             paste0("down:NS (",down_per[1],")"),paste0("down:Cluster_associated (",down_per[2],")"))),
                     num = c(up_per,down_per),
                     col = c("F8766D","grey","F8766D","grey"))
     p <- ggplot(x, aes(x = RNA, y = num, fill = Regulatory_potential)) + geom_bar(stat = "identity") +
@@ -6528,9 +6669,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     RNA$gene_category[RNA$log2FoldChange < -log2(input$DEG_fc_clustering) & RNA$padj < input$DEG_fdr_clustering] <- "down"
     data <- merge(RNA,RP_clustering(), by="gene_id")
     data$epigenome_category <- "NS"
-    data$epigenome_category[data$sumRP > 0] <- "up"
-    if(length(which(unique(data$epigenome_category) == "up")) == 1){
-      up <- data %>% dplyr::filter(epigenome_category == "up")
+    data$epigenome_category[data$sumRP > 0] <- "Cluster_associated"
+    if(length(which(unique(data$epigenome_category) == "Cluster_associated")) == 1){
+      up <- data %>% dplyr::filter(epigenome_category == "Cluster_associated")
       up_total <- length(rownames(up))
       if(length(which(unique(up$gene_category) == "up")) == 1){
         up_RNAUp <- length(rownames(dplyr::filter(up, gene_category == "up")))
@@ -6542,9 +6683,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }else{
       up_per <- c(0,0,0)
     } 
-    x <- data.frame(Regulatory_potential = c("up", "up","up"), 
-                    RNA = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")")),
-                                 levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")"))),
+    x <- data.frame(Regulatory_potential = c("Cluster_associated", "Cluster_associated","Cluster_associated"), 
+                    RNA = factor(c(paste0("Cluster_associated:NS (",up_per[1],")"),paste0("Cluster_associated:down (",up_per[2],")"),paste0("Cluster_associated:up (",up_per[3],")")),
+                                 levels = c(paste0("Cluster_associated:NS (",up_per[1],")"),paste0("Cluster_associated:down (",up_per[2],")"),paste0("Cluster_associated:up (",up_per[3],")"))),
                     num = up_per,
                     col = c("#F8766D","#00BFC4","grey"))
     p <- ggplot(x, aes(x = Regulatory_potential, y = num, fill = RNA)) + geom_bar(stat = "identity") +
@@ -6553,10 +6694,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   RP_all_table_clustering <- reactive({
     target_result <- regulatory_potential_clustering()$data
-    target_result$epigenome_category <- "up"
+    target_result$epigenome_category <- "Cluster_associated"
     table <- NULL
     if(str_detect(target_result$gene_id[1], "FBgn")){
-      symbol <- target_result$gene_id
+      symbol <- id_convert(my.symbols = target_result$gene_id,Species = input$Species_clustering,type = "ENSEMBL")
+      symbol <- symbol %>% distinct(ENSEMBL, .keep_all = TRUE)
+      symbol <- symbol$SYMBOL
     }else symbol <- target_result$Symbol
     if(!is.null(mmAnno_clustering())) {
       table <- data.frame(Symbol = symbol,
@@ -6871,8 +7014,19 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     colnames(df) <- c("ENTREZID","Group")
     for(name in group){
       table <- RP_all_table_clustering() %>% dplyr::filter(Group == name)
-      head(table)
-      df2 <- data.frame(ENTREZID = table$gene_id, Group = table$Group)
+      entrezid <- table$gene_id
+      if(str_detect(table$gene_id[1], "FBgn")){
+        my.symbols <- gsub("\\..*","", table$gene_id)
+        gene_IDs<-AnnotationDbi::select(org(input$Species_clustering),keys = my.symbols,
+                                        keytype = "ENSEMBL",
+                                        columns = c("ENSEMBL","ENTREZID"))
+        colnames(gene_IDs) <- c("gene_id","ENTREZID")
+        gene_IDs <- gene_IDs %>% distinct(ENTREZID, .keep_all = T)
+        gene_IDs <- na.omit(gene_IDs)
+        table <- merge(table,gene_IDs,by="gene_id")
+        entrezid <- table$ENTREZID
+      }
+      df2 <- data.frame(ENTREZID = entrezid, Group = table$Group)
       df <- rbind(df,df2)
     }
     return(df)
@@ -7566,10 +7720,24 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
     })
   })
+  gene_type_rnaseq_DEGs_enrich <- reactive({
+    files <- rnaseq_DEGs_enrich()
+    gene_types <- c()
+    name_list <- c()
+    if(!is.null(files)){
+      for(name in names(files)){
+        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_enrich(),Species=input$Species_enrich)
+        gene_types <- c(gene_types, type)
+        name_list <- c(name_list,name) 
+      }
+      names(gene_types) <- name_list
+      return(gene_types)
+    }
+  })
   rnaseq_DEGs2_enrich <- reactive({
     files <- rnaseq_DEGs_enrich()
     if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich)
+      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_DEGs_enrich())
       if(length(names(df)) != 1){
         matrix_list <- list()
         for (name in names(df)) {
@@ -7601,10 +7769,24 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(rna)
     }
   })
+  gene_type_rnaseq_counts_enrich <- reactive({
+    files <- rnaseq_count_enrich()
+    gene_types <- c()
+    name_list <- c()
+    if(!is.null(files)){
+      for(name in names(files)){
+        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_enrich(),Species=input$Species_enrich)
+        gene_types <- c(gene_types, type)
+        name_list <- c(name_list,name) 
+      }
+      names(gene_types) <- name_list
+      return(gene_types)
+    }
+  })
   rnaseq_count2_enrich <- reactive({
     files <- rnaseq_count_enrich()
     if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich)
+      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_counts_enrich())
       if(length(names(df)) != 1){
         matrix_z_list <- list()
         for (name in names(df)) {

@@ -71,9 +71,30 @@ shinyUI(
                  sidebarPanel(
                    radioButtons('data_file_type','Input:',
                                 c('BigWig files'="Row1",
-                                  'Bam files'="Row2"
+                                  'Bam files'="Row2",
+                                  'Count file + BigWig files'="Row1_count"
                                 ),selected = "Row1"),
-                   conditionalPanel(condition="input.data_file_type=='Row1'",
+                   conditionalPanel(condition="input.data_file_type=='Row1_count'",
+                                    radioButtons('count_file_type','Type:',
+                                                 c('Normalized count'="Norm",
+                                                   'Raw count'="Raw"
+                                                 ),selected = "Norm") ,
+                                    fileInput("file1_count",
+                                              strong(
+                                                span("Select a count file from pair-wise analysis"),
+                                                span(icon("info-circle"), id = "icon_count", 
+                                                     options = list(template = popoverTempate))
+                                              ),
+                                              accept = c("txt"),
+                                              multiple = TRUE,
+                                              width = "80%"),
+                                    bsPopover("icon_count", "count file (txt):", 
+                                              content=paste("The count data from pair-wise analysis in EpigenomeChef is required. 
+                                                            You can skip creating count data from bigwig files and peak call files.<br>",
+                                                            strong("You have to select the same 'Genomic region' that you used when you obtained the count file.")), 
+                                              placement = "right",options = list(container = "body"))
+                   ),
+                   conditionalPanel(condition=c("input.data_file_type=='Row1' || input.data_file_type=='Row1_count'"),
                                     fileInput("file1",
                                               strong(
                                                 span("Select BigWig files"),
@@ -99,7 +120,7 @@ shinyUI(
                                               accept = c("bam"),
                                               multiple = TRUE,
                                               width = "80%"),
-                                    bsPopover("icon1", "Bam files (bam):", 
+                                    bsPopover("icon1_bam", "Bam files (bam):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>Short names are recommended for file names.<br>"), 
                                               placement = "right",options = list(container = "body")),
@@ -118,7 +139,7 @@ shinyUI(
                                       column(5, numericInput("downstream", "downstream", value = 500, min = 0))
                                     )
                    ),
-                   conditionalPanel(condition="input.Genomic_region=='Genome-wide'",
+                   conditionalPanel(condition=c("input.Genomic_region=='Genome-wide' && input.data_file_type != 'Row1_count'"),
                                     fileInput("peak_call_file1",
                                               strong(
                                                 span("Select peak call files"),

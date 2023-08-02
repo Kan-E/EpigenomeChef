@@ -177,19 +177,25 @@ txdb_function <- function(Species){
           "Arabidopsis thaliana (tair10)" = txdb <- TxDb.Athaliana.BioMart.plantsmart51)
   return(txdb)
 }
-files_name2ENTREZID <- function(files,Species){
+files_name2ENTREZID <- function(files,Species,gene_type){
   df2 <- list()
+  if(!is.null(gene_type)){
   for (name in names(files)) {
     count <- files[[name]]
     if(!is.na(suppressWarnings(as.numeric(rownames(count)[1]))) == TRUE){
       df2[[name]] <- count
     }else{
-      if(str_detect(rownames(count)[1], "ENS") || str_detect(rownames(count)[1], "FBgn")){
+      if(gene_type[name] != "SYMBOL"){
+        if(str_detect(rownames(count)[1], "FBgn")){
+          count$ENTREZID <- rownames(count)
+          count2 <- count
+        }else{
         my.symbols <- gsub("\\..*","", rownames(count))
         gene_id <-id_convert(my.symbols,Species = Species,type = "ENSEMBL2ENTREZID")
         gene_id <- gene_id %>% distinct(ENSEMBL, .keep_all = T) %>% na.omit()
         gene_id <- data.frame(ENTREZID = gene_id$ENTREZID, row.names = gene_id$ENSEMBL)
         count2 <- merge(gene_id,count,by=0)
+        }
       }else{
         #symbol
         count2 <- symbol2gene_id(data = count,org=org(Species))
@@ -199,6 +205,7 @@ files_name2ENTREZID <- function(files,Species){
     }
   }
   return(df2)
+  }
 }
 promoter <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM){
   if(input_type == "Promoter"){
@@ -260,6 +267,7 @@ for(i in seq_len(length(bw))) {
 if(input_type == "Promoter"){
   or <- org(Species)
   rownames(counts) <- bed1$gene_id
+  if(!str_detect(rownames(counts)[1], "FBgn")){
 my.symbols <- rownames(counts)
 gene_IDs<-AnnotationDbi::select(or,keys = my.symbols,
                                 keytype = "ENTREZID",
@@ -270,6 +278,7 @@ gene_IDs <- data.frame(SYMBOL = gene_IDs$SYMBOL, row.names = gene_IDs$Row.names)
 data2 <- merge(gene_IDs,counts, by=0)
 rownames(data2) <- data2$SYMBOL
 counts <- data2[,-1:-2]
+}
 }else{
   a <- as.data.frame(bed)
   Row.name <- paste0(a$seqnames,":",a$start,"-",a$end)
@@ -395,11 +404,11 @@ dotplot_for_output <- function(data, plot_genelist, Gene_set, Species){
   }
 }
 GeneList_for_enrichment <- function(Species, Gene_set, org, Custom_gene_list){
-  if(Species != "not selected" || is.null(Gene_set) || is.null(org)){
+  if(Species != "not selected" && !is.null(Gene_set) && !is.null(org)){
     species <- substr(gsub("\\(.+$","",Species),1,nchar(gsub("\\(.+$","",Species))-1)
     if(Gene_set == "MSigDB Hallmark"){
       H_t2g <- msigdbr(species = species, category = "H") %>%
-        dplyr::select(gs_name, entrez_gene, gs_id, gs_description) 
+        dplyr::select(gs_name, entrez_gene, gs_id, gs_description,ensembl_gene) 
       H_t2g["gs_name"] <- lapply(H_t2g["gs_name"], gsub, pattern="HALLMARK_", replacement = "")
       H_t2g$gs_name <- H_t2g$gs_name %>% str_to_lower() %>% str_to_title()
       H_t2g["gs_name"] <- lapply(H_t2g["gs_name"], gsub, pattern="P53", replacement = "p53")
@@ -512,6 +521,8 @@ GeneList_for_enrichment <- function(Species, Gene_set, org, Custom_gene_list){
     H_t2g["gs_name"] <- lapply(H_t2g["gs_name"], gsub, pattern="_jak", replacement = "_JAK")
     H_t2g["gs_name"] <- lapply(H_t2g["gs_name"], gsub, pattern="_stat", replacement = "_STAT")
     H_t2g["gs_name"] <- lapply(H_t2g["gs_name"], gsub, pattern="_nfkb", replacement = "_NFkB")
+    print(head(H_t2g))
+    print(species)
     return(H_t2g)
   }else return(NULL)
 }
@@ -1102,7 +1113,10 @@ enrich_for_table <- function(data, H_t2g, Gene_set){
   }
 }
 symbol2gene_id <- function(data,org){
-  my.symbols <- rownames(data)
+  if(str_detect(rownames(data)[1], "FBgn")) {
+    data$gene_id <- rownames(data)
+  }else{
+    my.symbols <- rownames(data)
   gene_IDs<-AnnotationDbi::select(org,keys = my.symbols,
                                   keytype = "SYMBOL",
                                   columns = c("SYMBOL","ENTREZID"))
@@ -1112,6 +1126,7 @@ symbol2gene_id <- function(data,org){
   data <- merge(gene_IDs,data,by=0)
   rownames(data)<-data$Row.names
   data <- data[,-1]
+  }
   return(data)
 }
 
@@ -1183,9 +1198,13 @@ RNAseqDEGimport <- function(tmp,exampleButton){
     }
   })
 }
-RNAseqDEG_ann <- function(RNAdata,Species){
+RNAseqDEG_ann <- function(RNAdata,Species,gene_type){
   RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
-  if(str_detect(rownames(RNAdata)[1], "ENS") || str_detect(rownames(RNAdata)[1], "FBgn")){
+  if(str_detect(rownames(RNAdata)[1], "FBgn")){
+    RNAdata$gene_id <- rownames(RNAdata)
+    data <- RNAdata
+  }else{
+  if(gene_type != "SYMBOL"){
     my.symbols <- gsub("\\..*","", rownames(RNAdata))
     gene_IDs<-id_convert(my.symbols,Species,type="ENSEMBL")
     colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
@@ -1199,6 +1218,7 @@ RNAseqDEG_ann <- function(RNAdata,Species){
     RNAdata$Symbol <- rownames(RNAdata) 
   }
   data <- merge(RNAdata, gene_IDs, by="Symbol")
+  }
   return(data)
 }
 mmAnno <- function(peak,genomic_region=NULL,txdb,peak_distance){
@@ -1303,7 +1323,7 @@ id_convert <- function(my.symbols,Species,type){
     }
     if(type == "SYMBOL_double"){
       column <- c("SYMBOL", "ENSEMBL")
-      key <- "SYMBOL"
+      key <- "ENSEMBL"
     }
     if(type == "ENSEMBL"){
       column <- c("ENSEMBL","SYMBOL")
@@ -1554,4 +1574,22 @@ lgd <- function(files2){
   lgd = Legend(at = leg_name, title = "Group", 
                type = "lines", legend_gp = gpar(col = 1:8))
   return(lgd)
+}
+
+gene_type <- function(my.symbols,org,Species){
+  if(Species != "not selected"){
+      ENSEMBL<-try(AnnotationDbi::select(org,keys = my.symbols,
+                                         keytype = "ENSEMBL",
+                                         columns = c("ENSEMBL", "ENTREZID")))
+      SYMBOL <-try(AnnotationDbi::select(org,keys = my.symbols,
+                                         keytype = "SYMBOL",
+                                         columns = c("SYMBOL", "ENTREZID")))
+      if(class(ENSEMBL) == "try-error" && class(SYMBOL) != "try-error") {type <- "SYMBOL"
+      }else if(class(ENSEMBL) != "try-error" && class(SYMBOL) == "try-error") {type <- "ENSEMBL"
+      }else if(class(ENSEMBL) == "try-error" && class(SYMBOL) == "try-error") {validate("Cannot identify gene IDs. Please check the 'Species' and use the 'Official gene symbol' or 'ENSEMBL ID' for gene names.")
+      }else{
+        if(dim(ENSEMBL)[1] > dim(SYMBOL)[1]) type <- "ENSEMBL" else type <- "SYMBOL"
+      }
+  }else type <- "not selected"
+  return(type)
 }
