@@ -4451,8 +4451,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
           group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
         }else group1 <- NULL
+        if(length(group1$id)!=0){
         group1$Group <- name
         data <- rbind(data, group1)
+        }
       }
       if(length(data$id) != 0) {
         return(data)
@@ -4468,10 +4470,14 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(name in names(df)){
         if(!is.null(df[[name]])) {
           group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
+          if(length(group1$id)==0){
+            group1 <- NULL
+          }else{
           group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
           if (length(group1$p_adjust_hyper) > 5){
             group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
             group1 <- group1[1:5,]
+          }
           }
         }else group1 <- NULL
         data <- rbind(data, group1)
@@ -4557,8 +4563,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$whichGeneSet_venn <- renderUI({
     if(!is.null(input$intersection_venn_fun) && dim(as.data.frame(enrichment_1_1_venn()))[1] != 0){
       group <- input$intersection_venn_fun
+      if(dim(as.data.frame(enrichment_1_1_venn()))[1]!=0){
       set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_venn()), Group == group)$id)
       selectInput('Pathway_list_venn', 'Pathway list', set_list)
+      }
     }
   })
   
@@ -7591,8 +7599,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(input$Species_enrich != "not selected" && !is.null(Enrich_peak_call_files())){
     if(!is.null(input$intersection_enrich_fun)){
       group <- input$intersection_enrich_fun
+      if(dim(as.data.frame(enrichment_1_1_enrich()))[1] != 0){
       set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_enrich()), Group == group)$id)
       selectInput('Pathway_list_enrich', 'Pathway list', set_list)
+      }
     }
     }
   })
