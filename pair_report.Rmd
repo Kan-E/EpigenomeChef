@@ -1,5 +1,5 @@
 ---
-title: "Pair-wise analysis with EpigenomeChef v1.0.0-beta"
+title: "Pair-wise analysis with EpigenomeChef v1.0.4-beta"
 date: '`r format(Sys.time(), "%y/%m/%d %H:%M")`'
 params:
     raw_count: [some object]
@@ -32,6 +32,8 @@ try(knitr::kable(params$input_list_data_pair))
 
  - Experimental condition: 
  **`r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[1]` vs `r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[2]`**
+ - Experimental condition: 
+ **`r params$input$pair_filter`**
  - Species: 
  **`r params$input$Species`**
  - Cut-off condition: 
@@ -46,13 +48,13 @@ try(knitr::kable(head(params$deg_norm_count)))
 
 ## Result overview
  - Clustering (PCA, MDS, dendrogram (ward.D2)) (Clustering/pca.pdf)
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 try(magick::image_read_pdf("./Clustering/clustering.pdf"))
 ```
  - PCA_table (Clustering/pca.txt)
 
  - Volcano plot (DAR_result/volcano_plot.pdf)
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$xrange)){
 try(magick::image_read_pdf("./DAR_result/volcano_plot.pdf"))
 }else print("No plot")
@@ -65,7 +67,7 @@ try(magick::image_read_pdf("./DAR_result/volcano_plot.pdf"))
 
 ## Peak distribution
  - Annotation of up DARs (peak_distribution/up_annotation.pdf)
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
 try(magick::image_read_pdf("./peak_distribution/up_annotation.pdf"))
@@ -73,7 +75,7 @@ try(magick::image_read_pdf("./peak_distribution/up_annotation.pdf"))
 ```
 
  - Annotation of down DARs (peak_distribution/down_annotation.pdf)
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
 try(magick::image_read_pdf("./peak_distribution/down_annotation.pdf"))
@@ -115,13 +117,13 @@ information), including single exon transcripts such as "short noncoding."
 
  - Peak pattern of up DARs (line plot: peak_pattern/up_lineplot.pdf, heatmap: peak_pattern/up_heatmap.pdf)
  
-```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_up_range)){
   heatmap <- magick::image_read_pdf("./peak_pattern/up_heatmap.pdf")
   heatmap
           }else print("No plot")
 ```
-```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_up_range)){
   line <- magick::image_read_pdf("./peak_pattern/up_lineplot.pdf")
   line
@@ -130,13 +132,13 @@ if(!is.null(params$input$peak_up_range)){
  
  - Peak pattern of down DARs (line plot: peak_pattern/down_lineplot.pdf, heatmap: peak_pattern/down_heatmap.pdf)
  
-```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_down_range)){
   heatmap <- magick::image_read_pdf("./peak_pattern/down_heatmap.pdf")
   heatmap
           }else print("No plot")
 ```
-```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_down_range)){
   line <- magick::image_read_pdf("./peak_pattern/down_lineplot.pdf")
   line
@@ -150,7 +152,7 @@ if(!is.null(params$input$peak_down_range)){
  - Gene set: `r params$input$Gene_set`
  - Dotplot (GREAT/dotplot_`r params$input$Gene_set`.pdf)
  
-```{r, out.height=255.68181, out.width=306.818172, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=306.818172, include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && params$input$Genomic_region == "Genome-wide"){
 try(magick::image_read_pdf(paste0("GREAT/dotplot_",params$input$Gene_set,".pdf")))
           }else print("No plot")
@@ -166,7 +168,7 @@ try(knitr::kable(as.data.frame(params$enrichment_1_1),row.names=FALSE))
  - Which_group: `r params$input$Up_or_Down`
  - region associate plot (GREAT/"`r params$input$Gene_set`_`r params$input$Pathway_list`_`r params$input$Up_or_Down`.pdf)
  
-```{r, out.height=255.68181, out.width=613.636344, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=613.636344, include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$Gene_set) && params$input$Genomic_region == "Genome-wide"){
 try(magick::image_read_pdf(paste0("GREAT/",params$input$Gene_set,"_",params$input$Pathway_list,"_",params$input$Up_or_Down,".pdf")))
           }else print("No plot")
@@ -192,7 +194,7 @@ try(knitr::kable(table))
  - Background sequence: `r params$input$homer_bg`
  - Dotplot (`r params$base_dir`/homer_dotplot.pdf)
  
-```{r, out.height=306.818172, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=306.818172, out.width=357.954534, include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
              !is.null(params$input$homer_unknown)){
 magick::image_read_pdf(paste0(params$base_dir,"/homer_dotplot",".pdf"))
@@ -256,13 +258,13 @@ try(knitr::kable(head(params$RNAseqDEG)))
 
  - KS plot and barplot (`r params$dirname_withRNA`/KSplot.pdf and barplot.pdf)
  
-```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
    !is.na(params$input$DEG_fc)){
     try(magick::image_read_pdf(paste0("./",params$dirname_withRNA,"barplot.pdf")))
           }else print("Not performed")
 ```
-```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
    !is.na(params$input$DEG_fc)){
     try(magick::image_read_pdf(paste0("./",params$dirname_withRNA,"KSplot.pdf")))
@@ -270,7 +272,7 @@ if(params$input$Species != "not selected" && !is.null(params$input$peak_distance
 ```
 
  - Boxplot (`r params$dirname_withRNA`boxplot.pdf)
-```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
    !is.na(params$input$DEG_fc)){
  path = paste0("./",params$dirname_withRNA,"boxplot.pdf")

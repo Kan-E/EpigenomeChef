@@ -1,6 +1,4 @@
 
-##pair-wiseのfilter機能の改善
-##Clusteringでfilter機能の作成
 ##reportの更新 
 
 library(rtracklayer) 
@@ -213,25 +211,45 @@ files_name2ENTREZID <- function(files,Species,gene_type){
   return(df2)
   }
 }
-promoter <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM){
+filter_function <- function(filter, files){
+  if(filter == "Reproducible_peaks"){
+    name_list <- names(files) %>% sort()
+    files <- files[name_list]
+    unique_col <- unique(gsub("\\_.+$", "", name_list))
+    total <- 0
+    consensus <- list()
+    for(i in 1:length(unique_col)){
+      cond <- length(which(gsub("\\_.+$", "", name_list) == unique_col[i]))
+      files2 <- files[(1 + total):(total + cond)]
+      if(cond > 1) {
+        consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+        occurrences <- elementMetadata(consensusToCount) %>% as.data.frame %>% dplyr::select(-consensusIDs) %>% 
+          rowSums
+        consensusToCount <- consensusToCount[occurrences >= 2, ]
+        consensus[[i]] <- consensusToCount
+      }else consensus[[i]] <- files2
+      total <- total + cond
+    }
+    consensusToCount <- soGGi:::runConsensusRegions(GRangesList(consensus), "none")
+  }else{
+    if(length(names(files)) > 1){
+      consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files), "none")
+    }else consensusToCount <- files[[1]]
+  }
+  return(consensusToCount)
+}
+promoter <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM,filter="Reproducible_peaks"){
   if(input_type == "Promoter"){
   return(promoters(genes(txdb),upstream = upstream, downstream = downstream))
   }else{
-    consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files), "none")
-    occurrences <- elementMetadata(consensusToCount) %>% as.data.frame %>% dplyr::select(-consensusIDs) %>% 
-      rowSums
-    consensusToCount <- consensusToCount[occurrences >= 2, ]
-    return(consensusToCount)
+   return(filter_function(files = files,filter=filter))
   }
 }
-promoter_clustering <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM){
+promoter_clustering <- function(txdb, upstream, downstream,input_type = "Promoter",files = NULL, bam=F,RPM, filter="Reproducible_peaks"){
   if(input_type == "Promoter"){
     return(promoters(genes(txdb),upstream = upstream, downstream = downstream))
   }else{
-    if(length(names(files)) > 1){
-    consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files), "none")
-    }else consensusToCount <- files[[1]]
-    return(consensusToCount)
+    return(filter_function(files = files,filter=filter))
   }
 }
 

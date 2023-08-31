@@ -156,7 +156,11 @@ shinyUI(
                                                             "The third column is end position on the chromosome.<br>",
                                                             strong("Multiple peak call files are required for the filteration.<br>"),
                                                             img(src="pair_peakcallfilter.png", width = 200,height = 400)),
-                                              placement = "right",options = list(container = "body"))
+                                              placement = "right",options = list(container = "body")),
+                                    radioButtons('pair_filter','Filter:',
+                                                 c('Reproducible peaks'="Reproducible_peaks",
+                                                   'ALL peaks'="ALL_peaks"
+                                                 ),selected = "Reproducible_peaks"),        
                    ),
                    fluidRow(
                      column(12, selectInput("Species", "Species", species_list, selected = "not selected"))),
@@ -1027,6 +1031,10 @@ shinyUI(
                                                             "The second column is start position on the chromosome.<br>",
                                                             "The third column is end position on the chromosome.<br>"), 
                                               placement = "right",options = list(container = "body")),
+                                    radioButtons('pair_filter_cluster','Filter:',
+                                                 c('Reproducible peaks'="Reproducible_peaks",
+                                                   'ALL peaks'="ALL_peaks"
+                                                 ),selected = "Reproducible_peaks"),    
                    ),
                    fluidRow(
                      column(12, selectInput("Species_clustering", "Species", species_list, selected = "not selected"))),

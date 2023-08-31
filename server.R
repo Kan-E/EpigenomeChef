@@ -205,10 +205,10 @@ shinyServer(function(input, output, session) {
   promoter_region <- reactive({
       if(input$Genomic_region == "Promoter"){
         if(input$Species != "not selected"){
-        return(promoter(txdb(),upstream = input$upstream, downstream = input$downstream))
+        return(promoter(txdb(),upstream = input$upstream, downstream = input$downstream,filter = input$pair_filter))
         }
       }else return(promoter(upstream = input$upstream, downstream = input$downstream,
-                            input_type = "Genome-wide",files =peak_call_files()))
+                            input_type = "Genome-wide",files =peak_call_files(),filter = input$pair_filter))
   })
   gene_position <- reactive({
     if(input$Species != "not selected"){
@@ -5667,10 +5667,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   promoter_region_clustering <- reactive({
     if(input$Genomic_region_clustering == "Promoter"){
       if(input$Species_clustering != "not selected"){
-        return(promoter_clustering(txdb_clustering(),upstream = input$upstream_clustering, downstream = input$downstream_clustering))
+        return(promoter_clustering(txdb_clustering(),upstream = input$upstream_clustering, downstream = input$downstream_clustering,
+                                   filter = input$pair_filter_cluster))
       }
     }else return(promoter_clustering(upstream = input$upstream_clustering, downstream = input$downstream_clustering,
-                          input_type = "Genome-wide",files =peak_call_files_clustering()))
+                          input_type = "Genome-wide",files =peak_call_files_clustering(),
+                          filter = input$pair_filter_cluster))
   })
   gene_position_clustering <- reactive({
     if(input$Species_clustering != "not selected"){
