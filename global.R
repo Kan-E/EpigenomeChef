@@ -1,6 +1,3 @@
-
-##reportの更新 
-
 library(rtracklayer) 
 library(Rsubread)
 library(Rsamtools)

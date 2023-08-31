@@ -6079,6 +6079,18 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     updateCounter_kmeans <<- reactiveValues(i = 0)
   }) 
   
+  observeEvent(input$basemean_clustering, {
+    isolate(updateCounter_kmeans$i == 0)
+    updateCounter_kmeans <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$fc_clustering, {
+    isolate(updateCounter_kmeans$i == 0)
+    updateCounter_kmeans <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$selectFC, {
+    isolate(updateCounter_kmeans$i == 0)
+    updateCounter_kmeans <<- reactiveValues(i = 0)
+  }) 
   output$selectFC <- renderUI({
     if(is.null(bw_count_clustering())){
       return(NULL)
@@ -7135,7 +7147,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   int_track_additional_files_clustering <-reactive({
-    if(input$sample_order_kmeans_track_int) return(pre_int_track_additional_files_clustering()[input$sample_order_kmeans_track_int])
+    if(!is.null(input$sample_order_kmeans_track_int)) return(pre_int_track_additional_files_clustering()[input$sample_order_kmeans_track_int])
   })
   int_data_track_clustering <- reactive({
     if(!is.null(input$RP_table_clustering_rows_selected)){
