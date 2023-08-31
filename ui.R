@@ -82,17 +82,17 @@ shinyUI(
                                     fileInput("file1_count",
                                               strong(
                                                 span("Select a count file from pair-wise analysis"),
-                                                span(icon("info-circle"), id = "icon_count", 
+                                                span(icon("info-circle"), id = "icon_count1", 
                                                      options = list(template = popoverTempate))
                                               ),
                                               accept = c("txt"),
                                               multiple = TRUE,
                                               width = "80%"),
-                                    bsPopover("icon_count", "count file (txt):", 
-                                              content=paste("The count data from pair-wise analysis in EpigenomeChef is required. 
-                                                            You can skip creating count data from bigwig files and peak call files.<br>",
-                                                            strong("You have to select the same 'Genomic region' that you used when you obtained the count file.")), 
-                                              placement = "right",options = list(container = "body"))
+                                    bsPopover("icon_count1", "count file (txt):", 
+                                              content=paste("The count data from pair-wise analysis in EpigenomeChef is required.<br>", 
+                                                            "You can skip creating count data from bigwig files and peak call files.<br>",
+                                                            "You have to select the same ", strong("Genomic region"), " that you used when you obtained the count file."), 
+                                              placement = "right",options = list(container = "body")),
                    ),
                    conditionalPanel(condition=c("input.data_file_type=='Row1' || input.data_file_type=='Row1_count'"),
                                     fileInput("file1",
@@ -114,7 +114,7 @@ shinyUI(
                                     fileInput("file_bam",
                                               strong(
                                                 span("Select Bam files"),
-                                                span(icon("info-circle"), id = "icon_bam", 
+                                                span(icon("info-circle"), id = "icon1_bam", 
                                                      options = list(template = popoverTempate))
                                               ),
                                               accept = c("bam"),
@@ -158,7 +158,6 @@ shinyUI(
                                                             img(src="pair_peakcallfilter.png", width = 200,height = 400)),
                                               placement = "right",options = list(container = "body"))
                    ),
-                   selectizeInput("sample_order", "Sample order:", choices = "", multiple = T),
                    fluidRow(
                      column(12, selectInput("Species", "Species", species_list, selected = "not selected"))),
                    fluidRow(
@@ -231,11 +230,12 @@ shinyUI(
                                          ),
                                          bsCollapsePanel(title="Count data:",
                                                          value="raw_count_panel",
-                                                         column(4, textOutput("Spe"),
+                                                         textOutput("Spe"),
                                                                 tags$head(tags$style("#Spe{color: red;
                                  font-size: 20px;
             font-style: bold;
-            }"))),
+            }")),
+                                                         selectizeInput("sample_order", "Sample order:", choices = "", multiple = T),
                                                          downloadButton("download_raw_count_table", "Download count table"),
                                                          dataTableOutput('raw_count_table')
                                          )
@@ -258,7 +258,8 @@ shinyUI(
                                                          value="Trackplot_panel",
                                                          fluidRow(
                                                            column(4, downloadButton("download_pair_trackplot", "Download trackplot")),
-                                                           column(8, htmlOutput("trackplot_additional"))
+                                                           column(8, htmlOutput("trackplot_additional"),
+                                                                  htmlOutput("sample_order_pair_track"))
                                                          ),
                                                          fluidRow(
                                                            column(8, htmlOutput("igv_uprange")),
@@ -325,10 +326,10 @@ shinyUI(
                      tabPanel("Peak pattern",
                               fluidRow(
                                 column(4, downloadButton("download_peak_pattern_up_heatmap", "Download peak heatmap"),
-                                       htmlOutput("peak_pattern_up_bw"),
                                        htmlOutput("peak_pattern_up_heat_range")),
                                 column(4, downloadButton("download_peak_pattern_up_line", "Download peak aligned distribution"),
-                                       htmlOutput("peak_pattern_up_additional")),
+                                       htmlOutput("peak_pattern_up_additional"),
+                                       htmlOutput("sample_order_pair_pattern"))
                               ),
                               fluidRow(
                                 column(6,  plotOutput("peak_pattern_up_heatmap")),
@@ -477,7 +478,8 @@ shinyUI(
                                                          value="int_Trackplot_panel",
                                                          fluidRow(
                                                            column(6, downloadButton("download_pair_int_trackplot", "Download trackplot")),
-                                                           column(6, htmlOutput("int_trackplot_additional"))
+                                                           column(6, htmlOutput("int_trackplot_additional"),
+                                                                  htmlOutput("sample_order_pair_track_int"))
                                                          ),
                                                          fluidRow(
                                                            column(8, htmlOutput("int_igv_uprange")),
@@ -534,9 +536,12 @@ shinyUI(
                                          )
                               ),
                               fluidRow(
-                                column(4, htmlOutput("integrated_bw1")),
-                                column(4, htmlOutput("integrated_bw2")),
-                                column(4, htmlOutput("integrated_bw3"))
+                                column(4, htmlOutput("integrated_bw1"),
+                                       htmlOutput("sample_order_pair_comb1")),
+                                column(4, htmlOutput("integrated_bw2"),
+                                       htmlOutput("sample_order_pair_comb2")),
+                                column(4, htmlOutput("integrated_bw3"),
+                                       htmlOutput("sample_order_pair_comb3"))
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton", "Start"),
@@ -593,6 +598,7 @@ shinyUI(
                    bsPopover("icon_venn2", "BigWig files (bw, BigWig):", 
                              content=paste(strong("Short names are recommended for file names.")), 
                              placement = "right",options = list(container = "body")),
+                   selectizeInput("sample_order_venn", "Sample order:", choices = "", multiple = T),
                    fluidRow(
                      column(12, selectInput("Species_venn", "Species", species_list, selected = "not selected")),
                    ),
@@ -843,8 +849,7 @@ shinyUI(
                                          bsCollapsePanel(title="Trackplot:",
                                                          value="int_Trackplot_panel",
                                                          fluidRow(
-                                                           column(6, downloadButton("download_venn_int_trackplot", "Download trackplot")),
-                                                           column(6, htmlOutput("int_trackplot_additional_venn"))
+                                                           column(6, downloadButton("download_venn_int_trackplot", "Download trackplot"))
                                                          ),
                                                          fluidRow(
                                                            column(8, htmlOutput("int_igv_uprange_venn")),
@@ -908,9 +913,12 @@ shinyUI(
                                          )
                               ),
                               fluidRow(
-                                column(4, htmlOutput("integrated_bw2_venn")),
-                                column(4, htmlOutput("integrated_bw3_venn")),
-                                column(4, htmlOutput("integrated_bw4_venn"))
+                                column(4, htmlOutput("integrated_bw2_venn"),
+                                       htmlOutput("sample_order_venn_comb2")),
+                                column(4, htmlOutput("integrated_bw3_venn"),
+                                       htmlOutput("sample_order_venn_comb3")),
+                                column(4, htmlOutput("integrated_bw4_venn"),
+                                       htmlOutput("sample_order_venn_comb4"))
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton_venn", "Start"),
@@ -1020,7 +1028,6 @@ shinyUI(
                                                             "The third column is end position on the chromosome.<br>"), 
                                               placement = "right",options = list(container = "body")),
                    ),
-                   selectizeInput("sample_order_clustering", "Sample order:", choices = "", multiple = T),
                    fluidRow(
                      column(12, selectInput("Species_clustering", "Species", species_list, selected = "not selected"))),
                    fluidRow(
@@ -1080,11 +1087,12 @@ shinyUI(
                                          ),
                                          bsCollapsePanel(title="Raw count data:",
                                                          value="raw_count_panel",
-                                                         column(4, textOutput("Spe_clustering"),
+                                                         textOutput("Spe_clustering"),
                                                                 tags$head(tags$style("#Spe_clustering{color: red;
                                  font-size: 20px;
             font-style: bold;
-            }"))),
+            }")),
+                                                         selectizeInput("sample_order_clustering", "Sample order:", choices = "", multiple = T),
                                                          downloadButton("download_raw_count_clustering_table", "Download raw count table"),
                                                          dataTableOutput('raw_count_table_clustering')
                                          )
@@ -1136,7 +1144,8 @@ shinyUI(
             padding: 0 !important;
           }"
                                                  ))),
-                                column(8, plotOutput("clustering_kmeans_heatmap"))
+                                column(8, htmlOutput("kmeans_order"),
+                                       plotOutput("clustering_kmeans_heatmap"))
                               ),
                               htmlOutput("clustering_select_kmean"),
                               tags$head(tags$style("#clustering_select_kmean{color: black;
@@ -1148,7 +1157,8 @@ shinyUI(
                                        htmlOutput("peak_pattern_kmeans_bw"),
                                        htmlOutput("peak_pattern_kmeans_heat_range")),
                                 column(5, downloadButton("download_peak_pattern_kmeans_line", "Download peak aligned distribution"),
-                                       htmlOutput("peak_pattern_kmeans_additional")),
+                                       htmlOutput("peak_pattern_kmeans_additional"),
+                                       htmlOutput("sample_order_kmeans_pattern")),
                               ),
                               fluidRow(
                                 column(6,  plotOutput("peak_pattern_kmeans_heatmap")),
@@ -1165,7 +1175,8 @@ shinyUI(
                                                          value="kmeans_track_panel",
                                                          fluidRow(
                                                            column(4, downloadButton("download_clustering_trackplot", "Download trackplot")),
-                                                           column(8, htmlOutput("trackplot_additional_clustering"))
+                                                           column(8, htmlOutput("trackplot_additional_clustering"),
+                                                                  htmlOutput("sample_order_kmeans_track"))
                                                          ),
                                                          fluidRow(
                                                            column(8, htmlOutput("igv_uprange_clustering")),
@@ -1241,7 +1252,8 @@ shinyUI(
                                                          value="int_Trackplot_panel",
                                                          fluidRow(
                                                            column(6, downloadButton("download_clustering_int_trackplot", "Download trackplot")),
-                                                           column(6, htmlOutput("int_trackplot_additional_clustering"))
+                                                           column(6, htmlOutput("int_trackplot_additional_clustering"),
+                                                                  htmlOutput("sample_order_kmeans_track_int"))
                                                          ),
                                                          fluidRow(
                                                            column(8, htmlOutput("int_igv_uprange_clustering")),
@@ -1439,7 +1451,8 @@ shinyUI(
             font-style: bold;
             }")),
                               fluidRow(
-                                column(6, htmlOutput("integrated_bw1_enrich"))
+                                column(6, htmlOutput("integrated_bw1_enrich"),
+                                       htmlOutput("sample_order_enrich_comb1"))
                               ),
                               fluidRow(
                                 column(6, htmlOutput("rnaseq_DEGs_enrich")),
@@ -1456,9 +1469,12 @@ shinyUI(
                                          )
                               ),
                               fluidRow(
-                                column(4, htmlOutput("integrated_bw2_enrich")),
-                                column(4, htmlOutput("integrated_bw3_enrich")),
-                                column(4, htmlOutput("integrated_bw4_enrich"))
+                                column(4, htmlOutput("integrated_bw2_enrich"),
+                                       htmlOutput("sample_order_enrich_comb2")),
+                                column(4, htmlOutput("integrated_bw3_enrich"),
+                                       htmlOutput("sample_order_enrich_comb3")),
+                                column(4, htmlOutput("integrated_bw4_enrich"),
+                                       htmlOutput("sample_order_enrich_comb4"))
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton_enrich", "Start"),

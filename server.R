@@ -72,7 +72,127 @@ shinyServer(function(input, output, session) {
            unload = TRUE)
   })
   
-  
+  observeEvent(pre_bw_count(),({
+    updateSelectizeInput(session,inputId = "sample_order","Sample order:",
+                         choices = colnames(pre_bw_count()),selected = colnames(pre_bw_count()))
+  }))
+    output$sample_order_pair_track <- renderUI({
+      if(!is.null(pre_track_additional_files())){
+      selectInput(inputId = "sample_order_pair_track","Sample order:",
+                         choices =  names(pre_track_additional_files()),
+                         selected = names(pre_track_additional_files()),multiple = TRUE)
+      }
+  })
+    output$sample_order_pair_pattern <- renderUI({
+      if(!is.null(pre_up_additional())){
+        selectInput(inputId = "sample_order_pair_pattern","Sample order:",
+                    choices =  names(pre_up_additional()),
+                    selected = names(pre_up_additional()),multiple = TRUE)
+      }
+    })
+    output$sample_order_pair_track_int <- renderUI({
+      if(!is.null(pre_int_track_additional_files())){
+        selectInput(inputId = "sample_order_pair_track_int","Sample order:",
+                    choices =  names(pre_int_track_additional_files()),
+                    selected = names(pre_int_track_additional_files()),multiple = TRUE)
+      }
+    })
+    output$sample_order_pair_comb1 <- renderUI({
+      if(!is.null(pre_integrated_additional1())){
+        selectInput(inputId = "sample_order_pair_comb1","Sample order (blue):",
+                    choices =  names(pre_integrated_additional1()),
+                    selected = names(pre_integrated_additional1()),multiple = TRUE)
+      }
+    })
+    output$sample_order_pair_comb2 <- renderUI({
+      if(!is.null(pre_integrated_additional2())){
+        selectInput(inputId = "sample_order_pair_comb2","Sample order (green):",
+                    choices =  names(pre_integrated_additional2()),
+                    selected = names(pre_integrated_additional2()),multiple = TRUE)
+      }
+    })
+    output$sample_order_pair_comb3 <- renderUI({
+      if(!is.null(pre_integrated_additional3())){
+        selectInput(inputId = "sample_order_pair_comb3","Sample order (purple):",
+                    choices =  names(pre_integrated_additional3()),
+                    selected = names(pre_integrated_additional3()),multiple = TRUE)
+      }
+    })
+    observeEvent(pre_bws_venn(),({
+      updateSelectizeInput(session,inputId = "sample_order_venn","Sample order:",
+                           choices =  names(pre_bws_venn()),
+                           selected = names(pre_bws_venn()))
+    }))
+    output$sample_order_venn_comb2 <- renderUI({
+      if(!is.null(pre_integrated_additional2_venn())){
+        selectInput(inputId = "sample_order_venn_comb2","Sample order (blue):",
+                    choices =  names(pre_integrated_additional2_venn()),
+                    selected = names(pre_integrated_additional2_venn()),multiple = TRUE)
+      }
+    })
+    output$sample_order_venn_comb3 <- renderUI({
+      if(!is.null(pre_integrated_additional3_venn())){
+        selectInput(inputId = "sample_order_venn_comb3","Sample order (green):",
+                    choices =  names(pre_integrated_additional3_venn()),
+                    selected = names(pre_integrated_additional3_venn()),multiple = TRUE)
+      }
+    })
+    output$sample_order_venn_comb4 <- renderUI({
+      if(!is.null(pre_integrated_additional4_venn())){
+        selectInput(inputId = "sample_order_venn_comb4","Sample order (purple):",
+                    choices =  names(pre_integrated_additional4_venn()),
+                    selected = names(pre_integrated_additional4_venn()),multiple = TRUE)
+      }
+    })
+    output$sample_order_kmeans_pattern <- renderUI({
+      if(!is.null(pre_kmeans_additional())){
+        selectInput(inputId = "sample_order_kmeans_pattern","Sample order:",
+                    choices =  names(pre_kmeans_additional()),
+                    selected = names(pre_kmeans_additional()),multiple = TRUE)
+      }
+    })
+    output$sample_order_kmeans_track <- renderUI({
+      if(!is.null(pre_track_additional_files_clustering())){
+        selectInput(inputId = "sample_order_kmeans_track","Sample order:",
+                    choices =  names(pre_track_additional_files_clustering()),
+                    selected = names(pre_track_additional_files_clustering()),multiple = TRUE)
+      }
+    })
+    output$sample_order_kmeans_track_int <- renderUI({
+      if(!is.null(pre_int_track_additional_files_clustering())){
+        selectInput(inputId = "sample_order_kmeans_track_int","Sample order:",
+                    choices =  names(pre_int_track_additional_files_clustering()),
+                    selected = names(pre_int_track_additional_files_clustering()),multiple = TRUE)
+      }
+    })
+    output$sample_order_enrich_comb1 <- renderUI({
+      if(!is.null(pre_integrated_additional1_enrich())){
+        selectInput(inputId = "sample_order_enrich_comb1","Sample order (red):",
+                    choices =  names(pre_integrated_additional1_enrich()),
+                    selected = names(pre_integrated_additional1_enrich()),multiple = TRUE)
+      }
+    })
+    output$sample_order_enrich_comb2 <- renderUI({
+      if(!is.null(pre_integrated_additional2_enrich())){
+        selectInput(inputId = "sample_order_enrich_comb2","Sample order (blue):",
+                    choices =  names(pre_integrated_additional2_enrich()),
+                    selected = names(pre_integrated_additional2_enrich()),multiple = TRUE)
+      }
+    })
+    output$sample_order_enrich_comb3 <- renderUI({
+      if(!is.null(pre_integrated_additional3_enrich())){
+        selectInput(inputId = "sample_order_enrich_comb3","Sample order (green):",
+                    choices =  names(pre_integrated_additional3_enrich()),
+                    selected = names(pre_integrated_additional3_enrich()),multiple = TRUE)
+      }
+    })
+    output$sample_order_enrich_comb4 <- renderUI({
+      if(!is.null(pre_integrated_additional4_enrich())){
+        selectInput(inputId = "sample_order_enrich_comb4","Sample order (purple):",
+                    choices =  names(pre_integrated_additional4_enrich()),
+                    selected = names(pre_integrated_additional4_enrich()),multiple = TRUE)
+      }
+    })
   # pair-wise ------------------------------------------------------------------------------
   org1 <- reactive({
     return(org(Species = input$Species))
@@ -203,10 +323,7 @@ shinyServer(function(input, output, session) {
       as.data.frame(uploaded_files) 
     }
   })
-  observeEvent(pre_bw_count(),({
-    updateSelectizeInput(session,inputId = "sample_order","Sample order:",
-                         choices = colnames(pre_bw_count()),selected = colnames(pre_bw_count()))
-  }))
+
   
   output$input_peak_call_files <- DT::renderDataTable({
     if(input$Genomic_region == "Genome-wide"){
@@ -816,7 +933,7 @@ pair_volcano()
               width = "80%")
     }
   })
-  track_additional_files <-reactive({
+  pre_track_additional_files <-reactive({
     if(!is.null(input$trackplot_additional1)){
       files<-c()
       name<-c()
@@ -828,6 +945,9 @@ pair_volcano()
       names(files)<-name
       return(files)
     }
+  })
+  track_additional_files <- reactive({
+    return(pre_track_additional_files()[input$sample_order_pair_track])
   })
   
   data_track <- reactive({
@@ -1647,7 +1767,7 @@ pair_volcano()
               width = "80%")
     }
   })
-  up_additional <-reactive({
+  pre_up_additional <-reactive({
     if(!is.null(input$peak_pattern_up_add)){
       files<-c()
       name<-c()
@@ -1659,6 +1779,9 @@ pair_volcano()
       names(files)<-name
       return(bigwig_breakline(files))
     }
+  })
+  up_additional <-reactive({
+    return(pre_up_additional()[input$sample_order_pair_pattern])
   })
   output$peak_pattern_up_heat_range <- renderUI({
     if(!is.null(deg_result())){
@@ -2407,7 +2530,7 @@ pair_volcano()
               multiple = TRUE,
               width = "80%")
   })
-  int_track_additional_files <-reactive({
+  pre_int_track_additional_files <-reactive({
     if(!is.null(input$int_trackplot_additional1)){
       files<-c()
       name<-c()
@@ -2419,6 +2542,9 @@ pair_volcano()
       names(files)<-name
       return(files)
     }
+  })
+  int_track_additional_files <- reactive({
+    return(pre_int_track_additional_files()[input$sample_order_pair_track_int])
   })
   
   int_data_track <- reactive({
@@ -2646,7 +2772,7 @@ pair_volcano()
     return(list)
   })
   integrate_h <- reactive({
-    h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = bws(),type=input$Genomic_region)
+    h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = bws_order(),type=input$Genomic_region)
     return(h)
   })
   integrated_legend <- reactive({
@@ -3002,7 +3128,7 @@ pair_volcano()
               multiple = TRUE,
               width = "80%")
   })
-  integrated_additional1 <-reactive({
+  pre_integrated_additional1 <-reactive({
     if(!is.null(input$integrated_bw_1)){
       files<-c()
       name<-c()
@@ -3015,7 +3141,12 @@ pair_volcano()
       return(bigwig_breakline(files))
     }
   })
-  integrated_additional2 <-reactive({
+  integrated_additional1 <- reactive({
+    if(!is.null(input$sample_order_pair_comb1)){
+    return(pre_integrated_additional1()[input$sample_order_pair_comb1])
+    }
+  })
+  pre_integrated_additional2 <-reactive({
     if(!is.null(input$integrated_bw_2)){
       files<-c()
       name<-c()
@@ -3028,7 +3159,12 @@ pair_volcano()
       return(bigwig_breakline(files))
     }
   })
-  integrated_additional3 <-reactive({
+  integrated_additional2 <- reactive({
+    if(!is.null(input$sample_order_pair_comb2)){
+    return(pre_integrated_additional2()[input$sample_order_pair_comb2])
+    }
+  })
+  pre_integrated_additional3 <-reactive({
     if(!is.null(input$integrated_bw_3)){
       files<-c()
       name<-c()
@@ -3039,6 +3175,11 @@ pair_volcano()
       }
       names(files)<-name
       return(bigwig_breakline(files))
+    }
+  })
+  integrated_additional3 <- reactive({
+    if(!is.null(input$sample_order_pair_comb3)){
+    return(pre_integrated_additional3()[input$sample_order_pair_comb3])
     }
   })
   integrated_heatmap_add1 <- reactive({
@@ -3426,7 +3567,7 @@ pair_volcano()
     }
   })
   
-  bws_venn <- reactive({
+  pre_bws_venn <- reactive({
     if(is.null(input$file_venn1)){
       if(input$goButton_venn > 0 ){
         df<-list()
@@ -3449,7 +3590,9 @@ pair_volcano()
       return(files)
     }
   })
-  
+  bws_venn <- reactive({
+    if(!is.null(input$sample_order_venn)) return(pre_bws_venn()[input$sample_order_venn])
+  })
   venn_overlap <- reactive({
     withProgress(message = "Preparing intersection, takes a few minutes",{
     ol <- findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
@@ -4412,7 +4555,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   
   output$whichGeneSet_venn <- renderUI({
-    if(!is.null(input$intersection_venn_fun)){
+    if(!is.null(input$intersection_venn_fun) && dim(as.data.frame(enrichment_1_1_venn()))[1] != 0){
       group <- input$intersection_venn_fun
       set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_venn()), Group == group)$id)
       selectInput('Pathway_list_venn', 'Pathway list', set_list)
@@ -4428,7 +4571,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       for(name in names(df)){
         if(!is.null(df[[name]])) {
           group1 <- as.data.frame(rGREAT::getRegionGeneAssociations(df[[name]], term_id = set_list))
+          if(dim(group1)[1] != 0){
           group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
+          }else group1 <- NULL
         }else group1 <- NULL
         data <- rbind(data, group1)
       }
@@ -4874,33 +5019,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   
-  output$int_trackplot_additional_venn <- renderUI({
-    fileInput("int_trackplot_additional1_venn",
-              "Select additional bigwig files",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
-  })
-  int_track_additional_files_venn <-reactive({
-    if(!is.null(input$int_trackplot_additional1_venn)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$int_trackplot_additional1_venn[, 1])){
-        file <- input$int_trackplot_additional1_venn[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1_venn[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(files)
-    }
-  })
   
   int_data_track_venn <- reactive({
     if(!is.null(input$RP_table_venn_rows_selected)){
       return(data_trac(y=int_goi_promoter_position_venn(),gene_position=int_goi_gene_position_venn(),
                        gen=ref_venn(),txdb=txdb_venn(),org=org_venn(),
                        bw_files=bws_venn(),
-                       track_additional_files=int_track_additional_files_venn()))
+                       track_additional_files=NULL))
     }
   })
   
@@ -5444,7 +5569,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
               width = "80%")
   })
 
-  integrated_additional2_venn <-reactive({
+  pre_integrated_additional2_venn <-reactive({
     if(!is.null(input$integrated_bw_2_venn)){
       files<-c()
       name<-c()
@@ -5457,7 +5582,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(bigwig_breakline(files))
     }
   })
-  integrated_additional3_venn <-reactive({
+  integrated_additional2_venn <- reactive({
+    if(!is.null(input$sample_order_venn_comb2)) return(pre_integrated_additional2_venn()[input$sample_order_venn_comb2])
+  })
+  pre_integrated_additional3_venn <-reactive({
     if(!is.null(input$integrated_bw_3_venn)){
       files<-c()
       name<-c()
@@ -5470,7 +5598,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(bigwig_breakline(files))
     }
   })
-  integrated_additional4_venn <-reactive({
+  integrated_additional3_venn <- reactive({
+    if(!is.null(input$sample_order_venn_comb3)) return(pre_integrated_additional3_venn()[input$sample_order_venn_comb3])
+  })
+  pre_integrated_additional4_venn <-reactive({
     if(!is.null(input$integrated_bw_4_venn)){
       files<-c()
       name<-c()
@@ -5482,6 +5613,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       names(files)<-name
       return(bigwig_breakline(files))
     }
+  })
+  integrated_additional4_venn <- reactive({
+    if(!is.null(input$sample_order_venn_comb4)) return(pre_integrated_additional4_venn()[input$sample_order_venn_comb4])
   })
   integrated_heatmap_add1_venn <- reactive({
     if(!is.null(bws_venn())){
@@ -5926,7 +6060,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   
   #Restart
-  defaultvalues_kmeans <- observeEvent(clustering_kmeans(), {
+  observeEvent(input$clustering_kmeans_number, {
+    isolate(updateCounter_kmeans$i == 0)
+    updateCounter_kmeans <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$kmeans_cv, {
     isolate(updateCounter_kmeans$i == 0)
     updateCounter_kmeans <<- reactiveValues(i = 0)
   }) 
@@ -5940,7 +6078,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                      options = list(maxItems = 2))
     }
   })
-  
+  output$kmeans_order <- renderUI({
+    order <- pre_kmeans_order()
+    withProgress(message = "Draw heatmap",{
+      selectInput("kmeans_order","Order of clusters on heatmap",order,
+                  selected = order,multiple = T)
+    })
+  })
   
   bw_count_clustering_anno <- reactive({
     if(!is.null(bw_count_clustering()) && !is.null(txdb_clustering())){
@@ -6045,7 +6189,43 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(data.z)
     }
   })
-  
+  pre_clustering_kmeans <- reactive({
+    data.z <- clustering_data_z()
+    if(is.null(data.z)){
+      return(NULL)
+    }else{
+      withProgress(message = "k-means clustering",{
+        set.seed(123)
+        cl = consensus_kmeans(data.z, input$clustering_kmeans_number, 100)
+        names(cl) <- rownames(data.z)
+        incProgress(1)
+      })
+      return(cl)
+    }
+  })
+  pre_kmeans_order <- reactive({
+    data.z <- clustering_data_z()
+    cl = pre_clustering_kmeans()
+    print(unique(cl))
+    if(is.null(cl) || length(unique(cl)) == 1){
+      return(NULL)
+    }else{
+      cl <- data.frame(cl)
+      colnames(cl)[1] <- "cluster" 
+      data2 <- merge(cl,data.z, by=0)
+      rownames(data2)<-data2[,1]
+      data2 <- data2[,-1]
+      df <- data.frame(matrix(rep(NA, 1), nrow=1))[numeric(0), ]
+      for(i in 1:input$clustering_kmeans_number){
+        data3 <- data2 %>% dplyr::filter(cluster == i)
+        data4 <- apply(data3[,-1],2,sum)
+        df <- rbind(df,data4)
+      }
+      colnames(df) <- colnames(data2[,-1])
+      order <- hclust(dist(df), "average")$order
+      return(order)
+    }
+  })
   clustering_kmeans <- reactive({
     data.z <- clustering_data_z()
     if(is.null(data.z) || length(input$selectFC) != 2 || 
@@ -6056,7 +6236,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         ht <- Heatmap(data.z, name = "z-score",
                       column_order = colnames(data.z),
                       clustering_method_columns = 'ward.D2',
-                      row_km= input$clustering_kmeans_number, cluster_row_slices = F, row_km_repeats = 100,
+                      cluster_row_slices = F, split = factor(pre_clustering_kmeans(),levels = input$kmeans_order),
                       show_row_names = F,column_names_side = "top",use_raster = TRUE)
         ht <- draw(ht)
         return(ht)
@@ -6202,7 +6382,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
               multiple = TRUE,
               width = "80%")
   })
-  kmeans_additional <-reactive({
+  pre_kmeans_additional <-reactive({
     if(!is.null(input$peak_pattern_kmeans_add)){
       files<-c()
       name<-c()
@@ -6214,6 +6394,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       names(files)<-name
       return(bigwig_breakline(files))
     }
+  })
+  kmeans_additional <- reactive({
+  if(!is.null(input$sample_order_kmeans_pattern)) return(pre_kmeans_additional()[input$sample_order_kmeans_pattern])  
   })
   output$peak_pattern_kmeans_heat_range <- renderUI({
     if(!is.null(peak_kmeans_grange())){
@@ -6398,7 +6581,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
               multiple = TRUE,
               width = "80%")
   })
-  track_additional_files_clustering <-reactive({
+  pre_track_additional_files_clustering <-reactive({
     if(!is.null(input$trackplot_additional1_clustering)){
       files<-c()
       name<-c()
@@ -6411,7 +6594,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(files)
     }
   })
-  
+  track_additional_files_clustering <- reactive({
+    if(input$sample_order_kmeans_track) return(pre_track_additional_files_clustering()[input$sample_order_kmeans_track])
+  })
   data_track_clustering <- reactive({
     if(!is.null(input$clustering_kmeans_extract_table_rows_selected)){
       return(data_trac(y=goi_promoter_position_clustering(),gene_position=goi_gene_position_clustering(),
@@ -6926,7 +7111,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
               multiple = TRUE,
               width = "80%")
   })
-  int_track_additional_files_clustering <-reactive({
+  pre_int_track_additional_files_clustering <-reactive({
     if(!is.null(input$int_trackplot_additional1_clustering)){
       files<-c()
       name<-c()
@@ -6939,7 +7124,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(files)
     }
   })
-  
+  int_track_additional_files_clustering <-reactive({
+    if(input$sample_order_kmeans_track_int) return(pre_int_track_additional_files_clustering()[input$sample_order_kmeans_track_int])
+  })
   int_data_track_clustering <- reactive({
     if(!is.null(input$RP_table_clustering_rows_selected)){
       return(data_trac(y=int_goi_promoter_position_clustering(),gene_position=int_goi_gene_position_clustering(),
@@ -7994,7 +8181,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
               multiple = TRUE,
               width = "80%")
   })
-  integrated_additional1_enrich <-reactive({
+  pre_integrated_additional1_enrich <-reactive({
     if(!is.null(input$integrated_bw_1_enrich)){
       files<-c()
       name<-c()
@@ -8014,7 +8201,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
     }
   })
-  integrated_additional2_enrich <-reactive({
+  integrated_additional1_enrich <- reactive({
+    if(!is.null(input$sample_order_enrich_comb1)) return(pre_integrated_additional1_enrich()[input$sample_order_enrich_comb1])
+  })
+  pre_integrated_additional2_enrich <-reactive({
     if(!is.null(input$integrated_bw_2_enrich)){
       files<-c()
       name<-c()
@@ -8027,7 +8217,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(bigwig_breakline(files))
     }
   })
-  integrated_additional3_enrich <-reactive({
+  integrated_additional2_enrich <- reactive({
+    if(!is.null(input$sample_order_enrich_comb2)) return(pre_integrated_additional2_enrich()[input$sample_order_enrich_comb2])
+  })
+  pre_integrated_additional3_enrich <-reactive({
     if(!is.null(input$integrated_bw_3_enrich)){
       files<-c()
       name<-c()
@@ -8040,7 +8233,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(bigwig_breakline(files))
     }
   })
-  integrated_additional4_enrich <-reactive({
+  integrated_additional3_enrich <- reactive({
+    if(!is.null(input$sample_order_enrich_comb3)) return(pre_integrated_additional3_enrich()[input$sample_order_enrich_comb3])
+  })
+  pre_integrated_additional4_enrich <-reactive({
     if(!is.null(input$integrated_bw_4_enrich)){
       files<-c()
       name<-c()
@@ -8052,6 +8248,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       names(files)<-name
       return(bigwig_breakline(files))
     }
+  })
+  integrated_additional4_enrich <- reactive({
+    if(!is.null(input$sample_order_enrich_comb4)) return(pre_integrated_additional4_enrich()[input$sample_order_enrich_comb4])
   })
   integrated_heatmap_add1_enrich <- reactive({
     if(!is.null(integrated_additional1_enrich())){

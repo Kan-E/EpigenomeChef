@@ -96,7 +96,8 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('magick', update = F)" && \
     R -e "BiocManager::install('pdftools', update = F)" && \
     R -e "install.packages('pdftools', repos = 'https://ropensci.r-universe.dev')" && \
-    R -e "BiocManager::install('webshot', update = F)"
+    R -e "BiocManager::install('webshot', update = F)" && \
+    R -e "BiocManager::install('clue', update = F)"
 ##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \

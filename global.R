@@ -1,3 +1,8 @@
+
+##pair-wiseのfilter機能の改善
+##Clusteringでfilter機能の作成
+##reportの更新 
+
 library(rtracklayer) 
 library(Rsubread)
 library(Rsamtools)
@@ -76,6 +81,7 @@ library(EnrichedHeatmap)
 library(pdftools)
 library(magick)
 library(webshot)
+library(clue)
 Sys.setenv(OPENSSL_CONF="/dev/null")
 options('homer_path' = "/usr/local/homer")
 check_homer()
@@ -1552,7 +1558,7 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
     name <- gsub(" ", "\\_", name)
     ht <- EnrichedHeatmap(mat1, split = num_list, col = color,name=name,
                           axis_name = axis_name,pos_line = F,
-                          column_title =name,
+                          column_title =name,use_raster=TRUE,
                           top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:4, lty = 1),
                                                                                       axis_param = list(side = "right", facing = "inside"))))
     ht_list <- ht_list + ht
@@ -1592,4 +1598,12 @@ gene_type <- function(my.symbols,org,Species){
       }
   }else type <- "not selected"
   return(type)
+}
+consensus_kmeans = function(mat, centers, km_repeats) {
+  partition_list = lapply(seq_len(km_repeats), function(i) {
+    as.cl_hard_partition(kmeans(mat, centers))
+  })
+  partition_list = cl_ensemble(list = partition_list)
+  partition_consensus = cl_consensus(partition_list)
+  as.vector(cl_class_ids(partition_consensus)) 
 }
