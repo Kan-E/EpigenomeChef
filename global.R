@@ -218,20 +218,18 @@ filter_function <- function(filter, files){
     for(i in 1:length(unique_col)){
       cond <- length(which(gsub("\\_.+$", "", name_list) == unique_col[i]))
       files2 <- files[(1 + total):(total + cond)]
-      if(cond > 1) {
+      if(cond == 1) files2 <- list(files2[[1]],files2[[1]])
         consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
         occurrences <- elementMetadata(consensusToCount) %>% as.data.frame %>% dplyr::select(-consensusIDs) %>% 
           rowSums
         consensusToCount <- consensusToCount[occurrences >= 2, ]
         consensus[[i]] <- consensusToCount
-      }else consensus[[i]] <- files2
       total <- total + cond
     }
     consensusToCount <- soGGi:::runConsensusRegions(GRangesList(consensus), "none")
   }else{
-    if(length(names(files)) > 1){
+    if(length(names(files)) == 1) files <- list(files[[1]],files[[1]])
       consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files), "none")
-    }else consensusToCount <- files[[1]]
   }
   return(consensusToCount)
 }

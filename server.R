@@ -621,37 +621,32 @@ shinyServer(function(input, output, session) {
       return(data2)
     }
   })
-  
-  
-  output$DEG_result <- DT::renderDT({
+  pre_DEG_result <- reactive({
     if(!is.null(deg_result())){
       if(dim(brush_info())[1] == 0){
-      if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
-        deg_result() %>% 
-          datatable(
-            selection = "single",
-            filter = "top")
-      }else{
-        deg_result2()  %>%
-          datatable(
-            selection = "single",
-            filter = "top")
-      }
+        if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
+          deg_result()
+        }else{
+          deg_result2()
+        }
       }else{
         if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
           deg_result() %>% 
-            dplyr::filter(rownames(.) %in% brush_info()$Row.names) %>%
-            datatable(
-              selection = "single",
-              filter = "top")
+            dplyr::filter(rownames(.) %in% brush_info()$Row.names)
         }else{
           deg_result2()  %>%
-            dplyr::filter(rownames(.) %in% brush_info()$Row.names) %>%
-            datatable(
-              selection = "single",
-              filter = "top")
+            dplyr::filter(rownames(.) %in% brush_info()$Row.names)
         }
       }
+    }
+  })
+  
+  output$DEG_result <- DT::renderDT({
+    if(!is.null(deg_result())){
+      pre_DEG_result() %>%
+        datatable(
+          selection = "single",
+          filter = "top")
     }
   })
   
@@ -763,9 +758,7 @@ shinyServer(function(input, output, session) {
             label_data <- brush_info()$Row.names
         }else{
         if(!is.null(input$DEG_result_rows_selected)){
-          if(input$Genomic_region == "Promoter"){
-            label_data <- rownames(deg_result()[input$DEG_result_rows_selected,])
-          }else label_data <- rownames(deg_result2()[input$DEG_result_rows_selected,])
+            label_data <- rownames(pre_DEG_result()[input$DEG_result_rows_selected,])
         }else label_data <- NULL
         }
         data$color <- "NS"
@@ -901,11 +894,11 @@ pair_volcano()
     if(!is.null(input$DEG_result_rows_selected)){
       library(Gviz)
       if(input$Genomic_region == "Promoter"){
-        label_data <- rownames(deg_result()[input$DEG_result_rows_selected,])
+        label_data <- rownames(pre_DEG_result()[input$DEG_result_rows_selected,])
         gene_IDs<-id_convert(label_data,input$Species,type="SYMBOL_single")
         y <- as.data.frame(subset(promoter_region(), gene_id %in% gene_IDs))
       }else{
-        label_data <- rownames(deg_result2()[input$DEG_result_rows_selected,])
+        label_data <- rownames(pre_DEG_result()[input$DEG_result_rows_selected,])
         y <- dplyr::filter(deg_result_anno2(),locus == label_data)
       }
       return(y)
@@ -915,9 +908,9 @@ pair_volcano()
   goi_gene_position <- reactive({
     if(!is.null(input$DEG_result_rows_selected)){
       if(input$Genomic_region == "Promoter"){
-        label_data <- rownames(deg_result()[input$DEG_result_rows_selected,])
+        label_data <- rownames(pre_DEG_result()[input$DEG_result_rows_selected,])
       }else{
-        label_data <- deg_result2()[input$DEG_result_rows_selected,]$NearestGene
+        label_data <- pre_DEG_result()[input$DEG_result_rows_selected,]$NearestGene
       }
       gene_IDs<- id_convert(label_data,input$Species,type="SYMBOL_single")
       gene_position <- as.data.frame(subset(gene_position(), gene_id %in% gene_IDs))
