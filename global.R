@@ -196,6 +196,8 @@ files_name2ENTREZID <- function(files,Species,gene_type){
         gene_id <- gene_id %>% distinct(ENSEMBL, .keep_all = T) %>% na.omit()
         gene_id <- data.frame(ENTREZID = gene_id$ENTREZID, row.names = gene_id$ENSEMBL)
         count2 <- merge(gene_id,count,by=0)
+        count2 <- count2[,-1]
+        count2 <- count2 %>% distinct(ENTREZID, .keep_all = T)
         }
       }else{
         #symbol
@@ -1222,6 +1224,7 @@ RNAseqDEG_ann <- function(RNAdata,Species,gene_type){
   if(str_detect(rownames(RNAdata)[1], "FBgn")){
     RNAdata$gene_id <- rownames(RNAdata)
     data <- RNAdata
+    data <- merge(RNAdata, gene_IDs, by="Symbol")
   }else{
   if(gene_type != "SYMBOL"){
     my.symbols <- gsub("\\..*","", rownames(RNAdata))
@@ -1229,14 +1232,15 @@ RNAseqDEG_ann <- function(RNAdata,Species,gene_type){
     colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
     RNAdata$EnsemblID <- gsub("\\..*","", rownames(RNAdata))
     gene_IDs <- gene_IDs %>% distinct(EnsemblID, .keep_all = T)
+    data <- merge(RNAdata, gene_IDs, by="EnsemblID")
   }else{
     my.symbols <- rownames(RNAdata)
     gene_IDs<-id_convert(my.symbols, Species,type="SYMBOL_single")
     colnames(gene_IDs) <- c("Symbol", "gene_id")
     gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T)
     RNAdata$Symbol <- rownames(RNAdata) 
+    data <- merge(RNAdata, gene_IDs, by="Symbol")
   }
-  data <- merge(RNAdata, gene_IDs, by="Symbol")
   }
   return(data)
 }
