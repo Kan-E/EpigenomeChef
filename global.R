@@ -77,12 +77,13 @@ library(pdftools)
 library(magick)
 library(webshot)
 library(clue)
+library(TxDb.Mmusculus.UCSC.mm39.refGene)
 Sys.setenv(OPENSSL_CONF="/dev/null")
 options('homer_path' = "/usr/local/homer")
 check_homer()
 jscode <- "shinyjs.closeWindow = function() { window.close(); }"
 options(rsconnect.max.bundle.size=31457280000000000000)
-species_list <- c("not selected", "Homo sapiens (hg19)","Homo sapiens (hg38)","Mus musculus (mm10)",
+species_list <- c("not selected", "Homo sapiens (hg19)","Homo sapiens (hg38)","Mus musculus (mm10)","Mus musculus (mm39)",
                   "Rattus norvegicus (rn6)","Drosophila melanogaster (dm6)","Caenorhabditis elegans (ce11)",
                   "Bos taurus (bosTau8)","Canis lupus familiaris (canFam3)","Danio rerio (danRer10)",
                   "Gallus gallus (galGal4)","Macaca mulatta (rheMac8)","Pan troglodytes (panTro4)")
@@ -101,6 +102,7 @@ org <- function(Species){
             "Homo sapiens (hg38)" = org <- org.Hs.eg.db,
             "Homo sapiens (hg19)" = org <- org.Hs.eg.db,
             "Mus musculus (mm10)" = org <- org.Mm.eg.db,
+            "Mus musculus (mm39)" = org <- org.Mm.eg.db,
             "Drosophila melanogaster (dm6)" = org <- org.Dm.eg.db,
             "Rattus norvegicus (rn6)" = org <- org.Rn.eg.db,
             "Caenorhabditis elegans (ce11)" = org <- org.Ce.eg.db,
@@ -164,6 +166,7 @@ txdb_function <- function(Species){
           "Mus musculus (mm10)" = txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene,
           "Homo sapiens (hg19)" = txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene,
           "Homo sapiens (hg38)" = txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene,
+          "Mus musculus (mm39)" = txdb <- TxDb.Mmusculus.UCSC.mm39.refGene,
           "Drosophila melanogaster (dm6)" = txdb <- TxDb.Dmelanogaster.UCSC.dm6.ensGene,
           "Rattus norvegicus (rn6)" = txdb <- TxDb.Rnorvegicus.UCSC.rn6.refGene,
           "Caenorhabditis elegans (ce11)" = txdb <- TxDb.Celegans.UCSC.ce11.refGene,
@@ -567,7 +570,7 @@ gene_list_for_enrichment_genome <- function(H_t2g, Species=NULL){
   return(df)
 }
 dorothea <- function(species, confidence = "recommend",type){
-  if(species == "Mus musculus (mm10)"){
+  if(species == "Mus musculus (mm10)" || species == "Mus musculus (mm39)"){
     net <- dorothea::dorothea_mm
   }else{
     net <- dorothea::dorothea_hs
@@ -587,7 +590,7 @@ dorothea <- function(species, confidence = "recommend",type){
   net2 <- merge(net2, gene_IDs, by="target")
   net3 <- data.frame(gs_name = net2$tf, entrez_gene = net2$ENTREZID, target = net2$target, confidence = net2$confidence)
   net3 <- dplyr::arrange(net3, gs_name)
-  if(species != "Mus musculus (mm10)" && species != "Homo sapiens (hg19)" && 
+  if(species != "Mus musculus (mm10)"  && species != "Mus musculus (mm39)" && species != "Homo sapiens (hg19)" && 
      species != "Homo sapiens (hg38)"){
     withProgress(message = paste0("Gene ID conversion from human to ", species, "for the regulon gene set. It takes a few minutes."),{
       genes <- net3$entrez_gene
@@ -1368,6 +1371,7 @@ ref_for_GREAT <- function(Species){
           "Mus musculus (mm10)" = source <- "TxDb.Mmusculus.UCSC.mm10.knownGene",
           "Homo sapiens (hg19)" = source <- "TxDb.Hsapiens.UCSC.hg19.knownGene",
           "Homo sapiens (hg38)" = source <- "TxDb.Hsapiens.UCSC.hg38.knownGene",
+          "Mus musculus (mm39)" = source <- "TxDb.Mmusculus.UCSC.mm39.refGene",
           "Drosophila melanogaster (dm6)" = source <- "TxDb.Dmelanogaster.UCSC.dm6.ensGene",
           "Rattus norvegicus (rn6)" = source <- "TxDb.Rnorvegicus.UCSC.rn6.refGene",
           "Caenorhabditis elegans (ce11)" = source <- "TxDb.Celegans.UCSC.ce11.refGene",
