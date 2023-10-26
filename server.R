@@ -50,6 +50,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$goButton,({
     updateSelectInput(session,inputId = "Species","Species",species_list, selected = "Homo sapiens (hg19)")
   }))
+  
   observeEvent(input$goButton_venn,({
     updateSelectInput(session,inputId = "Species_venn","Species",species_list, selected = "Homo sapiens (hg19)")
   }))
@@ -76,123 +77,208 @@ shinyServer(function(input, output, session) {
     updateSelectizeInput(session,inputId = "sample_order","Sample order:",
                          choices = colnames(pre_bw_count()),selected = colnames(pre_bw_count()))
   }))
-    output$sample_order_pair_track <- renderUI({
-      if(!is.null(pre_track_additional_files())){
+  output$sample_order_pair_track <- renderUI({
+    if(!is.null(pre_track_additional_files())){
       selectInput(inputId = "sample_order_pair_track","Sample order:",
-                         choices =  names(pre_track_additional_files()),
-                         selected = names(pre_track_additional_files()),multiple = TRUE)
-      }
+                  choices =  names(pre_track_additional_files()),
+                  selected = names(pre_track_additional_files()),multiple = TRUE)
+    }
   })
-    output$sample_order_pair_pattern <- renderUI({
-      if(!is.null(pre_up_additional())){
-        selectInput(inputId = "sample_order_pair_pattern","Sample order:",
-                    choices =  names(pre_up_additional()),
-                    selected = names(pre_up_additional()),multiple = TRUE)
-      }
+  output$sample_order_pair_pattern <- renderUI({
+    if(!is.null(pre_up_additional())){
+      selectInput(inputId = "sample_order_pair_pattern","Sample order:",
+                  choices =  names(pre_up_additional()),
+                  selected = names(pre_up_additional()),multiple = TRUE)
+    }
+  })
+  output$sample_order_pair_track_int <- renderUI({
+    if(!is.null(pre_int_track_additional_files())){
+      selectInput(inputId = "sample_order_pair_track_int","Sample order:",
+                  choices =  names(pre_int_track_additional_files()),
+                  selected = names(pre_int_track_additional_files()),multiple = TRUE)
+    }
+  })
+  output$with_sample_order_pair_comb1 <- renderUI({
+    if(!is.null(with_pre_integrated_additional1())){
+      selectInput(inputId = "with_sample_order_pair_comb1","Sample order (blue):",
+                  choices =  names(with_pre_integrated_additional1()),
+                  selected = names(with_pre_integrated_additional1()),multiple = TRUE)
+    }
+  })
+  output$with_sample_order_pair_comb2 <- renderUI({
+    if(!is.null(with_pre_integrated_additional2())){
+      selectInput(inputId = "with_sample_order_pair_comb2","Sample order (green):",
+                  choices =  names(with_pre_integrated_additional2()),
+                  selected = names(with_pre_integrated_additional2()),multiple = TRUE)
+    }
+  })
+  output$with_sample_order_pair_comb3 <- renderUI({
+    if(!is.null(with_pre_integrated_additional3())){
+      selectInput(inputId = "with_sample_order_pair_comb3","Sample order (purple):",
+                  choices =  names(with_pre_integrated_additional3()),
+                  selected = names(with_pre_integrated_additional3()),multiple = TRUE)
+    }
+  })
+  output$sample_order_pair_comb1 <- renderUI({
+    if(!is.null(pre_integrated_additional1())){
+      selectInput(inputId = "sample_order_pair_comb1","Sample order (blue):",
+                  choices =  names(pre_integrated_additional1()),
+                  selected = names(pre_integrated_additional1()),multiple = TRUE)
+    }
+  })
+  output$sample_order_pair_comb2 <- renderUI({
+    if(!is.null(pre_integrated_additional2())){
+      selectInput(inputId = "sample_order_pair_comb2","Sample order (green):",
+                  choices =  names(pre_integrated_additional2()),
+                  selected = names(pre_integrated_additional2()),multiple = TRUE)
+    }
+  })
+  output$sample_order_pair_comb3 <- renderUI({
+    if(!is.null(pre_integrated_additional3())){
+      selectInput(inputId = "sample_order_pair_comb3","Sample order (purple):",
+                  choices =  names(pre_integrated_additional3()),
+                  selected = names(pre_integrated_additional3()),multiple = TRUE)
+    }
+  })
+  observeEvent(pre_bws_venn(),({
+    updateSelectizeInput(session,inputId = "sample_order_venn","Sample order:",
+                         choices =  names(pre_bws_venn()),
+                         selected = names(pre_bws_venn()))
+  }))
+  output$sample_order_venn_comb2 <- renderUI({
+    if(!is.null(pre_integrated_additional2_venn())){
+      selectInput(inputId = "sample_order_venn_comb2","Sample order (blue):",
+                  choices =  names(pre_integrated_additional2_venn()),
+                  selected = names(pre_integrated_additional2_venn()),multiple = TRUE)
+    }
+  })
+  output$sample_order_venn_comb3 <- renderUI({
+    if(!is.null(pre_integrated_additional3_venn())){
+      selectInput(inputId = "sample_order_venn_comb3","Sample order (green):",
+                  choices =  names(pre_integrated_additional3_venn()),
+                  selected = names(pre_integrated_additional3_venn()),multiple = TRUE)
+    }
+  })
+  output$sample_order_venn_comb4 <- renderUI({
+    if(!is.null(pre_integrated_additional4_venn())){
+      selectInput(inputId = "sample_order_venn_comb4","Sample order (purple):",
+                  choices =  names(pre_integrated_additional4_venn()),
+                  selected = names(pre_integrated_additional4_venn()),multiple = TRUE)
+    }
+  })
+  output$sample_order_kmeans_pattern <- renderUI({
+    if(!is.null(pre_kmeans_additional())){
+      selectInput(inputId = "sample_order_kmeans_pattern","Sample order:",
+                  choices =  names(pre_kmeans_additional()),
+                  selected = names(pre_kmeans_additional()),multiple = TRUE)
+    }
+  })
+  output$sample_order_kmeans_track <- renderUI({
+    if(!is.null(pre_track_additional_files_clustering())){
+      selectInput(inputId = "sample_order_kmeans_track","Sample order:",
+                  choices =  names(pre_track_additional_files_clustering()),
+                  selected = names(pre_track_additional_files_clustering()),multiple = TRUE)
+    }
+  })
+  output$sample_order_kmeans_track_int <- renderUI({
+    if(!is.null(pre_int_track_additional_files_clustering())){
+      selectInput(inputId = "sample_order_kmeans_track_int","Sample order:",
+                  choices =  names(pre_int_track_additional_files_clustering()),
+                  selected = names(pre_int_track_additional_files_clustering()),multiple = TRUE)
+    }
+  })
+  output$sample_order_enrich_comb1 <- renderUI({
+    if(!is.null(pre_integrated_additional1_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb1","Sample order (red):",
+                  choices =  names(pre_integrated_additional1_enrich()),
+                  selected = names(pre_integrated_additional1_enrich()),multiple = TRUE)
+    }
+  })
+  output$sample_order_enrich_comb2 <- renderUI({
+    if(!is.null(pre_integrated_additional2_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb2","Sample order (blue):",
+                  choices =  names(pre_integrated_additional2_enrich()),
+                  selected = names(pre_integrated_additional2_enrich()),multiple = TRUE)
+    }
+  })
+  output$sample_order_enrich_comb3 <- renderUI({
+    if(!is.null(pre_integrated_additional3_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb3","Sample order (green):",
+                  choices =  names(pre_integrated_additional3_enrich()),
+                  selected = names(pre_integrated_additional3_enrich()),multiple = TRUE)
+    }
+  })
+  output$sample_order_enrich_comb4 <- renderUI({
+    if(!is.null(pre_integrated_additional4_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb4","Sample order (purple):",
+                  choices =  names(pre_integrated_additional4_enrich()),
+                  selected = names(pre_integrated_additional4_enrich()),multiple = TRUE)
+    }
+  })
+  output$file1 <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("file1",label=NULL,choices = bw,multiple=T)
+    }else{
+      fileInput("file1",NULL,
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  output$file_bam <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bam <- c(str_subset(list,".bam"))
+      selectInput("file_bam",label=NULL,choices = bam,multiple=T)
+    }else{
+      fileInput("file_bam",NULL,
+                accept = c("bam"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  output$peak_call_file1 <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bed <- c(str_subset(list,".narrowPeak"),str_subset(list,".bed"))
+      selectInput("peak_call_file1",label=NULL,choices = bed,multiple=T)
+    }else{
+      fileInput("peak_call_file1",NULL,
+                accept = c("bed","narrowPeak"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  
+  updateCounter_createCount <- reactiveValues(i = 0)
+  
+  observe({
+    input$createcountButton
+    isolate({
+      updateCounter_createCount$i <- updateCounter_createCount$i + 1
     })
-    output$sample_order_pair_track_int <- renderUI({
-      if(!is.null(pre_int_track_additional_files())){
-        selectInput(inputId = "sample_order_pair_track_int","Sample order:",
-                    choices =  names(pre_int_track_additional_files()),
-                    selected = names(pre_int_track_additional_files()),multiple = TRUE)
-      }
-    })
-    output$sample_order_pair_comb1 <- renderUI({
-      if(!is.null(pre_integrated_additional1())){
-        selectInput(inputId = "sample_order_pair_comb1","Sample order (blue):",
-                    choices =  names(pre_integrated_additional1()),
-                    selected = names(pre_integrated_additional1()),multiple = TRUE)
-      }
-    })
-    output$sample_order_pair_comb2 <- renderUI({
-      if(!is.null(pre_integrated_additional2())){
-        selectInput(inputId = "sample_order_pair_comb2","Sample order (green):",
-                    choices =  names(pre_integrated_additional2()),
-                    selected = names(pre_integrated_additional2()),multiple = TRUE)
-      }
-    })
-    output$sample_order_pair_comb3 <- renderUI({
-      if(!is.null(pre_integrated_additional3())){
-        selectInput(inputId = "sample_order_pair_comb3","Sample order (purple):",
-                    choices =  names(pre_integrated_additional3()),
-                    selected = names(pre_integrated_additional3()),multiple = TRUE)
-      }
-    })
-    observeEvent(pre_bws_venn(),({
-      updateSelectizeInput(session,inputId = "sample_order_venn","Sample order:",
-                           choices =  names(pre_bws_venn()),
-                           selected = names(pre_bws_venn()))
-    }))
-    output$sample_order_venn_comb2 <- renderUI({
-      if(!is.null(pre_integrated_additional2_venn())){
-        selectInput(inputId = "sample_order_venn_comb2","Sample order (blue):",
-                    choices =  names(pre_integrated_additional2_venn()),
-                    selected = names(pre_integrated_additional2_venn()),multiple = TRUE)
-      }
-    })
-    output$sample_order_venn_comb3 <- renderUI({
-      if(!is.null(pre_integrated_additional3_venn())){
-        selectInput(inputId = "sample_order_venn_comb3","Sample order (green):",
-                    choices =  names(pre_integrated_additional3_venn()),
-                    selected = names(pre_integrated_additional3_venn()),multiple = TRUE)
-      }
-    })
-    output$sample_order_venn_comb4 <- renderUI({
-      if(!is.null(pre_integrated_additional4_venn())){
-        selectInput(inputId = "sample_order_venn_comb4","Sample order (purple):",
-                    choices =  names(pre_integrated_additional4_venn()),
-                    selected = names(pre_integrated_additional4_venn()),multiple = TRUE)
-      }
-    })
-    output$sample_order_kmeans_pattern <- renderUI({
-      if(!is.null(pre_kmeans_additional())){
-        selectInput(inputId = "sample_order_kmeans_pattern","Sample order:",
-                    choices =  names(pre_kmeans_additional()),
-                    selected = names(pre_kmeans_additional()),multiple = TRUE)
-      }
-    })
-    output$sample_order_kmeans_track <- renderUI({
-      if(!is.null(pre_track_additional_files_clustering())){
-        selectInput(inputId = "sample_order_kmeans_track","Sample order:",
-                    choices =  names(pre_track_additional_files_clustering()),
-                    selected = names(pre_track_additional_files_clustering()),multiple = TRUE)
-      }
-    })
-    output$sample_order_kmeans_track_int <- renderUI({
-      if(!is.null(pre_int_track_additional_files_clustering())){
-        selectInput(inputId = "sample_order_kmeans_track_int","Sample order:",
-                    choices =  names(pre_int_track_additional_files_clustering()),
-                    selected = names(pre_int_track_additional_files_clustering()),multiple = TRUE)
-      }
-    })
-    output$sample_order_enrich_comb1 <- renderUI({
-      if(!is.null(pre_integrated_additional1_enrich())){
-        selectInput(inputId = "sample_order_enrich_comb1","Sample order (red):",
-                    choices =  names(pre_integrated_additional1_enrich()),
-                    selected = names(pre_integrated_additional1_enrich()),multiple = TRUE)
-      }
-    })
-    output$sample_order_enrich_comb2 <- renderUI({
-      if(!is.null(pre_integrated_additional2_enrich())){
-        selectInput(inputId = "sample_order_enrich_comb2","Sample order (blue):",
-                    choices =  names(pre_integrated_additional2_enrich()),
-                    selected = names(pre_integrated_additional2_enrich()),multiple = TRUE)
-      }
-    })
-    output$sample_order_enrich_comb3 <- renderUI({
-      if(!is.null(pre_integrated_additional3_enrich())){
-        selectInput(inputId = "sample_order_enrich_comb3","Sample order (green):",
-                    choices =  names(pre_integrated_additional3_enrich()),
-                    selected = names(pre_integrated_additional3_enrich()),multiple = TRUE)
-      }
-    })
-    output$sample_order_enrich_comb4 <- renderUI({
-      if(!is.null(pre_integrated_additional4_enrich())){
-        selectInput(inputId = "sample_order_enrich_comb4","Sample order (purple):",
-                    choices =  names(pre_integrated_additional4_enrich()),
-                    selected = names(pre_integrated_additional4_enrich()),multiple = TRUE)
-      }
-    })
+  })
+  
+  
+  #Restart
+  observeEvent(bws_count(), {
+    isolate(updateCounter_createCount$i == 0)
+    updateCounter_createCount <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(peak_call_files(), {
+    isolate(updateCounter_createCount$i == 0)
+    updateCounter_createCount <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$upstream, {
+    isolate(updateCounter_createCount$i == 0)
+    updateCounter_createCount <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$downstream, {
+    isolate(updateCounter_createCount$i == 0)
+    updateCounter_createCount <<- reactiveValues(i = 0)
+  }) 
   # pair-wise ------------------------------------------------------------------------------
   org1 <- reactive({
     return(org(Species = input$Species))
@@ -203,12 +289,12 @@ shinyServer(function(input, output, session) {
     }
   })
   promoter_region <- reactive({
-      if(input$Genomic_region == "Promoter"){
-        if(input$Species != "not selected"){
+    if(input$Genomic_region == "Promoter"){
+      if(input$Species != "not selected"){
         return(promoter(txdb(),upstream = input$upstream, downstream = input$downstream,filter = input$pair_filter))
-        }
-      }else return(promoter(upstream = input$upstream, downstream = input$downstream,
-                            input_type = "Genome-wide",files =peak_call_files(),filter = input$pair_filter))
+      }
+    }else return(promoter(upstream = input$upstream, downstream = input$downstream,
+                          input_type = "Genome-wide",files =peak_call_files(),filter = input$pair_filter))
   })
   gene_position <- reactive({
     if(input$Species != "not selected"){
@@ -218,27 +304,31 @@ shinyServer(function(input, output, session) {
   
   bws <- reactive({
     if(input$data_file_type == "Row1" || input$data_file_type == "Row1_count"){
-      if(is.null(input$file1)){
-        if(input$goButton > 0 ){
-          df<-list()
-          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
-          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
-          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
-          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
-          return(df)
-        }
-        return(NULL)
-      }else{
-        files<-c()
-        name<-c()
-        for(nr in 1:length(input$file1[, 1])){
-          file <- input$file1[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$file1[nr,]$name))
-          files <- c(files,file)
-        }
-        names(files)<-name
-        return(files)
+      files<-NULL
+      if(input$goButton > 0 ){
+        files<-list()
+        files[["A_1"]] <- "data/bigwig/A_1.BigWig"
+        files[["A_2"]] <- "data/bigwig/A_2.BigWig"
+        files[["B_1"]] <- "data/bigwig/B_1.BigWig"
+        files[["B_2"]] <- "data/bigwig/B_2.BigWig"
       }
+      if(!is.null(input$file1)){
+        if(length(list.files("./Volume/")) > 0){
+          files <- input$file1
+          name <- gsub(".+\\/","",input$file1)
+          names(files) <- gsub("\\..+$", "", name)
+        }else{
+          files<-c()
+          name<-c()
+          for(nr in 1:length(input$file1[, 1])){
+            file <- input$file1[[nr, 'datapath']]
+            name <- c(name, gsub("\\..+$", "", input$file1[nr,]$name))
+            files <- c(files,file)
+          }
+          names(files)<-name
+        }
+      }
+      return(files)
     }
   })
   bws_order<-reactive({
@@ -253,27 +343,39 @@ shinyServer(function(input, output, session) {
     if(is.null(input$file1_count) && input$goButton > 0 )  tmp = "data/bws_count.txt"
     if(!is.null(tmp)) return(read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = ""))
   })
+  observeEvent(input$goButton,({
+    if(input$data_file_type == "Row2"){
+      updateRadioButtons(session,'Pair_or_single','Sequence type:',
+                         c('Paired-end'="Paired-end",
+                           'Single-end'="Single-end"),selected = "Single-end")
+    }
+  }))
   bam <- reactive({
     if(input$data_file_type == "Row2"){
       if(is.null(input$file_bam)){
         if(input$goButton > 0 ){
-          df<-list()
-          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
-          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
-          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
-          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
+          df<-c()
+          df["A_1"] <- "data/bam/A_1.bam"
+          df["A_2"] <- "data/bam/A_2.bam"
+          df["B_1"] <- "data/bam/B_1.bam"
+          df["B_2"] <- "data/bam/B_2.bam"
           return(df)
         }
-        return(NULL)
       }else{
-        files<-c()
-        name<-c()
-        for(nr in 1:length(input$file_bam[, 1])){
-          file <- input$file_bam[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$file_bam[nr,]$name))
-          files <- c(files,file)
+        if(length(list.files("./Volume/")) > 0){
+          files <- input$file_bam
+          name <- gsub(".+\\/","",input$file_bam)
+          names(files) <- gsub("\\..+$", "", name)
+        }else{
+          files<-c()
+          name<-c()
+          for(nr in 1:length(input$file_bam[, 1])){
+            file <- input$file_bam[[nr, 'datapath']]
+            name <- c(name, gsub("\\..+$", "", input$file_bam[nr,]$name))
+            files <- c(files,file)
+          }
+          names(files)<-name
         }
-        names(files)<-name
         return(files)
       }
     }
@@ -295,16 +397,23 @@ shinyServer(function(input, output, session) {
         }
         return(NULL)
       }else{
-        files<-c()
-        name<-c()
-        for(nr in 1:length(input$peak_call_file1[, 1])){
-          file <- input$peak_call_file1[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$peak_call_file1[nr,]$name))
-          files <- c(files,file)
+        if(length(list.files("./Volume/")) > 0){
+          files <- input$peak_call_file1
+          files2 <- lapply(files, GetGRanges, simple = TRUE)
+          name <- gsub(".+\\/","",input$peak_call_file1)
+          names(files2) <- gsub("\\..+$", "", name)
+        }else{
+          files<-c()
+          name<-c()
+          for(nr in 1:length(input$peak_call_file1[, 1])){
+            file <- input$peak_call_file1[[nr, 'datapath']]
+            name <- c(name, gsub("\\..+$", "", input$peak_call_file1[nr,]$name))
+            files <- c(files,file)
+          }
+          files2 <- lapply(files, GetGRanges, simple = TRUE)
+          names(files2)<-name
+          print(files2)
         }
-        files2 <- lapply(files, GetGRanges, simple = TRUE)
-        names(files2)<-name
-        print(files2)
         return(files2)
       }
     }
@@ -323,7 +432,7 @@ shinyServer(function(input, output, session) {
       as.data.frame(uploaded_files) 
     }
   })
-
+  
   
   output$input_peak_call_files <- DT::renderDataTable({
     if(input$Genomic_region == "Genome-wide"){
@@ -333,60 +442,78 @@ shinyServer(function(input, output, session) {
   })
   
   pre_bw_count <- reactive({
-    if(input$data_file_type == "Row1" && !is.null(bw_files())){
-      if(input$Genomic_region == "Promoter"){
-        if(input$Species != "not selected"){
-          return(Bigwig2count(bw = bw_files(),promoter_region(),
-                              Species = input$Species,input_type =input$Genomic_region)) 
-        }
-      }else{
-        if(!is.null(peak_call_files())){
-          return(Bigwig2count(bw = bw_files(),promoter_region(),input_type =input$Genomic_region))
-        }
-      }
-    }
-    if(input$data_file_type == "Row1_count" && !is.null(bws_count())){
-      return(bws_count())
-    }
-    if(input$Species != "not selected" && input$data_file_type == "Row2" && 
-       !is.null(bam())){
-      withProgress(message = "converting bam to gene count data",{
-        switch(input$Pair_or_single,
-               "Paired-end" = seq <- TRUE,
-               "Single-end" = seq <- FALSE)
-        regionsToCount <- data.frame(GeneID = paste("ID", seqnames(promoter_region()), 
-                                                    start(promoter_region()), end(promoter_region()), sep = "_"), Chr = seqnames(promoter_region()), 
-                                     Start = start(promoter_region()), End = end(promoter_region()), Strand = strand(promoter_region()))
-        a <- as.data.frame(promoter_region())
-        Row.name <- paste0(a$seqnames,":",a$start,"-",a$end)
+    if(input$createcountButton > 0 && updateCounter_createCount$i > 0){
+      if(input$data_file_type == "Row1" && !is.null(bw_files())){
         if(input$Genomic_region == "Promoter"){
-          count <- featureCounts(bam(),annot.ext = regionsToCount,isPairedEnd = seq,
-                                 countMultiMappingReads =F,maxFragLength = 100)$counts
-          rownames(count) <- Row.name
-          colnames(count) <- names(bam())
-          return(count)
+          if(input$Species != "not selected"){
+            return(Bigwig2count(bw = bw_files(),promoter_region(),
+                                Species = input$Species,input_type =input$Genomic_region)) 
+          }
         }else{
           if(!is.null(peak_call_files())){
-            count <- featureCounts(bam(),annot.ext = regionsToCount,isPairedEnd = seq,
-                                   countMultiMappingReads =F,maxFragLength = 100)$counts
-            print(count)
-            rownames(count) <- Row.name
-            colnames(count) <- names(bam())
-            return(count)
+            return(Bigwig2count(bw = bw_files(),promoter_region(),input_type =input$Genomic_region))
           }
         }
-      })
+      }
+      if(input$data_file_type == "Row1_count" && !is.null(bws_count())){
+        return(bws_count())
+      }
+      if(input$Species != "not selected" && input$data_file_type == "Row2" && 
+         !is.null(bam())){
+        withProgress(message = "converting bam to gene count data",{
+          switch(input$Pair_or_single,
+                 "Paired-end" = seq <- TRUE,
+                 "Single-end" = seq <- FALSE)
+          regionsToCount <- data.frame(GeneID = paste("ID", seqnames(promoter_region()), 
+                                                      start(promoter_region()), end(promoter_region()), sep = "_"), Chr = seqnames(promoter_region()), 
+                                       Start = start(promoter_region()), End = end(promoter_region()), Strand = strand(promoter_region()))
+          a <- as.data.frame(promoter_region())
+          Row.name <- paste0(a$seqnames,":",a$start,"-",a$end)
+          
+          if(input$Genomic_region == "Promoter"){
+            regionsToCount <- data.frame(GeneID = as.data.frame(promoter_region())$gene_id, Chr = seqnames(promoter_region()), 
+                                         Start = start(promoter_region()), End = end(promoter_region()), Strand = strand(promoter_region()))
+            count <- featureCounts(bam(),annot.ext = regionsToCount,isPairedEnd = seq,
+                                   countMultiMappingReads =F)
+            count <- count$counts
+            if(!str_detect(rownames(count)[1], "FBgn")){
+              my.symbols <- rownames(count)
+              or <- org(input$Species)
+              gene_IDs<-AnnotationDbi::select(or,keys = my.symbols,
+                                              keytype = "ENTREZID",
+                                              columns = c("ENTREZID","SYMBOL"))
+              colnames(gene_IDs) <- c("Row.names","SYMBOL")
+              gene_IDs <- gene_IDs %>% distinct(SYMBOL, .keep_all = T) %>% na.omit()
+              gene_IDs <- data.frame(SYMBOL = gene_IDs$SYMBOL, row.names = gene_IDs$Row.names)
+              data2 <- merge(gene_IDs,count, by=0)
+              rownames(data2) <- data2$SYMBOL
+              count <- data2[,-1:-2]
+            }
+            colnames(count) <- names(bam())
+            print(count)
+            return(count)
+          }else{
+            if(!is.null(peak_call_files())){
+              count <- featureCounts(bam(),annot.ext = regionsToCount,isPairedEnd = seq,
+                                     countMultiMappingReads =F)$counts
+              rownames(count) <- Row.name
+              colnames(count) <- names(bam())
+              return(count)
+            }
+          }
+        })
+      }
     }
   })
   bw_count <- reactive({
-  count <- pre_bw_count()
-  order <- input$sample_order
-  if(!is.null(count)){
-    if(dim(count)[2] == length(order)){
-      data <- count[,order]
-      return(data)
+    count <- pre_bw_count()
+    order <- input$sample_order
+    if(!is.null(count)){
+      if(dim(count)[2] == length(order)){
+        data <- count[,order]
+        return(data)
+      }
     }
-  }
   })
   output$raw_count_table <- DT::renderDataTable({
     bw_count()
@@ -412,9 +539,14 @@ shinyServer(function(input, output, session) {
   )
   
   ##pair-wise deseq2--------
+  collist_bw_pair <- reactive({
+    count <- bw_count()
+    collist <- factor(gsub("\\_.+$", "", colnames(count)))
+    return(collist)
+  })
   dds <- reactive({
     count <- bw_count()
-    collist <- gsub("\\_.+$", "", colnames(count))
+    collist <- collist_bw_pair()
     withProgress(message = "DESeq2",{
       group <- data.frame(con = factor(collist))
       dds<- DESeqDataSetFromMatrix(countData = round(count),colData = group, design = ~ con)
@@ -426,12 +558,12 @@ shinyServer(function(input, output, session) {
   })
   dds_limma <- reactive({
     withProgress(message = "Detecting differential accessible region (limma-trend)",{
-    count <- log(bw_count() + 1,2)
-    collist <- gsub("\\_.+$", "", colnames(count))
-    colnames(count) <- gsub("\\-","\\_",colnames(count))
-    collist<- gsub("\\-","\\_",collist)
-    collist<- factor(collist, levels = unique(collist),ordered = TRUE)
-    print(collist)
+      count <- log(bw_count() + 1,2)
+      collist <- collist_bw_pair()
+      colnames(count) <- gsub("\\-","\\_",colnames(count))
+      collist<- gsub("\\-","\\_",collist)
+      collist<- factor(collist, levels = unique(collist),ordered = TRUE)
+      print(collist)
       eset = new("ExpressionSet", exprs=as.matrix(count))
       design <- model.matrix(~0+collist)
       colnames(design) <- factor(unique(collist),levels = unique(collist))
@@ -453,12 +585,12 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }else{
       if(input$data_file_type == "Row2"){
-      count <- bw_count()
-      collist <- gsub("\\_.+$", "", colnames(count))
-      dds <- dds()
-      contrast <- c("con", unique(collist))
-      res <- results(dds,  contrast = contrast)
-      res <- as.data.frame(res)
+        count <- bw_count()
+        collist <- collist_bw_pair()
+        dds <- dds()
+        contrast <- c("con", unique(collist))
+        res <- results(dds,  contrast = contrast)
+        res <- as.data.frame(res)
       }
       if(input$data_file_type == "Row1"){
         res <- dds_limma()
@@ -468,12 +600,12 @@ shinyServer(function(input, output, session) {
           res <- dds_limma()
         }else{
           count <- bw_count()
-          collist <- gsub("\\_.+$", "", colnames(count))
+          collist <- collist_bw_pair()
           dds <- dds()
           contrast <- c("con", unique(collist))
           res <- results(dds,  contrast = contrast)
           res <- as.data.frame(res)
-          }
+        }
       }
       return(res)
     }
@@ -485,11 +617,11 @@ shinyServer(function(input, output, session) {
     }else{
       count <- bw_count()
       if(input$data_file_type == "Row2"){
-      collist <- gsub("\\_.+$", "", colnames(count))
-      group <- data.frame(con = factor(collist))
-      dds <- dds()
-      contrast <- c("con", unique(collist))
-      normalized_counts <- counts(dds, normalized=TRUE)
+        collist <- collist_bw_pair()
+        group <- data.frame(con = factor(collist))
+        dds <- dds()
+        contrast <- c("con", unique(collist))
+        normalized_counts <- counts(dds, normalized=TRUE)
       }
       if(input$data_file_type == "Row1"){
         normalized_counts <- count
@@ -498,12 +630,12 @@ shinyServer(function(input, output, session) {
         if(input$count_file_type == "Norm") {
           normalized_counts <- count
         }else{
-          collist <- gsub("\\_.+$", "", colnames(count))
+          collist <- collist_bw_pair()
           group <- data.frame(con = factor(collist))
           dds <- dds()
           contrast <- c("con", unique(collist))
           normalized_counts <- counts(dds, normalized=TRUE)
-          }
+        }
       }
       return(normalized_counts)
     }
@@ -528,7 +660,7 @@ shinyServer(function(input, output, session) {
     if(is.null(count) || is.null(data)){
       return(NULL)
     }else{
-      collist <- factor(gsub("\\_.+$", "", colnames(count)))
+      collist <- collist_bw_pair()
       vec <- c()
       for (i in 1:length(unique(collist))) {
         num <- length(collist[collist == unique(collist)[i]])
@@ -562,7 +694,7 @@ shinyServer(function(input, output, session) {
     if(is.null(count) || is.null(data)){
       return(NULL)
     }else{
-      collist <- factor(gsub("\\_.+$", "", colnames(count)))
+      collist <- collist_bw_pair()
       vec <- c()
       for (i in 1:length(unique(collist))) {
         num <- length(collist[collist == unique(collist)[i]])
@@ -572,8 +704,8 @@ shinyServer(function(input, output, session) {
       Cond_2 <- vec[2]
       data2 <- dplyr::filter(data, abs(data$log2FoldChange) > log(input$fc, 2))
       if(nrow(data2) != 0){
-        data2$group <- "Up"
-        data2$group[data2$log2FoldChange < 0] <- "Down"
+        data2$group <- paste0(unique(collist)[2],"-high")
+        data2$group[data2$log2FoldChange < 0] <- paste0(unique(collist)[1],"-high")
         data3 <- dplyr::filter(data2, abs(data2$padj) < input$fdr)
         return(data3)
       }else{return(NULL)}
@@ -586,7 +718,7 @@ shinyServer(function(input, output, session) {
         if(input$data_file_type == "Row1_count" && input$Genomic_region == "Genome-wide"){
           data <- range_changer(bws_count())
           data <- with(data, GRanges(seqnames = chr,ranges = IRanges(start=start,
-                                                                  end=end)))
+                                                                     end=end)))
         }else data <- promoter_region()
         data2 <- annotatePeak(data, TxDb= txdb())
         return(data2)
@@ -653,18 +785,18 @@ shinyServer(function(input, output, session) {
   output$download_pair_DEG_result = downloadHandler(
     filename = function() {
       if (input$Genomic_region=='Promoter'){
-        paste0("DESeq2_result-promoter(", -input$upstream,"-",input$downstream,").txt")
+        paste0("DAR_result-promoter(", -input$upstream,"-",input$downstream,").txt")
       }else{
-        paste0("DESeq2_result-genomeWide",".txt")
+        paste0("DAR_result-genomeWide",".txt")
       }},
     content = function(file){
       if(input$Genomic_region == "Promoter"){
         write.table(deg_result(), file, row.names = T, sep = "\t", quote = F)
       }else{
         if(input$Species != "not_selected"){
-        write.table(deg_result2(), file, row.names = T, sep = "\t", quote = F)
+          write.table(deg_result2(), file, row.names = T, sep = "\t", quote = F)
         }else write.table(deg_result(), file, row.names = T, sep = "\t", quote = F)
-        }
+      }
     }
   )
   output$download_pair_norm_count = downloadHandler(
@@ -699,11 +831,11 @@ shinyServer(function(input, output, session) {
   
   output$PCA <- renderPlot({
     withProgress(message = "preparing result table",{
-    if(is.null(deg_norm_count())){
-      return(NULL)
-    }else{
-      print(PCAplot(data = deg_norm_count(),plot=TRUE))
-    }
+      if(is.null(deg_norm_count())){
+        return(NULL)
+      }else{
+        print(PCAplot(data = deg_norm_count(),plot=TRUE))
+      }
     })
   })
   
@@ -718,26 +850,26 @@ shinyServer(function(input, output, session) {
   )
   ###GOI----------------------
   output$volcano_x <- renderUI({
-      if(!is.null(data_degcount())){
+    if(!is.null(data_degcount())){
       withProgress(message = "Preparing volcano plot",{
         data <- as.data.frame(data_degcount())
         data <- na.omit(data)
         min <- floor(min(data$log2FoldChange))
         max <- ceiling(max(data$log2FoldChange))
-    sliderInput("xrange","X_axis range:",min = min-1,
-                max=max+1, step = 1,
-                value = c(min, max))
-    })
-      }
+        sliderInput("xrange","X_axis range:",min = min-1,
+                    max=max+1, step = 1,
+                    value = c(min, max))
+      })
+    }
   })
   output$volcano_y <- renderUI({
     if(!is.null(data_degcount())){
       data <- as.data.frame(data_degcount())
       data$padj[data$padj == 0] <- 10^(-300)
       data <- na.omit(data)
-    max <- ceiling(max(-log10(data$padj)))
-    sliderInput("yrange","Y_axis range:",min = 0, max= max+1, step = 1,
-                value = max)
+      max <- ceiling(max(-log10(data$padj)))
+      sliderInput("yrange","Y_axis range:",min = 0, max= max+1, step = 1,
+                  value = max)
     }
   })
   brush_info <- reactive({
@@ -754,32 +886,35 @@ shinyServer(function(input, output, session) {
       withProgress(message = "volcano plot",{
         data <- as.data.frame(data_degcount())
         count <- deg_norm_count()
+        collist <- collist_bw_pair()
+        data <- data %>% dplyr::filter(!is.na(padj)) 
         if(dim(brush_info())[1]!=0){
-            label_data <- brush_info()$Row.names
+          label_data <- brush_info()$Row.names
         }else{
-        if(!is.null(input$DEG_result_rows_selected)){
+          if(!is.null(input$DEG_result_rows_selected)){
             label_data <- rownames(pre_DEG_result()[input$DEG_result_rows_selected,])
-        }else label_data <- NULL
+          }else label_data <- NULL
         }
         data$color <- "NS"
-        data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr] <- paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]))
-        data$color[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr] <- paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))
+        data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr] <- paste(paste0(unique(collist)[1],"-high:"), length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]))
+        data$color[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr] <- paste(paste0(unique(collist)[2],"-high"),length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))
         data$padj[data$padj == 0] <- 10^(-300)
         if(!is.null(label_data)) {
           for(name in label_data){
             data$color[data$Row.names == name] <- "GOI"
           }
           Color <- c("blue","green","darkgray","red")
-          data$color <- factor(data$color, levels = c(paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
-                                                      "GOI","NS", paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
+          data$color <- factor(data$color, levels = c(paste(paste0(unique(collist)[1],"-high:"), length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
+                                                      "GOI","NS", paste(paste0(unique(collist)[2],"-high"),length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
           if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("green","darkgray","red")
         }else{
           Color <- c("blue","darkgray","red")
-          data$color <- factor(data$color, levels = c(paste("down:", length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
-                                                      "NS", paste("up:",length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
+          data$color <- factor(data$color, levels = c(paste(paste0(unique(collist)[1],"-high:"), length(data$Row.names[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])),
+                                                      "NS", paste(paste0(unique(collist)[2],"-high"),length(data$Row.names[data$log2FoldChange > log2(input$fc) & data$padj < input$fdr]))))
           if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("darkgray","red")
         }
         data$minusLog10padj<--log10(data$padj)
+        print(data$padj[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])
         v <- ggplot(data, aes(x = log2FoldChange, y = minusLog10padj)) + ggrastr::geom_point_rast(aes(color = color),size = 0.4)
         v <- v  + geom_vline(xintercept = c(-log2(input$fc), log2(input$fc)), linetype = c(2, 2), color = c("black", "black")) +
           geom_hline(yintercept = c(-log10(input$fdr)), linetype = 2, color = c("black"))
@@ -808,7 +943,7 @@ shinyServer(function(input, output, session) {
       if(is.null(bw_count())){
         return(NULL)
       }else{
-pair_volcano()
+        pair_volcano()
       }
     }
   })
@@ -855,31 +990,33 @@ pair_volcano()
   }))
   observeEvent(input$DEG_result_rows_selected,({
     if(input$Species != "not selected"){
-    if(!is.null(goi_gene_position()) && !is.null(goi_promoter_position())){
-      y <- goi_promoter_position()
-      gene_position <- goi_gene_position()
-      start_position <- min(c(y$start,gene_position$start))
-      end_position <- max(c(y$end,gene_position$end))
-      updateSliderInput(session,"igv_uprange","Range:",
-                        value = c(start_position,end_position),
-                        step = 100, min = start_position - 10000, max = end_position + 10000)
-    }
+      if(!is.null(goi_gene_position()) && !is.null(goi_promoter_position())){
+        y <- goi_promoter_position()
+        gene_position <- goi_gene_position()
+        start_position <- min(c(y$start,gene_position$start))
+        end_position <- max(c(y$end,gene_position$end))
+        updateSliderInput(session,"igv_uprange","Range (x-axis):",
+                          value = c(start_position,end_position),
+                          step = 100, min = start_position - 10000, max = end_position + 10000)
+      }
     }
   }))
   
   output$igv_uprange <- renderUI({
-    if(is.null(bws())) validate("Bigwig files are required.")
+    if(input$data_file_type != "Row2"){
+      if(is.null(bws())) validate("Bigwig files are required.")
+    }
     if(!is.null(goi_gene_position()) && !is.null(goi_promoter_position())){
       y <- goi_promoter_position()
       gene_position <- goi_gene_position()
       start_position <- min(c(y$start,gene_position$start))-1000
       end_position <- max(c(y$end,gene_position$end))+1000
-      sliderInput("igv_uprange","Range:",value = c(start_position,end_position),
+      sliderInput("igv_uprange","Range (x-axis):",value = c(start_position,end_position),
                   step = 100, min = start_position - 10000, max = end_position + 10000)
     }
   })
   output$igv_ylim <- renderUI({
-    numericInput("igv_ylim","peak range:", value = 1, min = 0)
+    numericInput("igv_ylim","Max peak intensity (y-axis):", value = 1, min = 0)
   })
   
   gtrack <- reactive({
@@ -919,23 +1056,35 @@ pair_volcano()
   })
   output$trackplot_additional <- renderUI({
     if(!is.null(bws())){
-    fileInput("trackplot_additional1",
-              "Select additional bigwig files",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+      if(length(list.files("./Volume/")) > 0){
+        list <- list.files("Volume",full.names = T,recursive=T)
+        bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+        selectInput("trackplot_additional1",label="Select additional bigwig files",choices = bw,multiple=T)
+      }else{
+        fileInput("trackplot_additional1",
+                  "Select additional bigwig files",
+                  accept = c("bw","BigWig"),
+                  multiple = TRUE,
+                  width = "80%")
+      }
     }
   })
   pre_track_additional_files <-reactive({
     if(!is.null(input$trackplot_additional1)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$trackplot_additional1[, 1])){
-        file <- input$trackplot_additional1[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$trackplot_additional1[nr,]$name))
-        files <- c(files,file)
+      if(length(list.files("./Volume/")) > 0){
+        files <- input$trackplot_additional1
+        name <- gsub(".+\\/","",input$trackplot_additional1)
+        names(files) <- gsub("\\..+$", "", name)
+      }else{
+        files<-c()
+        name<-c()
+        for(nr in 1:length(input$trackplot_additional1[, 1])){
+          file <- input$trackplot_additional1[[nr, 'datapath']]
+          name <- c(name, gsub("\\..+$", "", input$trackplot_additional1[nr,]$name))
+          files <- c(files,file)
+        }
+        names(files)<-name
       }
-      names(files)<-name
       return(files)
     }
   })
@@ -1013,16 +1162,16 @@ pair_volcano()
         pdf(file, height = pdf_height, width = pdf_width)
         if(!is.null(highlight_trackplot())){
           plotTracks(list(gtrack(), highlight_trackplot()),
-                            from = input$igv_uprange[1], 
-                            to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
-                            type="hist",add=TRUE)
+                     from = input$igv_uprange[1], 
+                     to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
+                     type="hist",add=TRUE)
         }else{
           df <- data_track()
           df[["gtrack"]] <- gtrack()
           plotTracks(df,
-                            from = input$igv_uprange[1], 
-                            to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
-                            type="hist",add=TRUE)
+                     from = input$igv_uprange[1], 
+                     to = input$igv_uprange[2],ylim=c(0,input$igv_ylim),
+                     type="hist",add=TRUE)
         }
         dev.off()
         incProgress(1)
@@ -1041,7 +1190,7 @@ pair_volcano()
     if(is.null(count) || is.null(data)){
       return(NULL)
     }else{
-      collist <- factor(gsub("\\_.+$", "", colnames(count)))
+      collist <- collist_bw_pair()
       vec <- c()
       for (i in 1:length(unique(collist))) {
         num <- length(collist[collist == unique(collist)[i]])
@@ -1087,13 +1236,13 @@ pair_volcano()
   })
   output$download_pair_DEG_up_result = downloadHandler(
     filename = function() {
-      paste0("Up-DAR",".bed")
+      paste0(unique(collist_bw_pair())[2],"-high.bed")
     },
     content = function(file){write.table(data_degcount_up_bed(), file, row.names = F, col.names = F,sep = "\t", quote = F)}
   )
   output$download_pair_DEG_down_result = downloadHandler(
     filename = function() {
-      paste0("Down-DAR",".bed")
+      paste0(unique(collist_bw_pair())[1],"-high.bed")
     },
     content = function(file){write.table(data_degcount_down_bed(), file, row.names = F, col.names = F,sep = "\t", quote = F)}
   )
@@ -1104,7 +1253,7 @@ pair_volcano()
     if(is.null(count) || is.null(data)){
       return(NULL)
     }else{
-      collist <- factor(gsub("\\_.+$", "", colnames(count)))
+      collist <- collist_bw_pair()
       vec <- c()
       for (i in 1:length(unique(collist))) {
         num <- length(collist[collist == unique(collist)[i]])
@@ -1139,16 +1288,17 @@ pair_volcano()
   
   enrichment_enricher <- reactive({
     data3 <- data_degcount2()
+    collist <- collist_bw_pair()
     if(!is.null(input$Gene_set) && input$Species != "not selected" && !is.null(data3)){
       if(input$Genomic_region == "Promoter"){
         withProgress(message = "enrichment analysis",{
           H_t2g <- Hallmark_set()
           H_t2g2 <- H_t2g %>% dplyr::select(gs_name, entrez_gene)
-          em_up <- try(enricher(dplyr::filter(data3, group == "Up")$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
-          em_down <- try(enricher(dplyr::filter(data3, group == "Down")$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
+          em_up <- try(enricher(dplyr::filter(data3, group == paste0(unique(collist)[2],"-high"))$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
+          em_down <- try(enricher(dplyr::filter(data3, group == paste0(unique(collist)[1],"-high"))$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
           df <- list()
-          df[["Up"]] <- em_up
-          df[["Down"]] <- em_down
+          df[[paste0(unique(collist)[2],"-high")]] <- em_up
+          df[[paste0(unique(collist)[1],"-high")]] <- em_down
           for(name in names(df)){
             if (length(as.data.frame(df[[name]])$ID) == 0) {
               df[[name]] <- NULL
@@ -1174,8 +1324,8 @@ pair_volcano()
                                                                  ENTREZID = geneId))
         res_down = rGREAT::great(data_degcount_down3,gene_list_for_enrichment_genome(H_t2g,input$Species), source)
         df <- list()
-        df[["Up"]] <- res_up
-        df[["Down"]] <- res_down
+        df[[paste0(unique(collist)[2],"-high")]] <- res_up
+        df[[paste0(unique(collist)[1],"-high")]] <- res_down
         incProgress(1)
         return(df)
       }
@@ -1185,52 +1335,53 @@ pair_volcano()
   enrichment_1_1 <- reactive({
     df <- enrichment_enricher()
     if(!is.null(df)){
-    if(input$Genomic_region == "Promoter"){
-      if(!is.null(input$Gene_set) && input$Species != "not selected" && !is.null(df)){
-        data <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-        colnames(data) <- c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", " qvalue", "geneID", "Count", "Group")
-        for(name in names(df)){
-          if(!is.null(df[[name]])) {
-            group1 <- as.data.frame(df[[name]])
-          }else group1 <- NULL
-          group1$Group <- name
-          data <- rbind(data, group1)
-        }
-        if(length(data$Description) != 0) {
-          data["Description"] <- lapply(data["Description"], gsub, pattern="HALLMARK_", replacement = "")
-          data$GeneRatio <- parse_ratio(data$GeneRatio)
-          return(data)
-        }else return(NULL)
-      }else{return(NULL)}
-    }else{
-      if(!is.null(input$Gene_set) && input$Species != "not selected" && !is.null(df)){
-        data <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
-        colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
-                            "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
-        for(name in names(df)){
-          if(length(as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))$id) != 0) {
-            group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
-            group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
+      if(input$Genomic_region == "Promoter"){
+        if(!is.null(input$Gene_set) && input$Species != "not selected" && !is.null(df)){
+          data <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+          colnames(data) <- c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", " qvalue", "geneID", "Count", "Group")
+          for(name in names(df)){
+            if(!is.null(df[[name]])) {
+              group1 <- as.data.frame(df[[name]])
+            }else group1 <- NULL
             group1$Group <- name
-          }else group1 <- NULL
-          data <- rbind(data, group1)
-        }
-        if(length(data$id) != 0) {
-          return(data)
-        }else return(NULL)
-      }else{return(NULL)}
-    }}
+            data <- rbind(data, group1)
+          }
+          if(length(data$Description) != 0) {
+            data["Description"] <- lapply(data["Description"], gsub, pattern="HALLMARK_", replacement = "")
+            data$GeneRatio <- parse_ratio(data$GeneRatio)
+            return(data)
+          }else return(NULL)
+        }else{return(NULL)}
+      }else{
+        if(!is.null(input$Gene_set) && input$Species != "not selected" && !is.null(df)){
+          data <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
+          colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
+                              "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
+          for(name in names(df)){
+            if(length(as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))$id) != 0) {
+              group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
+              group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
+              group1$Group <- name
+            }else group1 <- NULL
+            data <- rbind(data, group1)
+          }
+          if(length(data$id) != 0) {
+            return(data)
+          }else return(NULL)
+        }else{return(NULL)}
+      }}
   })
   
   pair_enrich1_H <- reactive({
     if(!is.null(input$Gene_set) && input$Species != "not selected"){
       count <- deg_norm_count()
       df <- enrichment_enricher()
+      collist <- collist_bw_pair()
       if(input$Genomic_region == "Promoter"){
         data3 <- data_degcount2()
         H_t2g <- Hallmark_set()
         H_t2g2 <- H_t2g %>% dplyr::select(gs_name, entrez_gene)
-        if (is.null(df[["Up"]]) && is.null(df[["Down"]]))  {
+        if (is.null(df[[paste0(unique(collist)[2],"-high")]]) && is.null(df[[paste0(unique(collist)[1],"-high")]]))  {
           p1 <- NULL
         } else{
           data <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
@@ -1268,7 +1419,7 @@ pair_volcano()
         }
       }else{
         data3 <- data_degcount2_anno()
-        if (is.null(df[["Up"]]) && is.null(df[["Down"]]))  {
+        if (is.null(df[[paste0(unique(collist)[2],"-high")]]) && is.null(df[[paste0(unique(collist)[1],"-high")]]))  {
           p1 <- NULL
         } else{
           data <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
@@ -1341,6 +1492,7 @@ pair_volcano()
       }else data3 <- data_degcount2_anno()
       count <- deg_norm_count()
       df <- enrichment_enricher()
+      collist <- collist_bw_pair()
       upgene <- data3[data3$log2FoldChange > log(input$fc, 2),]
       downgene <- data3[data3$log2FoldChange < log(1/input$fc, 2),]
       p <- list()
@@ -1353,8 +1505,8 @@ pair_volcano()
         if (length(as.data.frame(cnet1)$ID) == 0) {
           p2 <- NULL
         } else{
-          if(name == "Up") genes <- upgene
-          if(name == "Down") genes <- downgene
+          if(name == paste0(unique(collist)[2],"-high")) genes <- upgene
+          if(name == paste0(unique(collist)[1],"-high")) genes <- downgene
           geneList <- genes$log2FoldChange
           names(geneList) = as.character(genes$ENTREZID)
           p2 <- try(as.grob(cnetplot(cnet1, foldChange=geneList,
@@ -1366,7 +1518,7 @@ pair_volcano()
         }
         p[[name]] <- p2
       }
-      p <- plot_grid(p[["Up"]], p[["Down"]], nrow = 1)
+      p <- plot_grid(p[[paste0(unique(collist)[2],"-high")]], p[[paste0(unique(collist)[1],"-high")]], nrow = 1)
       return(p)
     }else return(NULL)
   })
@@ -1421,7 +1573,7 @@ pair_volcano()
   output$whichGenes <- renderUI({
     if(input$Genomic_region == "Genome-wide"){
       if(!is.null(enrichment_enricher())){
-        selectInput('Up_or_Down', ' Up or Down', names(enrichment_enricher()))
+        selectInput('Up_or_Down', 'Which group', names(enrichment_enricher()))
       }
     }
   })
@@ -1442,7 +1594,7 @@ pair_volcano()
     if(input$Genomic_region == "Genome-wide" && !is.null(input$Pathway_list) && 
        !is.null(input$Up_or_Down) && !is.na(input$Up_or_Down) && input$Up_or_Down != "" &&  
        !is.null(enrichment_enricher())){
-    if(class(try(region_gene_associate_plot())) !="try-error") region_gene_associate_plot()
+      if(class(try(region_gene_associate_plot())) !="try-error") region_gene_associate_plot()
     }
   })
   output$download_region_gene_associations_plot = downloadHandler(
@@ -1475,21 +1627,12 @@ pair_volcano()
   )
   
   ##Motif enrichment analysis----------
-  output$homer_showCategory <- renderUI({
-    sliderInput("homer_showCategory","Most significant motifs", value=5, min=1,max=20)
-  })
-  output$homer_size <- renderUI({
-    radioButtons('homer_size','Type of the region for motif finding',
-                 c('given (exact size)'="given",
-                   'custom size'="custom"
-                 ),selected = "custom")
-  })
   output$homer_bg <- renderUI({
     if(input$Genomic_region == "Genome-wide"){
-    radioButtons('homer_bg','Background sequence',
-                 c('random'="random",
-                   'peak call files'="peakcalling"
-                 ),selected = "random")
+      radioButtons('homer_bg','Background sequence',
+                   c('random'="random",
+                     'peak call files'="peakcalling"
+                   ),selected = "random")
     }
   })
   
@@ -1501,28 +1644,26 @@ pair_volcano()
       updateCounter$i <- updateCounter$i + 1
     })
   })
-
+  
   
   #Restart
   defaultvalues <- observeEvent(enrich_motif(), {
     isolate(updateCounter$i == 0)
     updateCounter <<- reactiveValues(i = 0)
   }) 
-
+  
   output$homer_size2 <- renderUI({
     if(!is.null(input$homer_size)){
-    if(input$homer_size == "custom"){
-    numericInput('homer_size2','Size of the region for motif finding',value=200, step=100)}}
+      if(input$homer_size == "custom"){
+        numericInput('homer_size2','Size of the region for motif finding',value=200, step=100)}}
   })
-  output$homer_unknown <- renderUI({
-    selectInput("homer_unknown","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
-  })
-
+  
   
   preMotif_list <- reactive({
     df <- list()
-    df[["Up"]] <- data_degcount_up()
-    df[["Down"]] <- data_degcount_down()
+    collist <- collist_bw_pair()
+    df[[paste0(unique(collist)[2],"-high")]] <- data_degcount_up()
+    df[[paste0(unique(collist)[1],"-high")]] <- data_degcount_down()
     return(df)
   })
   
@@ -1532,11 +1673,11 @@ pair_volcano()
       if(input$homer_size == "given") size <- "given"
       if(input$homer_size == "custom") size <- input$homer_size2
       if(input$Genomic_region == "Genome-wide"){
-        return(findMotif(df= preMotif_list(), anno_data = deg_result_anno2(),back = input$homer_bg,
-                             Species = input$Species, motif=input$homer_unknown,size=size,bw_count=bw_count()))
+        return(findMotif(df= preMotif_list(), anno_data = deg_result_anno2(),back = input$homer_bg,motif_length=input$homer_length,
+                         Species = input$Species, motif=input$homer_unknown,size=size,bw_count=bw_count()))
       }else return(findMotif(df= data_degcount2(), anno_data = promoter_region(),
-                                 Species = input$Species,
-                                 type = "Promoter", motif=input$homer_unknown,size=size))
+                             Species = input$Species,motif_length=input$homer_length,
+                             type = "Promoter", motif=input$homer_unknown,size=size))
     }else return(NULL)
   })
   
@@ -1586,25 +1727,6 @@ pair_volcano()
     contentType = "application/zip"
   )
   
-  output$download_pair_report = downloadHandler(
-    filename = function() {
-      paste0("HOMER_report",".zip")
-    },
-    content = function(fname){
-      fs <- c()
-      path_list <- enrich_motif()
-      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
-      for(name in names(path_list)){
-        files <-list.files(path_list[[name]],pattern = "*.*")
-        for(i in 1:length(files)){
-          data <- paste0(path_list[[name]],"/",files[[i]])
-          fs <- c(fs, data)
-        }
-      }
-      zip(zipfile=fname, files=fs)
-    },
-    contentType = "application/zip"
-  )
   
   output$download_motif_table = downloadHandler(
     filename = function() {
@@ -1617,30 +1739,12 @@ pair_volcano()
       return(known_motif(enrich_motif()))
     }
   })
-  denovo_motif_table <- reactive({
-    if(input$motifButton > 0 && !is.null(enrich_motif())){
-      return(denovo_motif(enrich_motif()))
-    }
-  })
   
   output$motif_result <- DT::renderDT({
     if(input$motifButton > 0 && !is.null(enrich_motif()) && input$Species != "not selected"){
       motif_table()
     }
   })
-  output$denovo_motif_result <- DT::renderDT({
-    if(input$motifButton > 0 && !is.null(enrich_motif()) && input$Species != "not selected"){
-      denovo_motif_table()
-    }
-  })
-  
-  
-  output$download_denovo_motif_table = downloadHandler(
-    filename = function() {
-      paste0("denovo_motif_table",".txt")
-    },
-    content = function(file){write.table(denovo_motif_table(), file, row.names = F, sep = "\t", quote = F)}
-  )
   
   ##peak distribution-------
   input_peak_list <- reactive({
@@ -1670,15 +1774,15 @@ pair_volcano()
   })
   updistribution <- reactive({
     return(genomicElementDistribution(deg_peak_list()[["Up"]], 
-                               TxDb = txdb()))
+                                      TxDb = txdb()))
   })
   output$input_peak_distribution <- renderPlot({
     if(input$Genomic_region == "Genome-wide"){
-    if(!is.null(deg_peak_list()) && input$Species != "not selected"){
+      if(!is.null(deg_peak_list()) && input$Species != "not selected"){
         withProgress(message = "Plot peak distribution of up DAR",{
-        updistribution()
+          updistribution()
         })
-    }
+      }
     }
   })
   deg_peak_list <- reactive({
@@ -1702,9 +1806,9 @@ pair_volcano()
   output$deg_peak_distribution <- renderPlot({
     withProgress(message = "Plot peak distribution of down DAR",{
       if(input$Genomic_region == "Genome-wide"){
-      if(!is.null(deg_peak_list()) && input$Species != "not selected"){
-        downdistribution()
-      }
+        if(!is.null(deg_peak_list()) && input$Species != "not selected"){
+          downdistribution()
+        }
       }
     })
   })
@@ -1712,7 +1816,7 @@ pair_volcano()
   
   output$download_input_peak_distribution = downloadHandler(
     filename = function() {
-      paste0("Up_DAR_peak_distribution",".pdf")
+      paste0(unique(collist_bw_pair())[2],"-high_peak_distribution",".pdf")
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -1732,7 +1836,7 @@ pair_volcano()
   
   output$download_deg_peak_distribution = downloadHandler(
     filename = function() {
-      paste0("Down_DAR_peak_distribution",".pdf")
+      paste0(unique(collist_bw_pair())[1],"-high_peak_distribution",".pdf")
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -1753,23 +1857,35 @@ pair_volcano()
   ###Peak pattern comparison up--------
   output$peak_pattern_up_additional <- renderUI({
     if(!is.null(bws())){
-    fileInput("peak_pattern_up_add",
-              "Select additional bigwig files",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+      if(length(list.files("./Volume/")) > 0){
+        list <- list.files("Volume",full.names = T,recursive=T)
+        bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+        selectInput("peak_pattern_up_add",label="Select additional bigwig files",choices = bw,multiple=T)
+      }else{
+        fileInput("peak_pattern_up_add",
+                  "Select additional bigwig files",
+                  accept = c("bw","BigWig"),
+                  multiple = TRUE,
+                  width = "80%")
+      }
     }
   })
   pre_up_additional <-reactive({
     if(!is.null(input$peak_pattern_up_add)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$peak_pattern_up_add[, 1])){
-        file <- input$peak_pattern_up_add[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$peak_pattern_up_add[nr,]$name))
-        files <- c(files,file)
+      if(length(list.files("./Volume/")) > 0){
+        files <- input$peak_pattern_up_add
+        name <- gsub(".+\\/","",input$peak_pattern_up_add)
+        names(files) <- gsub("\\..+$", "", name)
+      }else{
+        files<-c()
+        name<-c()
+        for(nr in 1:length(input$peak_pattern_up_add[, 1])){
+          file <- input$peak_pattern_up_add[[nr, 'datapath']]
+          name <- c(name, gsub("\\..+$", "", input$peak_pattern_up_add[nr,]$name))
+          files <- c(files,file)
+        }
+        names(files)<-name
       }
-      names(files)<-name
       return(bigwig_breakline(files))
     }
   })
@@ -1779,14 +1895,16 @@ pair_volcano()
   output$peak_pattern_up_heat_range <- renderUI({
     if(!is.null(deg_result())){
       withProgress(message = "Preparing peak pattern for up DAR",{
-      rg <- pair_pattern_range_up()
-    sliderInput("peak_up_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+        rg <- pair_pattern_range_up()
+        sliderInput("peak_up_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
       })
     }
   })
   pair_pattern_range_up <- reactive({
     rg <- c()
-    if(is.null(bws())) validate("Bigwig files are required.")
+    if(input$data_file_type != "Row2"){
+      if(is.null(bws())) validate("Bigwig files are required.")
+    }
     sig <- peak_pattern_function(grange=peak_up_grange(), files=bws_order(),
                                  additional=up_additional(),plot = FALSE)
     for(name in names(sig)){
@@ -1797,7 +1915,9 @@ pair_volcano()
   })
   pair_pattern_range_down <- reactive({
     rg <- c()
-    if(is.null(bws())) validate("Bigwig files are required.")
+    if(input$data_file_type != "Row2"){
+      if(is.null(bws())) validate("Bigwig files are required.")
+    }
     sig <- peak_pattern_function(grange=peak_down_grange(), files=bws_order(),
                                  additional=up_additional(),plot = FALSE)
     for(name in names(sig)){
@@ -1809,14 +1929,14 @@ pair_volcano()
   
   peak_up_grange <- reactive({
     if(!is.null(data_degcount_down())){
-    if(input$Genomic_region == "Genome-wide"){
-      up <- range_changer(data_degcount_up())
-      up <- with(up, GRanges(seqnames = chr,ranges = IRanges(start=start,end=end)))
-    }else{
-      up <- symbol2gene_id(data_degcount_up(),org1()) %>% distinct(gene_id, .keep_all = T)
-      up <- subset(promoter_region(), gene_id %in% up$gene_id) 
-    }
-    return(up)
+      if(input$Genomic_region == "Genome-wide"){
+        up <- range_changer(data_degcount_up())
+        up <- with(up, GRanges(seqnames = chr,ranges = IRanges(start=start,end=end)))
+      }else{
+        up <- symbol2gene_id(data_degcount_up(),org1()) %>% distinct(gene_id, .keep_all = T)
+        up <- subset(promoter_region(), gene_id %in% up$gene_id) 
+      }
+      return(up)
     }else return(NULL)
   })
   
@@ -1849,7 +1969,7 @@ pair_volcano()
   
   output$download_peak_pattern_up_heatmap = downloadHandler(
     filename = function(){
-      paste0("download_peak_pattern_up_heatmap",".pdf")
+      paste0(unique(collist_bw_pair())[2],"-high_heatmap",".pdf")
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -1868,7 +1988,7 @@ pair_volcano()
   )
   output$download_peak_pattern_up_line = downloadHandler(
     filename = function(){
-      paste0("download_peak_pattern_up_alignedDistibution",".pdf")
+      paste0(unique(collist_bw_pair())[2],"-high_lineplot",".pdf")
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -1893,21 +2013,21 @@ pair_volcano()
   output$peak_pattern_down_heat_range <- renderUI({
     if(!is.null(deg_result())){
       withProgress(message = "Preparing peak pattern for down DAR",{
-      rg <- pair_pattern_range_down()
-      sliderInput("peak_down_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+        rg <- pair_pattern_range_down()
+        sliderInput("peak_down_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
       })
     }
   })
   peak_down_grange <- reactive({
     if(!is.null(data_degcount_down())){
-    if(input$Genomic_region == "Genome-wide"){
-      down <- range_changer(data_degcount_down())
-      down <- with(down, GRanges(seqnames = chr,ranges = IRanges(start=start,end=end)))
-    }else{
-      down <- symbol2gene_id(data_degcount_down(),org1()) %>% distinct(gene_id, .keep_all = T)
-      down <- subset(promoter_region(), gene_id %in% down$gene_id)
-    }
-    return(down)
+      if(input$Genomic_region == "Genome-wide"){
+        down <- range_changer(data_degcount_down())
+        down <- with(down, GRanges(seqnames = chr,ranges = IRanges(start=start,end=end)))
+      }else{
+        down <- symbol2gene_id(data_degcount_down(),org1()) %>% distinct(gene_id, .keep_all = T)
+        down <- subset(promoter_region(), gene_id %in% down$gene_id)
+      }
+      return(down)
     }else return(NULL)
   })
   
@@ -1939,7 +2059,7 @@ pair_volcano()
   })
   output$download_peak_pattern_down_heatmap = downloadHandler(
     filename = function(){
-      paste0("Peak_pattern_down_heatmap",".pdf")
+      paste0(unique(collist_bw_pair())[1],"-high_heatmap",".pdf")
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -1958,7 +2078,7 @@ pair_volcano()
   )
   output$download_peak_pattern_down_line = downloadHandler(
     filename = function(){
-      paste0("Peak_pattern_down_alignedDistibution",".pdf")
+      paste0(unique(collist_bw_pair())[1],"-high_lineplot",".pdf")
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -1982,16 +2102,23 @@ pair_volcano()
   
   ##Regulatory potential------
   output$pairRNAseqresult <- renderUI({
+    if(input$RNAseq_data_type == "Result") {
+      label <- "Select RNA-seq DEG result file"
+    }else{
+      label <- "Select RNA-seq raw count file"
+    }
     fileInput("pair_DEG_result",
-              "Select RNA-seq DEG result file",
+              label,
               accept = c("txt","csv","xlsx"),
               multiple = TRUE,
               width = "80%")
   })
-  RNAseqDEG <- reactive({
-    withProgress(message = "Importing row count matrix, please wait",{
-      tmp <- input$pair_DEG_result$datapath
-      if(is.null(input$pair_DEG_result) && input$goButton > 0 )  tmp = "data/RNAseq.txt"
+  pre_RNAseq_file <- reactive({
+    withProgress(message = "Importing RNA-seq data, please wait",{
+      tmp <- input$pair_DEG_result$datapath 
+      if(is.null(input$pair_DEG_result) && input$goButton > 0 )  {
+        if(input$RNAseq_data_type == "Result") tmp = "data/RNAseq.txt" else tmp = "data/RNAseq_count.txt"
+      }
       if(is.null(tmp)) {
         return(NULL)
       }else{
@@ -2008,15 +2135,121 @@ pair_volcano()
       }
     })
   })
+  output$pair_RNAseq_order <- renderUI({
+    if(input$RNAseq_data_type != "Result"){
+  selectInput("pair_RNAseq_order","Select samples:",
+              choices = colnames(pre_RNAseq_file()),selected = colnames(pre_RNAseq_file()),multiple = T)
+    }
+})
+  RNAseq_file <- reactive({
+    if(input$RNAseq_data_type != "Result"){
+        count <- pre_RNAseq_file()
+        order <- input$pair_RNAseq_order
+        data <- try(count[,order])
+        if(length(data) == 1){
+          if(class(data) == "try-error") validate("")
+        }
+        return(data)
+    }
+  })
+  updateCounter_DEGanalysis <- reactiveValues(i = 0)
+  
+  observe({
+    input$DEGanalysis_Button
+    isolate({
+      updateCounter_DEGanalysis$i <- updateCounter_DEGanalysis$i + 1
+    })
+  })
+
+  #Restart
+  observeEvent(RNAseq_file(), {
+    isolate(updateCounter_DEGanalysis$i == 0)
+    updateCounter_DEGanalysis <<- reactiveValues(i = 0)
+  }) 
+  pre_RNAseqDEG <- reactive({
+    if(input$DEGanalysis_Button > 0 && updateCounter_DEGanalysis$i > 0){
+      count <- RNAseq_file()
+      if(!is.null(count)){
+        collist <- gsub("\\_.+$", "", colnames(count))
+        if(length(unique(collist)) == 2){
+          group <- data.frame(con = factor(collist))
+          dds<- DESeqDataSetFromMatrix(countData = round(count),colData = group, design = ~ con)
+          dds$con <- factor(dds$con, levels = unique(collist))
+          dds <- DESeq(dds)
+          return(dds)
+        }else validate(print(paste0("Your count file contains data for ", length(unique(collist))," conditions. Please select samples to narrow it down to 2 conditions.")))
+      }
+    }
+  })
+  RNAseqDEG <- reactive({
+    withProgress(message = "Importing row count matrix, please wait",{
+      if(input$RNAseq_data_type == "Result"){
+      return(pre_RNAseq_file())
+      }else{
+        if(input$DEGanalysis_Button > 0 && updateCounter_DEGanalysis$i > 0){
+          count <- RNAseq_file()
+          collist <- gsub("\\_.+$", "", colnames(count))
+          dds <- pre_RNAseqDEG()
+          contrast <- c("con", unique(collist))
+          res <- results(dds,  contrast = contrast)
+          res <- as.data.frame(res)
+        return(res)
+        }
+      }
+    })
+  })
+  RNAseqDEG_norm <- reactive({
+    if(input$RNAseq_data_type != "Result" && !is.null(pre_RNAseqDEG())){
+      count <- RNAseq_file()
+      collist <- gsub("\\_.+$", "", colnames(count))
+      dds <- pre_RNAseqDEG()
+      contrast <- c("con", unique(collist))
+      normalized_counts <- counts(dds, normalized=TRUE)
+      print(head(normalized_counts))
+      return(normalized_counts)
+    }
+  })
   gene_type_pair_DEG_result <- reactive({
     return(gene_type(my.symbols=rownames(RNAseqDEG()),org=org1(),Species=input$Species))
+  })
+  output$pair_RNAseq_raw <- renderDataTable({
+    if(input$RNAseq_data_type != "Result"){
+    if(!is.null(RNAseq_file())){
+      RNAseq_file() 
+    }
+    }
+  })
+  output$RNAseq_condition <- renderText({
+    if(!is.null(RNAseqDEG())){
+    paste0(input$RNAseq_cond1_pair, " vs ", input$RNAseq_cond2_pair, "\n",
+           "Please confirm if the Log2FoldChange in the uploaded result file was calulated as Log2(",input$RNAseq_cond1_pair,"/",input$RNAseq_cond2_pair,").")
+    }
   })
   output$pair_DEG_result <- renderDataTable({
     if(!is.null(RNAseqDEG())){
       RNAseqDEG() 
     }
   })
-  
+  RNAseq_cond1_name <- reactive({
+    if(input$RNAseq_data_type != "Result"){
+      if(!is.null(RNAseq_file())){
+        collist <- gsub("\\_.+$", "", colnames(RNAseq_file()))
+        return(unique(collist)[1])
+      }
+    }else{
+      return(input$RNAseq_cond1_pair)
+    }
+  })
+  RNAseq_cond2_name <- reactive({
+    if(input$RNAseq_data_type != "Result"){
+      if(!is.null(RNAseq_file())){
+        collist <- gsub("\\_.+$", "", colnames(RNAseq_file()))
+        return(unique(collist)[2])
+      }
+    }else{
+      return(input$RNAseq_cond2_pair)
+    }
+  })
   RNAseqDEG_anno <- reactive({
     RNAdata <- RNAseqDEG()
     RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
@@ -2026,54 +2259,59 @@ pair_volcano()
       data <- merge(RNAdata, gene_IDs, by="Symbol")
     }else{
       if(gene_type_pair_DEG_result() != "SYMBOL"){
-      my.symbols <- gsub("\\..*","", rownames(RNAdata))
-      gene_IDs<-id_convert(my.symbols,input$Species,type="ENSEMBL")
-      colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
-      RNAdata$EnsemblID <- gsub("\\..*","", rownames(RNAdata))
-      gene_IDs <- gene_IDs %>% distinct(EnsemblID, .keep_all = T)
-      data <- merge(RNAdata, gene_IDs, by="EnsemblID")
-    }else{
-      my.symbols <- rownames(RNAdata)
-      gene_IDs<-id_convert(my.symbols, input$Species,type="SYMBOL_single")
-      colnames(gene_IDs) <- c("Symbol", "gene_id")
-      gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T)
-      RNAdata$Symbol <- rownames(RNAdata) 
-      data <- merge(RNAdata, gene_IDs, by="Symbol")
-    }
+        my.symbols <- gsub("\\..*","", rownames(RNAdata))
+        gene_IDs<-id_convert(my.symbols,input$Species,type="ENSEMBL")
+        colnames(gene_IDs) <- c("EnsemblID","Symbol","gene_id")
+        RNAdata$EnsemblID <- gsub("\\..*","", rownames(RNAdata))
+        gene_IDs <- gene_IDs %>% distinct(EnsemblID, .keep_all = T)
+        data <- merge(RNAdata, gene_IDs, by="EnsemblID")
+      }else{
+        my.symbols <- rownames(RNAdata)
+        gene_IDs<-id_convert(my.symbols, input$Species,type="SYMBOL_single")
+        colnames(gene_IDs) <- c("Symbol", "gene_id")
+        gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T)
+        RNAdata$Symbol <- rownames(RNAdata) 
+        data <- merge(RNAdata, gene_IDs, by="Symbol")
+      }
     }
     return(data)
   })
   
-  
+  output$RNAseq_RPmean <- renderText({
+      paste0("Epigenome analysis: ",unique(collist_bw_pair())[1], " vs ", unique(collist_bw_pair())[2], "\n",
+             "RP > 0 genes have a higher epigenetic potential in ", unique(collist_bw_pair())[2]," condition.\n",
+             "RP < 0 genes have a higher epigenetic potential in ", unique(collist_bw_pair())[1]," condition.\n",
+             "RP = 0 genes have no significant difference in epigenetic potential between ", unique(collist_bw_pair())[1], " and ", unique(collist_bw_pair())[2]," conditions.")
+  })
   
   mmAnno_up <- reactive({
     up_peak <- peak_up_grange()
     if(!is.null(up_peak) && !is.null(input$peak_distance)){
-    if(input$Genomic_region == "Promoter"){ 
-      up_peak <- up_peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
-      up_peak <- with(up_peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
-    }
-    range <- input$peak_distance * 1000
-    mcols(up_peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(up_peak))))
-    if(length(as.data.frame(up_peak)$seqnames) != 0){
-    mmAnno_up <- mm_geneScan(up_peak, txdb(),upstream = range,downstream = range)
-    }else mmAnno_up <- NULL
-    return(mmAnno_up)
+      if(input$Genomic_region == "Promoter"){ 
+        up_peak <- up_peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
+        up_peak <- with(up_peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
+      }
+      range <- input$peak_distance * 1000
+      mcols(up_peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(up_peak))))
+      if(length(as.data.frame(up_peak)$seqnames) != 0){
+        mmAnno_up <- mm_geneScan(up_peak, txdb(),upstream = range,downstream = range)
+      }else mmAnno_up <- NULL
+      return(mmAnno_up)
     }else return(NULL)
   })
   mmAnno_down <- reactive({
     down_peak <- peak_down_grange()
     if(!is.null(down_peak) && !is.null(input$peak_distance)){
-    if(input$Genomic_region == "Promoter"){ 
-      down_peak <- down_peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
-      down_peak <- with(down_peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
-    }
-    range <- input$peak_distance * 1000
-    mcols(down_peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(down_peak))))
-    if(length(as.data.frame(down_peak)$seqnames) != 0){
-    mmAnno_down <- mm_geneScan(down_peak, txdb(),upstream = range,downstream = range)
-    }else mmAnno_down <- NULL
-    return(mmAnno_down)
+      if(input$Genomic_region == "Promoter"){ 
+        down_peak <- down_peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
+        down_peak <- with(down_peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
+      }
+      range <- input$peak_distance * 1000
+      mcols(down_peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(down_peak))))
+      if(length(as.data.frame(down_peak)$seqnames) != 0){
+        mmAnno_down <- mm_geneScan(down_peak, txdb(),upstream = range,downstream = range)
+      }else mmAnno_down <- NULL
+      return(mmAnno_down)
     }else return(NULL)
   })
   
@@ -2104,23 +2342,25 @@ pair_volcano()
     if(is.null(result_geneRP_up) && is.null(result_geneRP_down)){
       return(NULL)
     }else{
-    result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
-    result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
-    return(result_geneRP)
+      result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
+      result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
+      return(result_geneRP)
     }
   })
   regulatory_potential <- reactive({
     if(input$Species != "not selected"){
-    data <- RNAseqDEG_anno()
-    result_geneRP <- RP()
-    merge_data <- integrate_ChIP_RNA(
-      result_geneRP = result_geneRP,
-      result_geneDiff = data,lfc_threshold = log(input$DEG_fc,2),padj_threshold = input$DEG_fdr
-    )
-    return(merge_data)
+      data <- RNAseqDEG_anno()
+      result_geneRP <- RP()
+      up_name <- paste0(RNAseq_cond2_name(),"-high")
+      down_name <- paste0(RNAseq_cond1_name(),"-high")
+      merge_data <- integrate_ChIP_RNA(
+        result_geneRP = result_geneRP,
+        result_geneDiff = data,lfc_threshold = log(input$DEG_fc,2),
+        padj_threshold = input$DEG_fdr, up_name = up_name, down_name = down_name)
+      return(merge_data)
     }
   })
- 
+  
   output$ks_plot <- renderPlot({    
     if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && 
        !is.null(regulatory_potential()) && !is.na(input$DEG_fdr) && 
@@ -2143,9 +2383,9 @@ pair_volcano()
   output$RNAseqGroup <- renderUI({
     if(input$Species != "not selected" &&!is.null(mmAnno_up()) && !is.null(mmAnno_down()) && !is.null(input$peak_distance)){
       if(!is.null(RP_all_table())){
-      selectInput("RNAseqGroup","Group (RNAseq-Epigenome)",
-                  unique(RP_all_table()$Group),
-                  multiple = FALSE)
+        selectInput("RNAseqGroup","Group (Epigenome:RNAseq)",
+                    unique(RP_all_table()$Group),
+                    multiple = FALSE)
       }
     }
   })
@@ -2168,17 +2408,17 @@ pair_volcano()
       group1 <- dplyr::filter(data, group == collist[1])
       group2 <- dplyr::filter(data, group == collist[2])
       if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
-      stat.test <- data %>% t_test(log2FoldChange ~ group)
-      stat.test <- stat.test %>% add_significance()
-      stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-      col <-c("gray","#F8766D")
+        stat.test <- data %>% t_test(log2FoldChange ~ group)
+        stat.test <- stat.test %>% add_significance()
+        stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
+        col <-c("gray","#F8766D")
       }else stat.test <- NULL
     }
     if(!is.null(stat.test)){
-    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
-                           fill = "group", scales = "free", add = "jitter",
-                           xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
-      xlab(NULL)+ylab("RNAseq log2FoldChange")+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T,size = 5))
+      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
+                                 fill = "group", scales = "free", add = "jitter",
+                                 xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+guides(fill=guide_legend(title="RP\nstatus"))+
+                 xlab(NULL)+ylab("RNAseq log2FoldChange")+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T,size = 5))
     }
     return(p)
   })
@@ -2194,51 +2434,64 @@ pair_volcano()
       data$group <- factor(data$group,levels=c("Others","RP > 1","RP < -1"),ordered=TRUE)
       collist <- unique(data$group)
       if (length(collist) < 3){
-      group1 <- dplyr::filter(data, group == collist[1])
-      group2 <- dplyr::filter(data, group == collist[2])
-      if(length(rownames(group1)) <= 1 || length(rownames(group2)) <= 1){
-        print("boxplot: There are few genes with |RP| > 1")
-      }
+        group1 <- dplyr::filter(data, group == collist[1])
+        group2 <- dplyr::filter(data, group == collist[2])
+        if(length(rownames(group1)) <= 1 || length(rownames(group2)) <= 1){
+          print("boxplot: There are few genes with |RP| > 1")
+        }
       }
     }
   })
   RNAseq_popu <- reactive({
     RNA <- RNAseqDEG_anno()
+    up_name <- paste0(RNAseq_cond2_name(),"-high")
+    down_name <- paste0(RNAseq_cond1_name(),"-high")
+    epi_up_name <- paste0(unique(collist_bw_pair())[2], "-high")
+    epi_down_name <- paste0(unique(collist_bw_pair())[1], "-high")
     RNA <- dplyr::filter(RNA, !is.na(gene_id))
-    RNA$group[RNA$log2FoldChange > log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- "up"
-    RNA$group[RNA$log2FoldChange < -log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- "down"
+    RNA$group[RNA$log2FoldChange > log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- up_name
+    RNA$group[RNA$log2FoldChange < -log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- down_name
     data <- merge(RNA,RP(), by="gene_id",all=T)
-    if(length(which(unique(data$group) == "up")) == 1){
-    up <- data %>% dplyr::filter(group == "up")
-    up_total <- length(rownames(up))
-    if(length(which(up$sumRP > 0))  > 0){
-    up_epiUp <- length(rownames(dplyr::filter(up, sumRP > 0)))
-    }else up_epiUp <- 0
-    if(length(which(up$sumRP < 0))  > 0){
-    up_epiDown <- length(rownames(dplyr::filter(up, sumRP < 0)))
-    }else up_epiDown <- 0
-    up_per <- c(up_total-(up_epiUp + up_epiDown), up_epiDown, up_epiUp)
+    if(length(which(unique(data$group) == up_name)) == 1){
+      up <- data %>% dplyr::filter(group == up_name)
+      up_total <- length(rownames(up))
+      if(length(which(up$sumRP > 0))  > 0){
+        up_epiUp <- length(rownames(dplyr::filter(up, sumRP > 0)))
+      }else up_epiUp <- 0
+      if(length(which(up$sumRP < 0))  > 0){
+        up_epiDown <- length(rownames(dplyr::filter(up, sumRP < 0)))
+      }else up_epiDown <- 0
+      up_per <- c(up_total-(up_epiUp + up_epiDown), up_epiDown, up_epiUp)
     }else up_per <- c(0,0,0)
-    if(length(which(unique(data$group) == "down")) == 1){
-    down <- data %>% dplyr::filter(group == "down")
-    down_total <- length(rownames(down))
-    if(length(which(down$sumRP > 0))  > 0){
-    down_epiUp <- length(rownames(dplyr::filter(down, sumRP > 0)))
-    }else down_epiUp <- 0
-    if(length(which(down$sumRP < 0))  > 0){
-    down_epiDown <- length(rownames(dplyr::filter(down, sumRP < 0)))
-    }else down_epiDown <- 0
-    down_per <- c(down_total-(down_epiUp + down_epiDown), down_epiDown, down_epiUp)
+    if(length(which(unique(data$group) == down_name)) == 1){
+      down <- data %>% dplyr::filter(group == down_name)
+      down_total <- length(rownames(down))
+      if(length(which(down$sumRP > 0))  > 0){
+        down_epiUp <- length(rownames(dplyr::filter(down, sumRP > 0)))
+      }else down_epiUp <- 0
+      if(length(which(down$sumRP < 0))  > 0){
+        down_epiDown <- length(rownames(dplyr::filter(down, sumRP < 0)))
+      }else down_epiDown <- 0
+      down_per <- c(down_total-(down_epiUp + down_epiDown), down_epiDown, down_epiUp)
     }else down_per <- c(0,0,0)
-    x <- data.frame(RNA = c("up", "up","up","down","down","down"), 
-                    Regulatory_potential = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")"),
-                                                    paste0("down:NS (",down_per[1],")"),paste0("down:down (",down_per[2],")"),paste0("down:up (",down_per[3],")")),
-                                                  levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")"),
-                                                             paste0("down:NS (",down_per[1],")"),paste0("down:down (",down_per[2],")"),paste0("down:up (",down_per[3],")"))),
+    x <- data.frame(RNA = c(up_name, up_name,up_name,down_name,down_name,down_name), 
+                    Regulatory_potential = factor(c(paste0("NS:",up_name,"(",up_per[1],")"),
+                                                    paste0(epi_down_name,":",up_name, "(",up_per[2],")"),
+                                                    paste0(epi_up_name,":",up_name, "(",up_per[3],")"),
+                                                    paste0("NS:",down_name,"(",down_per[1],")"),
+                                                    paste0(epi_down_name,":",down_name, "(",down_per[2],")"),
+                                                    paste0(epi_up_name,":",down_name, "(",down_per[3],")")),
+                                                  levels = c(paste0("NS:",up_name,"(",up_per[1],")"),
+                                                             paste0(epi_down_name,":",up_name, "(",up_per[2],")"),
+                                                             paste0(epi_up_name,":",up_name, "(",up_per[3],")"),
+                                                             paste0("NS:",down_name,"(",down_per[1],")"),
+                                                             paste0(epi_down_name,":",down_name, "(",down_per[2],")"),
+                                                             paste0(epi_up_name,":",down_name, "(",down_per[3],")"))),
                     num = c(up_per,down_per),
                     col = c("F8766D","#00BFC4","grey","F8766D","#00BFC4","grey"))
-    p <- ggplot(x, aes(x = RNA, y = num, fill = Regulatory_potential)) + geom_bar(stat = "identity") +
-      theme_bw(base_size = 15) + coord_flip() + scale_fill_manual(values = c("grey","#00BFC4","#F8766D","grey","#00BFC4","#F8766D"))
+    p <- ggplot(x, aes(x = RNA, y = num, fill = Regulatory_potential)) + geom_bar(stat = "identity") +xlab("Expression status")+
+      theme_bw(base_size = 15) + coord_flip() + scale_fill_manual(values = c("grey","#00BFC4","#F8766D","grey","#00BFC4","#F8766D"))+ 
+      guides(fill=guide_legend(title="Epigenome:RNA"))
     return(p)
   })
   output$int_boxplot <- renderPlot({
@@ -2256,92 +2509,107 @@ pair_volcano()
   })
   ChIPseq_popu <- reactive({
     RNA <- RNAseqDEG_anno()
+    up_name <- paste0(RNAseq_cond2_name(),"-high")
+    down_name <- paste0(RNAseq_cond1_name(),"-high")
+    epi_up_name <- paste0(unique(collist_bw_pair())[2], "-high")
+    epi_down_name <- paste0(unique(collist_bw_pair())[1], "-high")
     RNA <- dplyr::filter(RNA, !is.na(gene_id))
     RNA$gene_category <- "NS"
-    RNA$gene_category[RNA$log2FoldChange > log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- "up"
-    RNA$gene_category[RNA$log2FoldChange < -log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- "down"
+    RNA$gene_category[RNA$log2FoldChange > log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- up_name
+    RNA$gene_category[RNA$log2FoldChange < -log2(input$DEG_fc) & RNA$padj < input$DEG_fdr] <- down_name
     data <- merge(RNA,RP(), by="gene_id")
-    data$epigenome_category <- "up"
-    data$epigenome_category[data$sumRP < 0] <- "down"
-    if(length(which(unique(data$epigenome_category) == "up")) == 1){
-      up <- data %>% dplyr::filter(epigenome_category == "up")
+    data$epigenome_category <- epi_up_name
+    data$epigenome_category[data$sumRP < 0] <- epi_down_name
+    if(length(which(unique(data$epigenome_category) == epi_up_name)) == 1){
+      up <- data %>% dplyr::filter(epigenome_category == epi_up_name)
       up_total <- length(rownames(up))
-      if(length(which(unique(up$gene_category) == "up")) == 1){
-        up_RNAUp <- length(rownames(dplyr::filter(up, gene_category == "up")))
+      if(length(which(unique(up$gene_category) == up_name)) == 1){
+        up_RNAUp <- length(rownames(dplyr::filter(up, gene_category == up_name)))
       }else up_RNAUp <- 0
-      if(length(which(unique(up$gene_category) == "down")) == 1){
-      up_RNADown <- length(rownames(dplyr::filter(up, gene_category == "down")))
+      if(length(which(unique(up$gene_category) == down_name)) == 1){
+        up_RNADown <- length(rownames(dplyr::filter(up, gene_category == down_name)))
       }else up_RNADown <- 0
       up_per <- c(up_total-(up_RNAUp + up_RNADown), up_RNADown, up_RNAUp)
     }else{
       up_per <- c(0,0,0)
     } 
-    if(length(which(unique(data$epigenome_category) == "down")) == 1){
-    down <- data %>% dplyr::filter(epigenome_category == "down")
-    down_total <- length(rownames(down))
-    if(length(which(unique(down$gene_category) == "up")) == 1){
-    down_RNAUp <- length(rownames(dplyr::filter(down, gene_category == "up")))
-    }else down_RNAUp <- 0
-    if(length(which(unique(down$gene_category) == "down")) == 1){
-    down_RNADown <- length(rownames(dplyr::filter(down, gene_category == "down")))
-    }else down_RNADown <- 0
-    down_per <- c(down_total-(down_RNAUp + down_RNADown), down_RNADown, down_RNAUp)
+    if(length(which(unique(data$epigenome_category) == epi_down_name)) == 1){
+      down <- data %>% dplyr::filter(epigenome_category == epi_down_name)
+      down_total <- length(rownames(down))
+      if(length(which(unique(down$gene_category) == up_name)) == 1){
+        down_RNAUp <- length(rownames(dplyr::filter(down, gene_category == up_name)))
+      }else down_RNAUp <- 0
+      if(length(which(unique(down$gene_category) == down_name)) == 1){
+        down_RNADown <- length(rownames(dplyr::filter(down, gene_category == down_name)))
+      }else down_RNADown <- 0
+      down_per <- c(down_total-(down_RNAUp + down_RNADown), down_RNADown, down_RNAUp)
     }else{
       down_per <- c(0,0,0)
     } 
-    x <- data.frame(Regulatory_potential = c("up", "up","up","down","down","down"), 
-                    RNA = factor(c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")"),
-                                   paste0("down:NS (",down_per[1],")"),paste0("down:down (",down_per[2],")"),paste0("down:up (",down_per[3],")")),
-                                 levels = c(paste0("up:NS (",up_per[1],")"),paste0("up:down (",up_per[2],")"),paste0("up:up (",up_per[3],")"),
-                                            paste0("down:NS (",down_per[1],")"),paste0("down:down (",down_per[2],")"),paste0("down:up (",down_per[3],")"))),
+    x <- data.frame(Regulatory_potential = c(epi_up_name, epi_up_name,epi_up_name,epi_down_name,epi_down_name,epi_down_name), 
+                    RNA = factor(c(paste0(epi_up_name,":NS (",up_per[1],")"),
+                                   paste0(epi_up_name,":",down_name,"(",up_per[2],")"),
+                                   paste0(epi_up_name,":",up_name,"(",up_per[3],")"),
+                                   paste0(epi_down_name,":NS (",down_per[1],")"),
+                                   paste0(epi_down_name,":",down_name,"(",down_per[2],")"),
+                                   paste0(epi_down_name,":",up_name,"(",down_per[3],")")),
+                                 levels = c(paste0(epi_up_name,":NS (",up_per[1],")"),
+                                            paste0(epi_up_name,":",down_name,"(",up_per[2],")"),
+                                            paste0(epi_up_name,":",up_name,"(",up_per[3],")"),
+                                            paste0(epi_down_name,":NS (",down_per[1],")"),
+                                            paste0(epi_down_name,":",down_name,"(",down_per[2],")"),
+                                            paste0(epi_down_name,":",up_name,"(",down_per[3],")"))),
                     num = c(up_per,down_per),
                     col = c("#F8766D","#00BFC4","grey","#F8766D","#00BFC4","grey"))
-    p <- ggplot(x, aes(x = Regulatory_potential, y = num, fill = RNA)) + geom_bar(stat = "identity") +
-      theme_bw(base_size = 15) + coord_flip() + scale_fill_manual(values = c("grey","#00BFC4","#F8766D","grey","#00BFC4","#F8766D"))
+    p <- ggplot(x, aes(x = Regulatory_potential, y = num, fill = RNA)) + geom_bar(stat = "identity") + xlab("RP status") +
+      theme_bw(base_size = 15) + coord_flip() + scale_fill_manual(values = c("grey","#00BFC4","#F8766D","grey","#00BFC4","#F8766D"))+ 
+      guides(fill=guide_legend(title="Epigenome:RNA"))
     return(p)
   })
   RP_all_table <- reactive({
     if(!is.null(input$peak_distance) && !is.null(RNAseqDEG()) && 
        !is.na(input$DEG_fdr) && !is.na(input$DEG_fc) && !is.null(bw_count()) && input$Species != "not selected"){
-    target_result <- regulatory_potential()$data
-    target_result$epigenome_category <- "up"
-    target_result$epigenome_category[target_result$sumRP < 0] <- "down"
-    table <- NULL
-    if(str_detect(target_result$gene_id[1], "FBgn")){
-      symbol <- id_convert(my.symbols = target_result$gene_id,Species = input$Species,type = "ENSEMBL")
-      symbol <- symbol %>% distinct(ENSEMBL, .keep_all = TRUE)
-      symbol <- symbol$SYMBOL
-    }else symbol <- target_result$Symbol
-    if(!is.null(mmAnno_up()) && !is.null(mmAnno_down())) {
-    table <- data.frame(Symbol = symbol,
-                        Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
-                        RNA_log2FC = -target_result$log2FoldChange,
-                        RNA_padj = target_result$padj,
-                        regulatory_potential = target_result$sumRP,
-                        withUpPeakN = target_result$withPeakN_up,
-                        withDownPeakN = target_result$withPeakN_down,
-                        gene_id = target_result$gene_id)
-    }else{
-      if(!is.null(mmAnno_up())){
+      target_result <- regulatory_potential()$data
+      epi_up_name <- paste0(unique(collist_bw_pair())[2], "-high")
+      epi_down_name <- paste0(unique(collist_bw_pair())[1], "-high")
+      target_result$epigenome_category <- epi_up_name
+      target_result$epigenome_category[target_result$sumRP < 0] <- epi_down_name
+      table <- NULL
+      if(str_detect(target_result$gene_id[1], "FBgn")){
+        symbol <- id_convert(my.symbols = target_result$gene_id,Species = input$Species,type = "ENSEMBL")
+        symbol <- symbol %>% distinct(ENSEMBL, .keep_all = TRUE)
+        symbol <- symbol$SYMBOL
+      }else symbol <- target_result$Symbol
+      if(!is.null(mmAnno_up()) && !is.null(mmAnno_down())) {
         table <- data.frame(Symbol = symbol,
-                            Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
+                            Group = paste0(target_result$epigenome_category,":",target_result$gene_category),
                             RNA_log2FC = -target_result$log2FoldChange,
                             RNA_padj = target_result$padj,
                             regulatory_potential = target_result$sumRP,
                             withUpPeakN = target_result$withPeakN_up,
-                            gene_id = target_result$gene_id)
-      }
-      if(!is.null(mmAnno_down())){
-        table <- data.frame(Symbol = symbol,
-                            Group = paste0(target_result$gene_category,"-",target_result$epigenome_category),
-                            RNA_log2FC = -target_result$log2FoldChange,
-                            RNA_padj = target_result$padj,
-                            regulatory_potential = target_result$sumRP,
                             withDownPeakN = target_result$withPeakN_down,
                             gene_id = target_result$gene_id)
+      }else{
+        if(!is.null(mmAnno_up())){
+          table <- data.frame(Symbol = symbol,
+                              Group = paste0(target_result$epigenome_category,":",target_result$gene_category),
+                              RNA_log2FC = -target_result$log2FoldChange,
+                              RNA_padj = target_result$padj,
+                              regulatory_potential = target_result$sumRP,
+                              withUpPeakN = target_result$withPeakN_up,
+                              gene_id = target_result$gene_id)
+        }
+        if(!is.null(mmAnno_down())){
+          table <- data.frame(Symbol = symbol,
+                              Group = paste0(target_result$epigenome_category,":",target_result$gene_category),
+                              RNA_log2FC = -target_result$log2FoldChange,
+                              RNA_padj = target_result$padj,
+                              regulatory_potential = target_result$sumRP,
+                              withDownPeakN = target_result$withPeakN_down,
+                              gene_id = target_result$gene_id)
+        }
       }
-    }
-    return(table)
+      return(table)
     }
   })
   
@@ -2429,27 +2697,27 @@ pair_volcano()
     },
     content = function(file){write.table(RP_selected_table(), file, row.names = F, sep = "\t", quote = F)}
   )
- 
+  
   int_selected_bed <- reactive({
     if(!is.null(RP_selected_table())){
       gene <- RP_selected_table()$gene_id
-      type <- gsub(".+\\-","", input$RNAseqGroup)
-      if(type == "up") {
+      type <- gsub("\\:.+$","", input$RNAseqGroup)
+      epi_up_name <- paste0(unique(collist_bw_pair())[2], "-high")
+      epi_down_name <- paste0(unique(collist_bw_pair())[1], "-high")
+      if(type == epi_up_name) {
         peak <- subset(mmAnno_up(), gene_id %in% gene)
         up_peak2 <- as.data.frame(peak)
         up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
         up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
         up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-        mcols(up_peak3) <- DataFrame(Group = "up")
         y <- as.data.frame(up_peak3)
       }
-      if(type == "down") {
+      if(type == epi_down_name) {
         peak <- subset(mmAnno_down(), gene_id %in% gene)
         down_peak2 <- as.data.frame(peak)
         down_peak2$Row.names <- paste0(down_peak2$seqnames,":",down_peak2$start,"-",down_peak2$end)
         down_peak2 <- down_peak2 %>% distinct(Row.names, .keep_all = T)
         down_peak3 <- with(down_peak2,GRanges(seqnames,IRanges(start,end)))
-        mcols(down_peak3) <- DataFrame(Group = "up")
         y <- as.data.frame(down_peak3)
       }
       return(y)
@@ -2477,12 +2745,12 @@ pair_volcano()
       gene_position <- int_goi_gene_position()
       start_position <- min(c(y$start,gene_position$start))-1000
       end_position <- max(c(y$end,gene_position$end))+1000
-      sliderInput("int_igv_uprange","Range:",value = c(start_position,end_position),
+      sliderInput("int_igv_uprange","Range (x-axis):",value = c(start_position,end_position),
                   step = 100, min = start_position - 10000, max = end_position + 10000)
     }
   })
   output$int_igv_ylim <- renderUI({
-    numericInput("int_igv_ylim","peak range:", value = 2, min = 0)
+    numericInput("int_igv_ylim","Max peak intensity (y-axis):", value = 2, min = 0)
   })
   
   int_goi_promoter_position<- reactive({
@@ -2492,11 +2760,9 @@ pair_volcano()
       y <- NULL
       if(!is.null(mmAnno_up())) {
         up_peak <- subset(mmAnno_up(), gene_id %in% gene)
-        mcols(up_peak) <- DataFrame(Group = "up")
       }
       if(!is.null(mmAnno_down())) {
         down_peak <- subset(mmAnno_down(), gene_id %in% gene)
-        mcols(down_peak) <- DataFrame(Group = "up")
         y <- as.data.frame(down_peak)
       }
       if(!is.null(mmAnno_up()) && !is.null(mmAnno_down())) {
@@ -2519,22 +2785,34 @@ pair_volcano()
   })
   
   output$int_trackplot_additional <- renderUI({
-    fileInput("int_trackplot_additional1",
-              "Select additional bigwig files",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("int_trackplot_additional1",label="Select additional bigwig files",choices = bw,multiple=T)
+    }else{
+      fileInput("int_trackplot_additional1",
+                "Select additional bigwig files",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   pre_int_track_additional_files <-reactive({
     if(!is.null(input$int_trackplot_additional1)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$int_trackplot_additional1[, 1])){
-        file <- input$int_trackplot_additional1[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1[nr,]$name))
-        files <- c(files,file)
+      if(length(list.files("./Volume/")) > 0){
+        files <- input$int_trackplot_additional1
+        name <- gsub(".+\\/","",input$int_trackplot_additional1)
+        names(files) <- gsub("\\..+$", "", name)
+      }else{
+        files<-c()
+        name<-c()
+        for(nr in 1:length(input$int_trackplot_additional1[, 1])){
+          file <- input$int_trackplot_additional1[[nr, 'datapath']]
+          name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1[nr,]$name))
+          files <- c(files,file)
+        }
+        names(files)<-name
       }
-      names(files)<-name
       return(files)
     }
   })
@@ -2627,23 +2905,23 @@ pair_volcano()
         pdf(file, height = pdf_height, width = pdf_width)
         if(!is.null(int_highlight_trackplot())){
           plotTracks(list(gtrack(), int_highlight_trackplot()),
-                            from = input$int_igv_uprange[1], 
-                            to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
-                            type="hist")
+                     from = input$int_igv_uprange[1], 
+                     to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                     type="hist")
         }else{
           df <- int_data_track()
           df[["gtrack"]] <- gtrack()
           plotTracks(df,
-                            from = input$int_igv_uprange[1], 
-                            to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
-                            type="hist")
+                     from = input$int_igv_uprange[1], 
+                     to = input$int_igv_uprange[2],ylim=c(0,input$int_igv_ylim),
+                     type="hist")
         }
         dev.off()
         incProgress(1)
       })
     }
   )
-
+  
   
   #Integrative functional analysis--------
   int_Hallmark_set <- reactive({
@@ -2654,7 +2932,7 @@ pair_volcano()
   
   output$intGroup <- renderUI({
     if(!is.null(RP_all_table())){
-      selectInput("intGroup","Group (RNAseq-Epigenome)",unique(RP_all_table()$Group),multiple = T)
+      selectInput("intGroup","Group (Epigenome:RNAseq)",unique(RP_all_table()$Group),multiple = T)
     }
   })
   output$intGeneset <- renderUI({
@@ -2734,6 +3012,463 @@ pair_volcano()
     },
     content = function(file){write.table(int_enrich_table(), file, row.names = F, sep = "\t", quote = F)}
   )
+  #withRNAseq combined heatmap-------------
+  output$Group_integrated_heatmap <- renderUI({
+    if(!is.null(RP_all_table())){
+      selectInput("Group_integrated_heatmap","Group (Epigenome:RNAseq)",unique(RP_all_table()$Group),multiple = T)
+    }
+  })
+  with_uniqueID_DAR<- reactive({
+    group <- input$Group_integrated_heatmap
+    list <- list()
+    if(is.null(group)) validate("Select groups of interest.")
+    for(name in group){
+      table <- RP_all_table() %>% dplyr::filter(Group == name)
+      gene <- table$gene_id
+      if(input$Genomic_region == "Promoter"){
+        tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
+        peak <- subset(tss, gene_id %in% gene)
+      }else{
+        type <- gsub("\\:.+$","", name)
+        if(type == paste0(unique(collist_bw_pair())[2], "-high")) {
+          peak <- subset(mmAnno_up(), gene_id %in% gene)
+        }
+        if(type == paste0(unique(collist_bw_pair())[1], "-high")) {
+          peak <- subset(mmAnno_down(), gene_id %in% gene)
+        }
+      }
+      locus <- as.data.frame(peak)
+      locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
+      names(peak) <- paste0(locus$gene_id,"_",locus$locus)
+      list[[gsub(":",":\n",name)]] <- peak
+    }
+    return(list)
+  })
+  with_integrate_h <- reactive({
+    h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = bws_order(),type=input$Genomic_region)
+    return(h)
+  })
+  with_integrated_legend <- reactive({
+    lgd <- lgd(files2 = with_uniqueID_DAR())
+    return(lgd)
+  })
+  with_integrated_heatlist <- reactive({
+    if(input$with_integrated_heatmapButton > 0 && updateCounter_with_int$i > 0){
+      ht_list <- NULL
+      if(!is.null(with_integrate_h())) ht_list <- ht_list + with_integrate_h()[["heatmap"]]
+      if(!is.null(with_integrated_heatmap_add1())) ht_list <- ht_list + with_integrated_heatmap_add1()[["heatmap"]]
+      if(!is.null(with_integrated_heatmap_add2())) ht_list <- ht_list + with_integrated_heatmap_add2()[["heatmap"]]
+      if(!is.null(with_integrated_heatmap_add3())) ht_list <- ht_list + with_integrated_heatmap_add3()[["heatmap"]]
+      if(!is.null(with_rnaseq_DEGs2())) ht_list <- ht_list + with_rnaseq_DEGs_heatmap()
+      if(!is.null(with_rnaseq_count2())) ht_list <- ht_list + with_rnaseq_count_heatmap()
+      return(ht_list)
+    }else return(NULL)
+  })
+  updateCounter_with_int <- reactiveValues(i = 0)
+  
+  observe({
+    input$with_integrated_heatmapButton
+    isolate({
+      updateCounter_with_int$i <- updateCounter_with_int$i + 1
+    })
+  })
+  #Restart
+  observeEvent(with_integrated_heatlist(), {
+    isolate(updateCounter_with_int$i == 0)
+    updateCounter_with_int <<- reactiveValues(i = 0)
+  }) 
+  with_integrated_heatlist_plot <- reactive({
+    if(input$with_integrated_heatmapButton > 0 && !is.null(bws()) && 
+       !is.null(with_integrated_heatlist())){
+      return(draw(with_integrated_heatlist(),annotation_legend_list = list(with_integrated_legend()),
+                  heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
+    }
+  })
+  output$with_integrated_heatmap <- renderPlot({
+    if(input$data_file_type != "Row2"){
+      if(is.null(bws())) validate("Bigwig files are required.")
+    }
+    if(input$with_integrated_heatmapButton > 0 && !is.null(bws()) && 
+       !is.null(with_integrated_heatlist())){
+      with_integrated_heatlist_plot()
+    }
+  })
+  with_gene_type_rnaseq_DEGs <- reactive({
+    files <- list()
+    files[["deg"]] <- RNAseqDEG()
+    return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
+  })
+  with_rnaseq_DEGs2 <- reactive({
+    files <- list()
+    files[["deg"]] <- RNAseqDEG()
+    return(rnaseqDEGs_for_integrated_heatmap(files = files,Species=input$Species,gene_type=with_gene_type_rnaseq_DEGs()))
+  })
+  with_gene_type_rnaseq_counts <- reactive({
+    if(input$RNAseq_data_type != "Result"){
+    files <- list()
+    files[["count"]] <- RNAseqDEG_norm()
+    print(files)
+    return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
+    }
+  })
+  with_rnaseq_count2 <- reactive({
+    if(input$RNAseq_data_type != "Result"){
+    files <- list()
+    files[["count"]] <- RNAseqDEG_norm()
+    print(with_gene_type_rnaseq_counts())
+    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species,gene_type=with_gene_type_rnaseq_counts()))
+    }
+  })
+  with_rnaseq_count_heatmap <- reactive({
+    rna <-  with_rnaseq_count2()
+    if(!is.null(rna)){
+    group <- input$Group_integrated_heatmap
+    list <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+    for(name in group){
+      table <- RP_all_table() %>% dplyr::filter(Group == name)
+      gene <- table$gene_id
+      if(input$Genomic_region == "Promoter"){
+        tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
+        peak <- subset(tss, gene_id %in% gene)
+      }else{
+        type <- gsub("\\:.+$","", name)
+        if(type == paste0(unique(collist_bw_pair())[2], "-high")) {
+          peak <- subset(mmAnno_up(), gene_id %in% gene)
+        }
+        if(type == paste0(unique(collist_bw_pair())[1], "-high")) {
+          peak <- subset(mmAnno_down(), gene_id %in% gene)
+        }
+      }
+      locus <- as.data.frame(peak)
+      locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
+      list <-rbind(list, locus)
+    }
+    rna$gene_id <- rownames(rna)
+    print(head(rna))
+    m_z <- merge(rna,list,by="gene_id",all=T)
+    m_z <- m_z %>% dplyr::filter(!is.na(locus))
+    rownames(m_z) <- paste0(m_z$gene_id,"_",m_z$locus)
+    m_z <- m_z[,2:length(colnames(rna))]
+    m_z[is.na(m_z)] <- 0
+    print(head(m_z))
+    mat <- with_integrate_h()[["mat"]]
+    
+    cond <- gsub(".+\\.", "", colnames(m_z))
+    cond <- gsub("\\_.+$", "", cond)
+    cond <- factor(cond, levels = unique(cond), ordered = TRUE)
+    cond_color <- rainbow_hcl(length(unique(cond)),c=100)
+    names(cond_color) <- unique(cond)
+    if(length(names(rnaseq_count())) == 1){
+      file_name <- NULL
+      file_name_color <- NULL
+    }else{
+      file_name <- gsub("\\..+$", "", colnames(m_z))
+      file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
+      file_name_color <- rainbow_hcl(length(file_name))
+      names(file_name_color) <- file_name
+    }
+    withProgress(message = "Heatmap of RNA-seq count data",{
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
+                    top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                       col = list(files = file_name_color,
+                                                                  condition = cond_color)),
+                    show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+    })
+    return(ht)
+    }
+  })
+  with_rnaseq_DEGs_heatmap <- reactive({
+    rna <-  with_rnaseq_DEGs2()
+    group <- input$Group_integrated_heatmap
+    list <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+    for(name in group){
+      table <- RP_all_table() %>% dplyr::filter(Group == name)
+      gene <- table$gene_id
+      if(input$Genomic_region == "Promoter"){
+        tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
+        peak <- subset(tss, gene_id %in% gene)
+      }else{
+        type <- gsub("\\:.+$","", name)
+        if(type == paste0(unique(collist_bw_pair())[2], "-high")) {
+          peak <- subset(mmAnno_up(), gene_id %in% gene)
+        }
+        if(type == paste0(unique(collist_bw_pair())[1], "-high")) {
+          peak <- subset(mmAnno_down(), gene_id %in% gene)
+        }
+      }
+      locus <- as.data.frame(peak)
+      locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
+      list <-rbind(list,locus)
+    }
+    rna$gene_id <- rownames(rna)
+    m_z <- merge(rna,list,by="gene_id",all=T)
+    m_z <- m_z %>% dplyr::filter(!is.na(locus))
+    rownames(m_z) <- paste0(m_z$gene_id,"_",m_z$locus)
+    m_z[is.na(m_z)] <- 0
+    m_z <- as.data.frame(m_z[,1:length(colnames(rna))])
+    for(i in 1:length(colnames(rna))){
+      m_z[,i] <- -1 * as.numeric(m_z[,i])
+    }
+    m_z[m_z > 5]<- 5
+    m_z[m_z < -5]<- -5
+    print(head(m_z))
+    mat <- with_integrate_h()[["mat"]]
+    colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
+    withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
+                    show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
+                    use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
+                    col = c("blue","white","gold"))
+      return(ht)
+    })
+  })
+  output$with_integrated_bw1 <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("with_integrated_bw_1",
+                  "Option: Select additional bigwig files (blue)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("with_integrated_bw_1",
+                "Option: Select additional bigwig files (blue)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  output$with_integrated_bw2 <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("with_integrated_bw_2",
+                  "Option: Select additional bigwig files (green)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("with_integrated_bw_2",
+                "Option: Select additional bigwig files (green)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  output$with_integrated_bw3 <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("with_integrated_bw_3",
+                  "Option: Select additional bigwig files (purple)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("with_integrated_bw_3",
+                "Option: Select additional bigwig files (purple)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  with_pre_integrated_additional1 <-reactive({
+    return(pre_integrated_additional(input$with_integrated_bw_1))
+  })
+  with_integrated_additional1 <- reactive({
+    if(!is.null(input$with_sample_order_pair_comb1)){
+      return(with_pre_integrated_additional1()[input$with_sample_order_pair_comb1])
+    }
+  })
+  with_pre_integrated_additional2 <-reactive({
+    return(pre_integrated_additional(input$with_integrated_bw_2))
+  })
+  with_integrated_additional2 <- reactive({
+    if(!is.null(input$with_sample_order_pair_comb2)){
+      return(with_pre_integrated_additional2()[input$with_sample_order_pair_comb2])
+    }
+  })
+  with_pre_integrated_additional3 <-reactive({
+    return(pre_integrated_additional(input$with_integrated_bw_3))
+  })
+  with_integrated_additional3 <- reactive({
+    if(!is.null(input$with_sample_order_pair_comb3)){
+      return(with_pre_integrated_additional3()[input$with_sample_order_pair_comb3])
+    }
+  })
+  with_integrated_heatmap_add1 <- reactive({
+    if(!is.null(with_integrated_additional1())){
+      h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = with_integrated_additional1(),
+                         color = c("white","blue"),signal = "blue",type=input$Genomic_region)
+      return(h)
+    }
+  })
+  with_integrated_heatmap_add2 <- reactive({
+    if(!is.null(with_integrated_additional2())){
+      h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = with_integrated_additional2(),
+                         color = c("white","green"),signal = "green",type=input$Genomic_region)
+      return(h)
+    }
+  })
+  with_integrated_heatmap_add3 <- reactive({
+    if(!is.null(with_integrated_additional3())){
+      h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = with_integrated_additional3(),
+                         color = c("white", "purple"),signal = "purple",type=input$Genomic_region)
+      return(h)
+    }
+  })
+  output$download_with_integrated_heatmap = downloadHandler(
+    filename = "withRNAseq_conbined_heatmap.pdf",
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 10
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(with_integrated_heatlist_plot())
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  # with RNAseq HOMER-----------
+  output$with_homer_bg <- renderUI({
+    if(input$Genomic_region == "Genome-wide"){
+      radioButtons('with_homer_bg','Background sequence',
+                   c('random'="random",
+                     'peak call files'="peakcalling"
+                   ),selected = "random")
+    }
+  })
+  
+  with_updateCounter <- reactiveValues(i = 0)
+  
+  observe({
+    input$with_motifButton
+    isolate({
+      with_updateCounter$i <- with_updateCounter$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(with_enrich_motif(), {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  
+  output$with_homer_size2 <- renderUI({
+    if(!is.null(input$with_homer_size)){
+      if(input$with_homer_size == "custom"){
+        numericInput('with_homer_size2','Size of the region for motif finding',value=200, step=100)}}
+  })
+  
+  output$Group_homer <- renderUI({
+    if(!is.null(RP_all_table())){
+      selectInput("Group_homer","Group (Epigenome:RNAseq)",unique(RP_all_table()$Group),multiple = T)
+    }
+  })
+  with_preMotif_list <- reactive({
+    group <- input$Group_homer
+    list <- list()
+    if(is.null(group)) validate("Select groups of interest.")
+    for(name in group){
+      table <- RP_all_table() %>% dplyr::filter(Group == name)
+      gene <- table$gene_id
+      if(input$Genomic_region == "Promoter"){
+        tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
+        peak <- subset(tss, gene_id %in% gene)
+      }else{
+        type <- gsub("\\:.+$","", name)
+        if(type == paste0(unique(collist_bw_pair())[2], "-high")) {
+          peak <- subset(mmAnno_up(), gene_id %in% gene)
+        }
+        if(type == paste0(unique(collist_bw_pair())[1], "-high")) {
+          peak <- subset(mmAnno_down(), gene_id %in% gene)
+        }
+      }
+      list[[gsub(":",":\n",name)]] <- peak
+    }
+    return(list)
+  })
+  
+  with_enrich_motif <- reactive({
+    if(with_updateCounter$i > 0 && input$with_motifButton > 0 && !is.null(with_preMotif_list()) 
+       && input$Species != "not selected" && !is.null(input$with_homer_unknown)){
+      if(input$with_homer_size == "given") size <- "given"
+      if(input$with_homer_size == "custom") size <- input$with_homer_size2
+      if(input$Genomic_region == "Genome-wide"){
+        return(findMotif(df= with_preMotif_list(), anno_data = deg_result_anno2(),back = input$with_homer_bg,
+                         motif_length=input$with_homer_length,
+                         Species = input$Species, motif=input$with_homer_unknown,size=size,bw_count=bw_count()))
+      }else return(findMotif(df= data_degcount2(), anno_data = promoter_region(),
+                             Species = input$Species,motif_length=input$with_homer_length,
+                             type = "Promoter", motif=input$with_homer_unknown,size=size))
+    }else return(NULL)
+  })
+  
+  output$with_motif_plot <- renderPlot({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
+       !is.null(input$with_homer_unknown) && input$Species != "not selected"){
+      homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
+    }
+  })
+  output$download_with_motif_plot = downloadHandler(
+    filename = function() {
+      paste0("withRNAseq_motif_enrichment_plot",".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        p1 <- homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(p1)
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$download_with_homer_report = downloadHandler(
+    filename = function() {
+      paste0("withRNAseq_HOMER_report",".zip")
+    },
+    content = function(fname){
+      fs <- c()
+      path_list <- with_enrich_motif()
+      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+      for(name in names(path_list)){
+        files <-list.files(path_list[[name]],pattern = "*.*")
+        for(i in 1:length(files)){
+          data <- paste0(path_list[[name]],"/",files[[i]])
+          fs <- c(fs, data)
+        }
+      }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  
+  
+  output$download_with_motif_table = downloadHandler(
+    filename = function() {
+      paste0("withRNAseq_known_motif_table",".txt")
+    },
+    content = function(file){write.table(with_motif_table(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  with_motif_table <- reactive({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif())){
+      return(known_motif(with_enrich_motif()))
+    }
+  })
+  
+  output$with_motif_result <- DT::renderDT({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && input$Species != "not selected"){
+      with_motif_table()
+    }
+  })
   
   #combined heatmap--------------
   uniqueID_DAR<- reactive({
@@ -2743,8 +3478,8 @@ pair_volcano()
       tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
       tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
       colnames(tss)[6]<-"ENTREZID"
-      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
-      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == paste0(unique(collist_bw_pair())[2],"-high"))$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == paste0(unique(collist_bw_pair())[1],"-high"))$ENTREZID)
       print(head(up))
     }else{
       data <- data_degcount2_anno()
@@ -2761,8 +3496,8 @@ pair_volcano()
     names(up_gr) <- paste0(up$ENTREZID,"_",up$locus)
     names(down_gr) <- paste0(down$ENTREZID,"_",down$locus)
     list <- list()
-    list[["Up"]] <- up_gr
-    list[["Down"]] <- down_gr
+    list[[paste0(unique(collist_bw_pair())[2],"-high")]] <- up_gr
+    list[[paste0(unique(collist_bw_pair())[1],"-high")]] <- down_gr
     print(list)
     return(list)
   })
@@ -2782,11 +3517,8 @@ pair_volcano()
       if(!is.null(integrated_heatmap_add1())) ht_list <- ht_list + integrated_heatmap_add1()[["heatmap"]]
       if(!is.null(integrated_heatmap_add2())) ht_list <- ht_list + integrated_heatmap_add2()[["heatmap"]]
       if(!is.null(integrated_heatmap_add3())) ht_list <- ht_list + integrated_heatmap_add3()[["heatmap"]]
-      print("DEGs")
       if(!is.null(rnaseq_DEGs2())) ht_list <- ht_list + rnaseq_DEGs_heatmap()
-      print("Counts")
       if(!is.null(rnaseq_count2())) ht_list <- ht_list + rnaseq_count_heatmap()
-      print("Clear")
       return(ht_list)
     }else return(NULL)
   })
@@ -2801,16 +3533,24 @@ pair_volcano()
   
   
   #Restart
-  defaultvalues <- observeEvent(integrated_heatlist(), {
+  observeEvent(integrated_heatlist(), {
     isolate(updateCounter_int$i == 0)
     updateCounter_int <<- reactiveValues(i = 0)
   }) 
-  output$integrated_heatmap <- renderPlot({
-    if(is.null(bws())) validate("Bigwig files are required.")
+  integrated_heatlist_plot <- reactive({
     if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
        !is.null(integrated_heatlist())){
-      draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
-           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+      return(draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
+                  heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
+    }
+  })
+  output$integrated_heatmap <- renderPlot({
+    if(input$data_file_type != "Row2"){
+      if(is.null(bws())) validate("Bigwig files are required.")
+    }
+    if(input$integrated_heatmapButton > 0 && !is.null(bws()) && !is.null(deg_result()) && 
+       !is.null(integrated_heatlist())){
+      integrated_heatlist_plot()
     }
   })
   output$download_integrated_heatmap = downloadHandler(
@@ -2824,8 +3564,7 @@ pair_volcano()
           pdf_width <- 10
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
-             heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+        print(integrated_heatlist_plot())
         dev.off()
         incProgress(1)
       })
@@ -2881,103 +3620,19 @@ pair_volcano()
   })
   gene_type_rnaseq_DEGs <- reactive({
     files <- rnaseq_DEGs()
-    gene_types <- c()
-    name_list <- c()
-    if(!is.null(files)){
-      for(name in names(files)){
-        type <- gene_type(my.symbols=rownames(files[[name]]),org=org1(),Species=input$Species)
-        gene_types <- c(gene_types, type)
-        name_list <- c(name_list,name) 
-      }
-      names(gene_types) <- name_list
-      return(gene_types)
-    }
+    return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
   })
   rnaseq_DEGs2 <- reactive({
     files <- rnaseq_DEGs()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species,gene_type=gene_type_rnaseq_DEGs())
-      if(length(names(df)) != 1){
-        matrix_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix[is.na(matrix)] <- 0
-          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_list[[name]] <- matrix
-        }
-        base <- matrix_list[[1]]
-        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
-        rownames(base) <- base$Row.names
-        colnames(base) <- gsub("\\.y$", "", colnames(base))
-        rna <- as.data.frame(base[,-1])
-        print(head(rna))
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      rna <- dplyr::select(rna, contains("log2FoldChange"))
-      return(rna)
-    }
+    return(rnaseqDEGs_for_integrated_heatmap(files = files,Species=input$Species,gene_type=gene_type_rnaseq_DEGs()))
   })
   gene_type_rnaseq_counts <- reactive({
     files <- rnaseq_count()
-    gene_types <- c()
-    name_list <- c()
-    if(!is.null(files)){
-      for(name in names(files)){
-        type <- gene_type(my.symbols=rownames(files[[name]]),org=org1(),Species=input$Species)
-        gene_types <- c(gene_types, type)
-        name_list <- c(name_list,name) 
-      }
-      names(gene_types) <- name_list
-      return(gene_types)
-    }
+      return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
   })
   rnaseq_count2 <- reactive({
     files <- rnaseq_count()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species,gene_type = gene_type_rnaseq_counts())
-      if(length(names(df)) != 1){
-        matrix_z_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix_z <- genescale(matrix, axis = 1, method = "Z")
-          print(head(matrix_z))
-          matrix_z[is.na(matrix_z)] <- 0
-          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_z_list[[name]] <- matrix_z
-        }
-        base_z <- matrix_z_list[[1]]
-        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
-        rownames(base_z) <- base_z$Row.names
-        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
-        rna <- as.data.frame(base_z[,-1])
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        print(head(rna))
-        rna <- genescale(rna, axis = 1, method = "Z")
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      return(rna)
-    }
+    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species,gene_type=gene_type_rnaseq_counts()))
   })
   observeEvent(input$pair_rnaseq_DEGs, ({
     updateCollapse(session,id =  "z-score_count", open="Uploaded_DEGs")
@@ -3007,15 +3662,13 @@ pair_volcano()
       tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
       tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
       colnames(tss)[6]<-"ENTREZID"
-      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
-      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == paste0(unique(collist_bw_pair())[2],"-high"))$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == paste0(unique(collist_bw_pair())[1],"-high"))$ENTREZID)
     }else{
       data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
       up <- dplyr::filter(data, locus %in% rownames(data_degcount_up()))
       down <- dplyr::filter(data, locus %in% rownames(data_degcount_down()))
     }
-    print(head(data))
-    print(head(rna))
     rna$ENTREZID <- rownames(rna)
     up_m <- merge(rna,up,by="ENTREZID",all=T)
     up_m <- up_m %>% dplyr::filter(!is.na(locus))
@@ -3065,8 +3718,8 @@ pair_volcano()
       tss <- as.data.frame(promoters(genes(txdb()),upstream = 0,downstream = 1))
       tss$locus <- paste0(tss$seqnames,":",tss$start,"-",tss$end)
       colnames(tss)[6]<-"ENTREZID"
-      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Up")$ENTREZID)
-      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == "Down")$ENTREZID)
+      up <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == paste0(unique(collist_bw_pair())[2],"-high"))$ENTREZID)
+      down <- dplyr::filter(tss, ENTREZID %in% dplyr::filter(data, group == paste0(unique(collist_bw_pair())[1],"-high"))$ENTREZID)
     }else{
       data <- data_degcount2_anno() %>% dplyr::filter(!is.na(ENTREZID))
       data <- data[,- which(colnames(data) == "log2FoldChange")]
@@ -3103,78 +3756,72 @@ pair_volcano()
   })
   
   output$integrated_bw1 <- renderUI({
-    fileInput("integrated_bw_1",
-              "Option: Select additional bigwig files (blue)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_1",
+                  "Option: Select additional bigwig files (blue)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_1",
+                "Option: Select additional bigwig files (blue)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   output$integrated_bw2 <- renderUI({
-    fileInput("integrated_bw_2",
-              "Option: Select additional bigwig files (green)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_2",
+                  "Option: Select additional bigwig files (green)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_2",
+                "Option: Select additional bigwig files (green)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   output$integrated_bw3 <- renderUI({
-    fileInput("integrated_bw_3",
-              "Option: Select additional bigwig files (purple)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_3",
+                  "Option: Select additional bigwig files (purple)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_3",
+                "Option: Select additional bigwig files (purple)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   pre_integrated_additional1 <-reactive({
-    if(!is.null(input$integrated_bw_1)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_1[, 1])){
-        file <- input$integrated_bw_1[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_1[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_1))
   })
   integrated_additional1 <- reactive({
     if(!is.null(input$sample_order_pair_comb1)){
-    return(pre_integrated_additional1()[input$sample_order_pair_comb1])
+      return(pre_integrated_additional1()[input$sample_order_pair_comb1])
     }
   })
   pre_integrated_additional2 <-reactive({
-    if(!is.null(input$integrated_bw_2)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_2[, 1])){
-        file <- input$integrated_bw_2[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_2))
   })
   integrated_additional2 <- reactive({
     if(!is.null(input$sample_order_pair_comb2)){
-    return(pre_integrated_additional2()[input$sample_order_pair_comb2])
+      return(pre_integrated_additional2()[input$sample_order_pair_comb2])
     }
   })
   pre_integrated_additional3 <-reactive({
-    if(!is.null(input$integrated_bw_3)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_3[, 1])){
-        file <- input$integrated_bw_3[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_3))
   })
   integrated_additional3 <- reactive({
     if(!is.null(input$sample_order_pair_comb3)){
-    return(pre_integrated_additional3()[input$sample_order_pair_comb3])
+      return(pre_integrated_additional3()[input$sample_order_pair_comb3])
     }
   })
   integrated_heatmap_add1 <- reactive({
@@ -3234,8 +3881,8 @@ pair_volcano()
         dir.create("Input",showWarnings = FALSE)
         dir.create("Clustering/",showWarnings = FALSE)
         DEG <- "DAR_result/DAR_result.txt"
-        up <- "DAR_result/up_DAR.bed"
-        down <- "DAR_result/down_DAR.bed"
+        up <- paste0("DAR_result/",unique(collist_bw_pair())[2],"-high.bed")
+        down <- paste0("DAR_result/",unique(collist_bw_pair())[1],"-high.bed")
         count <- "Input/count.txt"
         bed <- "Input/filtered_merged_peak_call.bed"
         PCA <- "Clustering/clustering.pdf"
@@ -3273,10 +3920,10 @@ pair_volcano()
         if(!is.null(input$peak_up_range) && !is.null(bws())){
           withProgress(message = "Peak pattern",{
             dir.create("peak_pattern",showWarnings = FALSE)
-            up_pattern <- "peak_pattern/up_lineplot.pdf"
-            down_pattern <- "peak_pattern/down_lineplot.pdf"
-            up_pattern_heatmap <- "peak_pattern/up_heatmap.pdf"
-            down_pattern_heatmap <- "peak_pattern/down_heatmap.pdf"
+            up_pattern <- paste0("peak_pattern/",unique(collist_bw_pair())[2],"-high_lineplot.pdf")
+            down_pattern <- paste0("peak_pattern/",unique(collist_bw_pair())[1],"-high_lineplot.pdf")
+            up_pattern_heatmap <- paste0("peak_pattern/",unique(collist_bw_pair())[2],"-high_heatmap.pdf")
+            down_pattern_heatmap <- paste0("peak_pattern/",unique(collist_bw_pair())[1],"-high_heatmap.pdf")
             fs <- c(fs,up_pattern,down_pattern, up_pattern_heatmap,down_pattern_heatmap)
             pdf(up_pattern, height = 5, width = 5)
             matplot(peak_up_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
@@ -3318,8 +3965,8 @@ pair_volcano()
         if(input$Species != "not selected"){
           if(input$Genomic_region == "Genome-wide"){
             dir.create("peak_distribution",showWarnings = FALSE)
-            up_distribution <- "peak_distribution/up_annotation.pdf"
-            down_distribution <- "peak_distribution/down_annotation.pdf"
+            up_distribution <- paste0("peak_distribution/",unique(collist_bw_pair())[2],"-high_annotation.pdf")
+            down_distribution <- paste0("peak_distribution/",unique(collist_bw_pair())[1],"-high_annotation.pdf")
             fs <- c(fs, up_distribution,down_distribution)
             withProgress(message = "Peak distribution",{
               pdf(up_distribution, height = 6, width = 10)
@@ -3402,32 +4049,32 @@ pair_volcano()
               gridExtra::grid.arrange(RNAseq_popu(), ChIPseq_popu(), ncol = 1)
               dev.off()
               write.table(RP_all_table(), RP_all, row.names = F, sep = "\t", quote = F)
-              dir.create(paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/"),showWarnings = FALSE)
-              dir.create(paste0(dirname_withRNA,"selected_table(RNA-epigenome)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname_withRNA,"selected_bed(epigenome:RNA)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname_withRNA,"selected_table(epigenome:RNA)/"),showWarnings = FALSE)
               for(name in unique(RP_all_table()$Group)){
-                RP_selected <- paste0(dirname_withRNA,"selected_table(RNA-epigenome)/",name,".txt")
-                RP_selected_bed <- paste0(dirname_withRNA,"selected_bed(RNA-epigenome)/",name,".bed")
+                RP_selected <- paste0(dirname_withRNA,"selected_table(epigenome:RNAe)/",name,".txt")
+                RP_selected_bed <- paste0(dirname_withRNA,"selected_bed(epigenome:RNA)/",name,".bed")
                 fs <- c(fs, RP_selected,RP_selected_bed)
                 table <- RP_all_table() %>% dplyr::filter(Group == name)
                 write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
                 gene <- table$gene_id
-                type <- gsub(".+\\-","", name)
-                if(type == "up") {
+                type <- gsub("\\:.+$","", name)
+                epi_up_name <- paste0(unique(collist_bw_pair())[2], "-high")
+                epi_down_name <- paste0(unique(collist_bw_pair())[1], "-high")
+                if(type == epi_up_name) {
                   peak <- subset(mmAnno_up(), gene_id %in% gene)
                   up_peak2 <- as.data.frame(peak)
                   up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
                   up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
                   up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-                  mcols(up_peak3) <- DataFrame(Group = "up")
                   y <- as.data.frame(up_peak3)
                 }
-                if(type == "down") {
+                if(type == epi_down_name) {
                   peak <- subset(mmAnno_down(), gene_id %in% gene)
                   down_peak2 <- as.data.frame(peak)
                   down_peak2$Row.names <- paste0(down_peak2$seqnames,":",down_peak2$start,"-",down_peak2$end)
                   down_peak2 <- down_peak2 %>% distinct(Row.names, .keep_all = T)
                   down_peak3 <- with(down_peak2,GRanges(seqnames,IRanges(start,end)))
-                  mcols(down_peak3) <- DataFrame(Group = "up")
                   y <- as.data.frame(down_peak3)
                 }
                 write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
@@ -3480,8 +4127,7 @@ pair_volcano()
             intheatmap <- paste0("combined_heatmap/","combined_heatmap.pdf")
             fs <- c(fs, intheatmap)
             pdf(intheatmap, height = 6, width = 10)
-            draw(integrated_heatlist(),annotation_legend_list = list(integrated_legend()),
-                 heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+            print(integrated_heatlist_plot())
             dev.off()
           }
         }else {
@@ -3517,6 +4163,32 @@ pair_volcano()
   )
   
   ##Venn diagram -----------
+  output$peak_call_file_venn1 <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bed <- c(str_subset(list,".narrowPeak"),str_subset(list,".bed"))
+      selectInput("peak_call_file_venn1",label=NULL,choices = bed,multiple=T)
+    }else{
+      fileInput("peak_call_file_venn1",
+                NULL,
+                accept = c("bed","narrowPeak"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  output$file_venn1 <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("file_venn1",label=NULL,choices = bw,multiple=T)
+    }else{
+      fileInput("file_venn1",
+                NULL,
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
   output$Spe_motif_venn <- renderText({
     if(input$Species_venn == "not selected") print("Please select 'Species'")
   })
@@ -3537,6 +4209,22 @@ pair_volcano()
       return(genes(txdb_venn()))
     }
   })
+  
+  updateCounter_vennStart <- reactiveValues(i = 0)
+  
+  observe({
+    input$vennButton
+    isolate({
+      updateCounter_vennStart$i <- updateCounter_vennStart$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(Venn_peak_call_files(), {
+    isolate(updateCounter_vennStart$i == 0)
+    updateCounter_vennStart <<- reactiveValues(i = 0)
+  }) 
   #venn-------
   Venn_peak_call_files <- reactive({
     if(is.null(input$peak_call_file_venn1)){
@@ -3549,20 +4237,27 @@ pair_volcano()
       }
       return(NULL)
     }else{
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$peak_call_file_venn1[, 1])){
-        file <- input$peak_call_file_venn1[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$peak_call_file_venn1[nr,]$name))
-        files <- c(files,file)
+      if(length(list.files("./Volume/")) > 0){
+        files <- input$peak_call_file_venn1
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
+        name <- gsub(".+\\/","",input$peak_call_file_venn1)
+        names(files2) <- gsub("\\..+$", "", name)
+      }else{
+        files<-c()
+        name<-c()
+        for(nr in 1:length(input$peak_call_file_venn1[, 1])){
+          file <- input$peak_call_file_venn1[[nr, 'datapath']]
+          name <- c(name, gsub("\\..+$", "", input$peak_call_file_venn1[nr,]$name))
+          files <- c(files,file)
+        }
+        files2 <- lapply(files, GetGRanges, simple = TRUE)
+        names(files2)<-name
       }
-      files2 <- lapply(files, GetGRanges, simple = TRUE)
-      names(files2)<-name
       return(files2)
     }
   })
   
-  pre_bws_venn <- reactive({
+  pre2_bws_venn <- reactive({
     if(is.null(input$file_venn1)){
       if(input$goButton_venn > 0 ){
         df<-list()
@@ -3574,26 +4269,35 @@ pair_volcano()
       }
       return(NULL)
     }else{
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$file_venn1[, 1])){
-        file <- input$file_venn1[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$file_venn1[nr,]$name))
-        files <- c(files,file)
+      if(length(list.files("./Volume/")) > 0){
+        files <- input$file_venn1
+        name <- gsub(".+\\/","",input$file_venn1)
+        names(files) <- gsub("\\..+$", "", name)
+      }else{
+        files<-c()
+        name<-c()
+        for(nr in 1:length(input$file_venn1[, 1])){
+          file <- input$file_venn1[[nr, 'datapath']]
+          name <- c(name, gsub("\\..+$", "", input$file_venn1[nr,]$name))
+          files <- c(files,file)
+        }
+        names(files)<-name
       }
-      names(files)<-name
       return(files)
     }
   })
+  pre_bws_venn <- debounce(pre2_bws_venn, 1000)
   bws_venn <- reactive({
     if(!is.null(input$sample_order_venn)) return(pre_bws_venn()[input$sample_order_venn])
   })
   venn_overlap <- reactive({
+    if(updateCounter_vennStart$i > 0){
     withProgress(message = "Preparing intersection, takes a few minutes",{
-    ol <- findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
-    names(ol$peaklist) <- gsub("///","-",names(ol$peaklist))
-    return(ol)
+      ol <- findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
+      names(ol$peaklist) <- gsub("///","-",names(ol$peaklist))
+      return(ol)
     })
+    }
   })
   make_venn <-reactive({
     df<-list()
@@ -3604,12 +4308,11 @@ pair_volcano()
     }
     return(df)
   })
-
+  
   output$venn <- renderPlot({
     withProgress(message = "Venn diagram",{
-      if(!is.null(Venn_peak_call_files())){
-        
-ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
+      if(!is.null(Venn_peak_call_files()) && updateCounter_vennStart$i > 0){
+        ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
     })
   })
@@ -3639,15 +4342,15 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   venn_batch_lineplot <- reactive({
     withProgress(message = "Line plot",{
-    return(batch_lineplot(files2 = venn_overlap()$peaklist,files_bw = bws_venn()))
+      return(batch_lineplot(files2 = venn_overlap()$peaklist,files_bw = bws_venn()))
     })
   })
   
   output$venn_batch_bed_line <- renderPlot({
     if(!is.null(Venn_peak_call_files()) && !is.null(bws_venn())){
-    if(!is.null(venn_overlap())){
-    venn_batch_lineplot()[["bed"]]
-    }
+      if(!is.null(venn_overlap())){
+        venn_batch_lineplot()[["bed"]]
+      }
     }
   })
   output$venn_batch_bigwig_line <- renderPlot({
@@ -3657,7 +4360,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }
     }
   })
-
+  
   output$download_venn_intersection_line = downloadHandler(
     filename = function(){
       paste0("Lineplot_intersection",".pdf")
@@ -3849,8 +4552,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           intheatmap <- paste0("combined_heatmap/","combined_heatmap.pdf")
           fs <- c(fs, intheatmap)
           pdf(intheatmap, height = 6, width = 10)
-          draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
-               heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+          print(integrated_heatlist_venn_plot())
           dev.off()
         }
         incProgress(1)
@@ -3900,22 +4602,22 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   selected_grange <- reactive({
     if(!is.null(input$intersect_select)){
-    if(input$intersect_select != "not_selected"){
-      return(venn_overlap()$peaklist[[input$intersect_select]])
-    }
+      if(input$intersect_select != "not_selected"){
+        return(venn_overlap()$peaklist[[input$intersect_select]])
+      }
     }
   })
   vendistribution <- reactive({
     return(genomicElementDistribution(selected_grange(), 
-                               TxDb = txdb_venn()))
+                                      TxDb = txdb_venn()))
   })
   output$venn_peak_distribution <- renderPlot({
     withProgress(message = "Peak distribution",{
       if(!is.null(input$intersect_select)){
-      if(input$intersect_select != "not_selected" && !is.null(selected_grange()) &&
-         input$Species_venn != "not selected"){
-        vendistribution()
-      }
+        if(input$intersect_select != "not_selected" && !is.null(selected_grange()) &&
+           input$Species_venn != "not selected"){
+          vendistribution()
+        }
       }
     })
   })
@@ -3987,10 +4689,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$intersect_select) && 
        input$intersect_select != "not_selected" && !is.null(bws_venn())){
       withProgress(message = "Preparing peak pattern",{
-      rg <- venn_pattern_range()
-      sliderInput("peak_venn_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+        rg <- venn_pattern_range()
+        print(ceiling(rg*2))
+        sliderInput("peak_venn_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
       })
-      }
+    }
   })
   venn_pattern_range <- reactive({
     rg <- c()
@@ -4009,7 +4712,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(heatmap)
     }
   })
-
+  
   output$peak_pattern_venn_heatmap <- renderPlot({
     if(!is.null(input$intersect_select) && 
        input$intersect_select != "not_selected" && !is.null(bws_venn())){
@@ -4086,14 +4789,14 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   }))
   observeEvent(input$selected_intersect_annotation_rows_selected,({
     if(input$Species_venn != "not selected"){
-    if(!is.null(goi_promoter_position_venn()) && !is.null(goi_gene_position_venn())){
-      y <- goi_promoter_position_venn()
-      gene_position <- goi_gene_position_venn()
-      start_position <- min(c(y$start,gene_position$start))
-      end_position <- max(c(y$end,gene_position$end))
-      updateSliderInput(session,"igv_venn_uprange","Range:",value = c(start_position,end_position),
-                        step = 100, min = start_position - 10000, max = end_position + 10000)
-    }
+      if(!is.null(goi_promoter_position_venn()) && !is.null(goi_gene_position_venn())){
+        y <- goi_promoter_position_venn()
+        gene_position <- goi_gene_position_venn()
+        start_position <- min(c(y$start,gene_position$start))
+        end_position <- max(c(y$end,gene_position$end))
+        updateSliderInput(session,"igv_venn_uprange","Range (x-axis):",value = c(start_position,end_position),
+                          step = 100, min = start_position - 10000, max = end_position + 10000)
+      }
     }
   }))
   
@@ -4103,12 +4806,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       gene_position <- goi_gene_position_venn()
       start_position <- min(c(y$start,gene_position$start))-1000
       end_position <- max(c(y$end,gene_position$end))+1000
-      sliderInput("igv_venn_uprange","Range:",value = c(start_position,end_position),
+      sliderInput("igv_venn_uprange","Range (x-axis):",value = c(start_position,end_position),
                   step = 100, min = start_position - 10000, max = end_position + 10000)
     }
   })
   output$igv_venn_ylim <- renderUI({
-    numericInput("igv_venn_ylim","peak range:", value = 2, min = 0)
+    numericInput("igv_venn_ylim","Max peak intensity (y-axis):", value = 2, min = 0)
   })
   
   gtrack_venn <- reactive({
@@ -4217,10 +4920,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                  ),selected = "custom")
   })
   output$homer_bg_venn <- renderUI({
-      radioButtons('homer_bg_venn','Background sequence',
-                   c('random'="random",
-                     'bed files'="peakcalling"
-                   ),selected = "random")
+    radioButtons('homer_bg_venn','Background sequence',
+                 c('random'="random",
+                   'bed files'="peakcalling"
+                 ),selected = "random")
   })
   output$homer_bg2_venn <- renderUI({
     if(!is.null(input$homer_bg_venn)){
@@ -4230,7 +4933,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                   accept = c("bed","narrowPeak"),
                   multiple = TRUE,
                   width = "80%")
-        }}
+      }}
   })
   updateCounter_venn <- reactiveValues(i = 0)
   
@@ -4261,16 +4964,16 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
       if(length(names(files2)) > 1){
-      files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+        files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
       }
-      return(files3)
+      return(files2)
     }
   })
   
   output$homer_size2_venn <- renderUI({
     if(!is.null(input$homer_size_venn)){
-    if(input$homer_size_venn == "custom"){
-      numericInput('homer_size2_venn','Size of the region for motif finding',value=200, step=100)}}
+      if(input$homer_size_venn == "custom"){
+        numericInput('homer_size2_venn','Size of the region for motif finding',value=200, step=100)}}
   })
   output$homer_unknown_venn <- renderUI({
     selectInput("homer_unknown_venn","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
@@ -4292,7 +4995,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
     return(df)
   })
-
+  
   enrich_motif_venn <- reactive({
     if(updateCounter_venn$i > 0 && input$motifButton_venn > 0 && !is.null(preMotif_list_venn()) 
        && input$Species_venn != "not selected" && !is.null(input$homer_unknown_venn)){
@@ -4300,8 +5003,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       if(input$homer_size_venn == "custom") size <- input$homer_size2_venn
       if(input$homer_bg_venn == "peakcalling" && is.null(input$homer_bg2_venn)){
         return(NULL)
-      }else return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,
-                       motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other"))
+      }else return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,motif_length=input$homer_length_venn,
+                             motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other"))
     }
   })
   venn_motif_plot <- reactive({
@@ -4341,7 +5044,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     content = function(file){write.table(motif_table_venn(), file, row.names = F, sep = "\t", quote = F)}
   )
-
+  
   motif_table_venn <- reactive({
     if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn())){
       return(known_motif(enrich_motif_venn()))
@@ -4412,7 +5115,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   
-  selected_grange_venn_list <- reactive({
+  pre_selected_grange_venn_list <- reactive({
     if(!is.null(input$venn_whichGroup2)){
       Glist <- GRangesList()
       for(name in input$venn_whichGroup2){
@@ -4422,6 +5125,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       return(Glist)
     }
   })
+  selected_grange_venn_list <- debounce(pre_selected_grange_venn_list,1000)
   
   enrichment_enricher_venn <- reactive({
     data <- selected_grange_venn_list()
@@ -4447,8 +5151,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
         }else group1 <- NULL
         if(length(group1$id)!=0){
-        group1$Group <- name
-        data <- rbind(data, group1)
+          group1$Group <- name
+          data <- rbind(data, group1)
         }
       }
       if(length(data$id) != 0) {
@@ -4468,11 +5172,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           if(length(group1$id)==0){
             group1 <- NULL
           }else{
-          group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
-          if (length(group1$p_adjust_hyper) > 5){
-            group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-            group1 <- group1[1:5,]
-          }
+            group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
+            if (length(group1$p_adjust_hyper) > 5){
+              group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
+              group1 <- group1[1:5,]
+            }
           }
         }else group1 <- NULL
         data <- rbind(data, group1)
@@ -4559,8 +5263,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$intersection_venn_fun) && dim(as.data.frame(enrichment_1_1_venn()))[1] != 0){
       group <- input$intersection_venn_fun
       if(dim(as.data.frame(enrichment_1_1_venn()))[1]!=0){
-      set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_venn()), Group == group)$id)
-      selectInput('Pathway_list_venn', 'Pathway list', set_list)
+        set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_venn()), Group == group)$id)
+        selectInput('Pathway_list_venn', 'Pathway list', set_list)
       }
     }
   })
@@ -4575,7 +5279,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         if(!is.null(df[[name]])) {
           group1 <- as.data.frame(rGREAT::getRegionGeneAssociations(df[[name]], term_id = set_list))
           if(dim(group1)[1] != 0){
-          group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
+            group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
           }else group1 <- NULL
         }else group1 <- NULL
         data <- rbind(data, group1)
@@ -4642,17 +5346,17 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   #Venn regulatory potential------
   output$venn_select_RNA <- renderUI({
     if(!is.null(Venn_peak_call_files())){
-    selectInput("intersect_RNA", "Select intersect",
-                c("not_selected",names(venn_overlap()$peaklist)),
-                selected = "not_selected",multiple = F)
+      selectInput("intersect_RNA", "Select intersect",
+                  c("not_selected",names(venn_overlap()$peaklist)),
+                  selected = "not_selected",multiple = F)
     }
   })
-
+  
   peak_venn_grange_RNA  <- reactive({
     if(!is.null(input$intersect_RNA)){
-    if(input$intersect_RNA != "not_selected"){
-      return(venn_overlap()$peaklist[[input$intersect_RNA]])
-    }}
+      if(input$intersect_RNA != "not_selected"){
+        return(venn_overlap()$peaklist[[input$intersect_RNA]])
+      }}
   })
   
   
@@ -4742,10 +5446,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       col <-c("gray","#F8766D")
     }else stat.test <- NULL
     if(!is.null(stat.test)){
-    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
-                           fill = "group", scales = "free", add = "jitter",
-                           xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
-      xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
+      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
+                                 fill = "group", scales = "free", add = "jitter",
+                                 xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
+                 xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
     }
     return(p)
   })
@@ -4764,7 +5468,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       group2 <- dplyr::filter(data, group == collist[2])
       if(length(rownames(group1)) <= 1 || length(rownames(group2)) <= 1){
         print("boxplot: There are few genes with RP > 1")
-    }
+      }
     }
   })
   
@@ -4988,12 +5692,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       gene_position <- int_goi_gene_position_venn()
       start_position <- min(c(y$start,gene_position$start))-1000
       end_position <- max(c(y$end,gene_position$end))+1000
-      sliderInput("int_igv_uprange_venn","Range:",value = c(start_position,end_position),
+      sliderInput("int_igv_uprange_venn","Range (x-axis):",value = c(start_position,end_position),
                   step = 100, min = start_position - 10000, max = end_position + 10000)
     }
   })
   output$int_igv_ylim_venn <- renderUI({
-    numericInput("int_igv_ylim_venn","peak range:", value = 2, min = 0)
+    numericInput("int_igv_ylim_venn","Max peak intensity (y-axis):", value = 2, min = 0)
   })
   
   int_goi_promoter_position_venn<- reactive({
@@ -5262,13 +5966,21 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     isolate(updateCounter_int_venn$i == 0)
     updateCounter_int_venn <<- reactiveValues(i = 0)
   }) 
+  integrated_heatlist_venn_plot <- reactive({
+    if(!is.null(input$venn_heatmap_group)){
+      if(input$integrated_heatmapButton_venn > 0 && !is.null(Venn_peak_call_files_locus()) &&
+         !is.null(integrated_heatlist_venn())){
+      return(draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
+                  heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
+      }
+    }
+  })
   output$integrated_heatmap_venn <- renderPlot({
     if(!is.null(input$venn_heatmap_group)){
-    if(input$integrated_heatmapButton_venn > 0 && !is.null(Venn_peak_call_files_locus()) &&
-       !is.null(integrated_heatlist_venn())){
-      draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
-           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
-    }
+      if(input$integrated_heatmapButton_venn > 0 && !is.null(Venn_peak_call_files_locus()) &&
+         !is.null(integrated_heatlist_venn())){
+        integrated_heatlist_venn_plot()
+      }
     }
   })
   output$download_integrated_heatmap_venn = downloadHandler(
@@ -5282,8 +5994,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 10
         }else pdf_width <- input$enrich_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
-             heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+        print(integrated_heatlist_venn_plot())
         dev.off()
         incProgress(1)
       })
@@ -5339,102 +6050,19 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   gene_type_rnaseq_DEGs_venn <- reactive({
     files <- rnaseq_DEGs_venn()
-    gene_types <- c()
-    name_list <- c()
-    if(!is.null(files)){
-      for(name in names(files)){
-        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_venn(),Species=input$Species_venn)
-        gene_types <- c(gene_types, type)
-        name_list <- c(name_list,name) 
-      }
-      names(gene_types) <- name_list
-      return(gene_types)
-    }
+    return(gene_type_for_integrated_heatmap(files=files,Species=input$Species_venn,org=org_venn()))
   })
   rnaseq_DEGs2_venn <- reactive({
     files <- rnaseq_DEGs_venn()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_DEGs_venn())
-      if(length(names(df)) != 1){
-        matrix_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix[is.na(matrix)] <- 0
-          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_list[[name]] <- matrix
-        }
-        base <- matrix_list[[1]]
-        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
-        rownames(base) <- base$Row.names
-        colnames(base) <- gsub("\\.y$", "", colnames(base))
-        rna <- as.data.frame(base[,-1])
-        print(head(rna))
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      rna <- dplyr::select(rna, contains("log2FoldChange"))
-      return(rna)
-    }
+    return(rnaseqDEGs_for_integrated_heatmap(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_DEGs_venn()))
   })
   gene_type_rnaseq_counts_venn <- reactive({
     files <- rnaseq_count_venn()
-    gene_types <- c()
-    name_list <- c()
-    if(!is.null(files)){
-      for(name in names(files)){
-        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_venn(),Species=input$Species_venn)
-        gene_types <- c(gene_types, type)
-        name_list <- c(name_list,name) 
-      }
-      names(gene_types) <- name_list
-      return(gene_types)
-    }
+    return(gene_type_for_integrated_heatmap(files=files,Species=input$Species_venn,org=org_venn()))
   })
   rnaseq_count2_venn <- reactive({
     files <- rnaseq_count_venn()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_counts_venn())
-      if(length(names(df)) != 1){
-        matrix_z_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix_z <- genescale(matrix, axis = 1, method = "Z")
-          print(head(matrix_z))
-          matrix_z[is.na(matrix_z)] <- 0
-          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_z_list[[name]] <- matrix_z
-        }
-        base_z <- matrix_z_list[[1]]
-        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
-        rownames(base_z) <- base_z$Row.names
-        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
-        rna <- as.data.frame(base_z[,-1])
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        rna <- genescale(rna, axis = 1, method = "Z")
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      return(rna)
-    }
+    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_counts_venn()))
   })
   observeEvent(input$pair_rnaseq_DEGs_venn, ({
     updateCollapse(session,id =  "z-score_count_venn", open="Uploaded_DEGs_venn")
@@ -5512,12 +6140,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
     mat <- integrated_heatmap_add1_venn()[["mat"]]
     withProgress(message = "Heatmap of RNA-seq count data",{
-    ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
-                  top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
-                                                     col = list(files = file_name_color,
-                                                                condition = cond_color)),
-                  show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
-    return(ht)
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
+                    top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                       col = list(files = file_name_color,
+                                                                  condition = cond_color)),
+                    show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+      return(ht)
     })
   })
   rnaseq_DEGs_heatmap_venn <- reactive({
@@ -5542,80 +6170,74 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
     mat <- integrated_heatmap_add1_venn()[["mat"]]
     withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
-    ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
-                  show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
-                  use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
-                  col = c("blue","white","gold"))
-    return(ht)
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
+                    show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
+                    use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
+                    col = c("blue","white","gold"))
+      return(ht)
     })
   })
   
   output$integrated_bw2_venn <- renderUI({
-    fileInput("integrated_bw_2_venn",
-              "Option: Select additional bigwig files (blue)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_2_venn",
+                  "Option: Select additional bigwig files (blue)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_2_venn",
+                "Option: Select additional bigwig files (blue)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   output$integrated_bw3_venn <- renderUI({
-    fileInput("integrated_bw_3_venn",
-              "Option: Select additional bigwig files (green)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_3_venn",
+                  "Option: Select additional bigwig files (green)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_3_venn",
+                "Option: Select additional bigwig files (green)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   output$integrated_bw4_venn <- renderUI({
-    fileInput("integrated_bw_4_venn",
-              "Option: Select additional bigwig files (purple)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
-  })
-
-  pre_integrated_additional2_venn <-reactive({
-    if(!is.null(input$integrated_bw_2_venn)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_2_venn[, 1])){
-        file <- input$integrated_bw_2_venn[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2_venn[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_4_venn",
+                  "Option: Select additional bigwig files (purple)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_4_venn",
+                "Option: Select additional bigwig files (purple)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
     }
+  })
+  
+  pre_integrated_additional2_venn <-reactive({
+    return(pre_integrated_additional(input$integrated_bw_2_venn))
   })
   integrated_additional2_venn <- reactive({
     if(!is.null(input$sample_order_venn_comb2)) return(pre_integrated_additional2_venn()[input$sample_order_venn_comb2])
   })
   pre_integrated_additional3_venn <-reactive({
-    if(!is.null(input$integrated_bw_3_venn)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_3_venn[, 1])){
-        file <- input$integrated_bw_3_venn[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3_venn[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_3_venn))
   })
   integrated_additional3_venn <- reactive({
     if(!is.null(input$sample_order_venn_comb3)) return(pre_integrated_additional3_venn()[input$sample_order_venn_comb3])
   })
   pre_integrated_additional4_venn <-reactive({
-    if(!is.null(input$integrated_bw_4_venn)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_4_venn[, 1])){
-        file <- input$integrated_bw_4_venn[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_4_venn[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_4_venn))
   })
   integrated_additional4_venn <- reactive({
     if(!is.null(input$sample_order_venn_comb4)) return(pre_integrated_additional4_venn()[input$sample_order_venn_comb4])
@@ -5650,6 +6272,50 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   ##Clustering--------
+  output$file1_clustering <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("file1_clustering",label=NULL,choices = bw,multiple=T)
+    }else{
+      fileInput("file1_clustering",NULL,
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  output$peak_call_file1_clustering <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bed <- c(str_subset(list,".narrowPeak"),str_subset(list,".bed"))
+      selectInput("peak_call_file1_clustering",label=NULL,choices = bed,multiple=T)
+    }else{
+      fileInput("peak_call_file1_clustering",NULL,
+                accept = c("bed","narrowPeak"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  
+  updateCounter_createCount_clustering <- reactiveValues(i = 0)
+  
+  observe({
+    input$createcountButton_clustering
+    isolate({
+      updateCounter_createCount_clustering$i <- updateCounter_createCount_clustering$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(bws_clustering(), {
+    isolate(updateCounter_createCount_clustering$i == 0)
+    updateCounter_createCount_clustering <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(peak_call_files_clustering(), {
+    isolate(updateCounter_createCount_clustering$i == 0)
+    updateCounter_createCount_clustering <<- reactiveValues(i = 0)
+  }) 
   # input data ------------------------------------------------------------------------------
   org1_clustering <- reactive({
     return(org(Species = input$Species_clustering))
@@ -5666,8 +6332,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
                                    filter = input$pair_filter_cluster))
       }
     }else return(promoter_clustering(upstream = input$upstream_clustering, downstream = input$downstream_clustering,
-                          input_type = "Genome-wide",files =peak_call_files_clustering(),
-                          filter = input$pair_filter_cluster))
+                                     input_type = "Genome-wide",files =peak_call_files_clustering(),
+                                     filter = input$pair_filter_cluster))
   })
   gene_position_clustering <- reactive({
     if(input$Species_clustering != "not selected"){
@@ -5688,14 +6354,20 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         }
         return(NULL)
       }else{
-        files<-c()
-        name<-c()
-        for(nr in 1:length(input$file1_clustering[, 1])){
-          file <- input$file1_clustering[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$file1_clustering[nr,]$name))
-          files <- c(files,file)
+        if(length(list.files("./Volume/")) > 0){
+          files <- input$file1_clustering
+          name <- gsub(".+\\/","",input$file1_clustering)
+          names(files) <- gsub("\\..+$", "", name)
+        }else{
+          files<-c()
+          name<-c()
+          for(nr in 1:length(input$file1_clustering[, 1])){
+            file <- input$file1_clustering[[nr, 'datapath']]
+            name <- c(name, gsub("\\..+$", "", input$file1_clustering[nr,]$name))
+            files <- c(files,file)
+          }
+          names(files)<-name
         }
-        names(files)<-name
         return(files)
       }
     }
@@ -5749,15 +6421,22 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         }
         return(NULL)
       }else{
-        files<-c()
-        name<-c()
-        for(nr in 1:length(input$peak_call_file1_clustering[, 1])){
-          file <- input$peak_call_file1_clustering[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$peak_call_file1_clustering[nr,]$name))
-          files <- c(files,file)
+        if(length(list.files("./Volume/")) > 0){
+          files <- input$peak_call_file1_clustering
+          files2 <- lapply(files, GetGRanges, simple = TRUE)
+          name <- gsub(".+\\/","",input$peak_call_file1_clustering)
+          names(files2) <- gsub("\\..+$", "", name)
+        }else{
+          files<-c()
+          name<-c()
+          for(nr in 1:length(input$peak_call_file1_clustering[, 1])){
+            file <- input$peak_call_file1_clustering[[nr, 'datapath']]
+            name <- c(name, gsub("\\..+$", "", input$peak_call_file1_clustering[nr,]$name))
+            files <- c(files,file)
+          }
+          files2 <- lapply(files, GetGRanges, simple = TRUE)
+          names(files2)<-name
         }
-        files2 <- lapply(files, GetGRanges, simple = TRUE)
-        names(files2)<-name
         return(files2)
       }
     }
@@ -5850,7 +6529,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   pre_bw_count_clustering <- reactive({
-    if(input$data_file_type_clustering == "Row1" && !is.null(bw_files_clustering())){
+    if(input$data_file_type_clustering == "Row1" && !is.null(bw_files_clustering()) && updateCounter_createCount_clustering$i > 0){
       if(input$Genomic_region_clustering == "Promoter"){
         if(input$Species_clustering != "not selected"){
           count <-bw_count_clustering2()
@@ -5863,7 +6542,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           return(count) 
         }
       }else{
-          return(bw_count_clustering2())
+        return(bw_count_clustering2())
       }
     }
     if(input$Species_clustering != "not selected" && input$data_file_type_clustering == "Row2" && 
@@ -5912,10 +6591,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$clustering_pca_error <- renderText({
     p <- length(colnames(bw_count_clustering()))
     if(p < 3){
-        print("PCA: The sample number must be > 2")
+      print("PCA: The sample number must be > 2")
     }else return(NULL)
   })
-   output$download_clustering_PCA = downloadHandler(
+  output$download_clustering_PCA = downloadHandler(
     filename = "PCA-MDS-dendrogram.pdf",
     content = function(file) {
       withProgress(message = "Preparing download",{
@@ -5953,7 +6632,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$download_clustering_PCA_table = downloadHandler(
     filename ="PCA_table.txt",
     content = function(file){write.table(PCAplot(data = bw_count_clustering(),plot=FALSE), 
-                                          file, row.names = T, sep = "\t", quote = F)}
+                                         file, row.names = T, sep = "\t", quote = F)}
   )
   #Clustering umap-------
   output$clustering_umap_n <- renderUI({
@@ -6164,16 +6843,16 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       print(input$basemean_clustering)
       data2 <- data %>% dplyr::filter(apply(.,1,mean) > input$basemean_clustering)
       if(dim(data2)[1] != 0){
-      cond1 <- input$selectFC[1]
-      cond2 <- input$selectFC[2]
-      cond1_num <- data2 %>% dplyr::select(.,starts_with(cond1)) %>% colnames() %>% length()
-      cond2_num <- data2 %>% dplyr::select(.,starts_with(cond2)) %>% colnames() %>% length()
-      cond1_ave <- data2 %>% dplyr::select(starts_with(cond1)) %>% rowSums(na.rm=TRUE)/cond1_num
-      cond2_ave <- data2 %>% dplyr::select(starts_with(cond2)) %>% rowSums(na.rm=TRUE)/cond2_num
-      Log2FoldChange <- log((cond1_ave + 0.01)/(cond2_ave + 0.01),2)
-      data2$Log2FoldChange <- Log2FoldChange
-      data3 <- data2 %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
-      data3 <- data3[, - which(colnames(data3) == "Log2FoldChange")]
+        cond1 <- input$selectFC[1]
+        cond2 <- input$selectFC[2]
+        cond1_num <- data2 %>% dplyr::select(.,starts_with(cond1)) %>% colnames() %>% length()
+        cond2_num <- data2 %>% dplyr::select(.,starts_with(cond2)) %>% colnames() %>% length()
+        cond1_ave <- data2 %>% dplyr::select(starts_with(cond1)) %>% rowSums(na.rm=TRUE)/cond1_num
+        cond2_ave <- data2 %>% dplyr::select(starts_with(cond2)) %>% rowSums(na.rm=TRUE)/cond2_num
+        Log2FoldChange <- log((cond1_ave + 0.01)/(cond2_ave + 0.01),2)
+        data2$Log2FoldChange <- Log2FoldChange
+        data3 <- data2 %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
+        data3 <- data3[, - which(colnames(data3) == "Log2FoldChange")]
       }else data3 <- NULL
       return(data3)
     }
@@ -6295,12 +6974,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   output$clustering_select_kmean <- renderUI({
     withProgress(message = "preparing kmeans clustering",{
-    clusters <- clustering_kmeans_cluster()
-    if(is.null(clusters) || length(input$selectFC) != 2 || input$kmeans_start == 0){
-      return(NULL)
-    }else{
-      selectInput("clustering_select_kmean", "cluster_list", choices = c(unique(clusters$Cluster)),multiple = T)
-    } 
+      clusters <- clustering_kmeans_cluster()
+      if(is.null(clusters) || length(input$selectFC) != 2 || input$kmeans_start == 0){
+        return(NULL)
+      }else{
+        selectInput("clustering_select_kmean", "cluster_list", choices = c(unique(clusters$Cluster)),multiple = T)
+      } 
     })
   })
   
@@ -6323,17 +7002,17 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$clustering_kmeans_extract_table <- renderDT({
     if(!is.null(input$clustering_select_kmean) && length(input$selectFC) == 2 && input$kmeans_start > 0){
       if(input$Genomic_region_clustering == "Genome-wide"){
-    if(input$Species_clustering == "not selected"){
-      clustering_kmeans_pattern_extract() %>%
-        datatable(
-          selection = "single")
-    }else{
-      if(!is.null(peak_kmeans_grange()) ){
-      bw_count_clusterin_anno2() %>%
-          datatable(
-            selection = "single")
-      }
-    } 
+        if(input$Species_clustering == "not selected"){
+          clustering_kmeans_pattern_extract() %>%
+            datatable(
+              selection = "single")
+        }else{
+          if(!is.null(peak_kmeans_grange()) ){
+            bw_count_clusterin_anno2() %>%
+              datatable(
+                selection = "single")
+          }
+        } 
       }else{
         clustering_kmeans_pattern_extract() %>%
           datatable(
@@ -6344,12 +7023,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   output$clustering_kmeans_heatmap <- renderPlot({
     withProgress(message = "plot heatmap",{
-    ht <- clustering_kmeans()
-    if(is.null(ht) || input$kmeans_start == 0){
-      return(NULL)
-    }else{
-      print(ht)
-    }
+      ht <- clustering_kmeans()
+      if(is.null(ht) || input$kmeans_start == 0){
+        return(NULL)
+      }else{
+        print(ht)
+      }
     })
   })
   
@@ -6358,8 +7037,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       paste0("kmeans_selected_table",".bed")
     },
     content = function(file){
-        write.table(as.data.frame(peak_kmeans_grange()), file, row.names = F, col.names = F,sep = "\t", quote = F)
-      }
+      write.table(as.data.frame(peak_kmeans_grange()), file, row.names = F, col.names = F,sep = "\t", quote = F)
+    }
   )
   output$download_clustering_kmeans_heatmap = downloadHandler(
     filename = function() {
@@ -6387,9 +7066,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     },
     content = function(file){
       if(input$Species_clustering == "not selected"){
-      write.table(clustering_kmeans_pattern_extract(), file, row.names = T, sep = "\t", quote = F)
+        write.table(clustering_kmeans_pattern_extract(), file, row.names = T, sep = "\t", quote = F)
       }else write.table(bw_count_clusterin_anno2(), file, row.names = T, sep = "\t", quote = F)
-        }
+    }
   )
   #clustering kmeans peak--------
   output$peak_pattern_kmeans_additional <- renderUI({
@@ -6413,13 +7092,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   kmeans_additional <- reactive({
-  if(!is.null(input$sample_order_kmeans_pattern)) return(pre_kmeans_additional()[input$sample_order_kmeans_pattern])  
+    if(!is.null(input$sample_order_kmeans_pattern)) return(pre_kmeans_additional()[input$sample_order_kmeans_pattern])  
   })
   output$peak_pattern_kmeans_heat_range <- renderUI({
     if(!is.null(peak_kmeans_grange())){
       withProgress(message = "Preparing peak pattern",{
-    rg <- kmeans_pattern_range()
-    sliderInput("peak_kmeans_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
+        rg <- kmeans_pattern_range()
+        sliderInput("peak_kmeans_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
       })
     }
   })
@@ -6521,38 +7200,38 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     return(ref)
   })
   
-
+  
   observeEvent(input$clustering_kmeans_extract_table_rows_selected, ({
     updateCollapse(session,id =  "clustering_kmeans_collapse_panel", open="kmeans_track_panel")
   }))
   observeEvent(input$clustering_kmeans_extract_table_rows_selected,({
     if(input$Species_clustering != "not selected"){
-    if(!is.null(goi_gene_position_clustering()) && !is.null(goi_promoter_position_clustering())){
-      y <- goi_promoter_position_clustering()
-      gene_position <- goi_gene_position_clustering()
-      start_position <- min(c(y$start,gene_position$start))
-      end_position <- max(c(y$end,gene_position$end))
-      updateSliderInput(session,"igv_uprange_clustering","Range:",
-                        value = c(start_position,end_position),
-                        step = 100, min = start_position - 10000, max = end_position + 10000)
-    }
+      if(!is.null(goi_gene_position_clustering()) && !is.null(goi_promoter_position_clustering())){
+        y <- goi_promoter_position_clustering()
+        gene_position <- goi_gene_position_clustering()
+        start_position <- min(c(y$start,gene_position$start))
+        end_position <- max(c(y$end,gene_position$end))
+        updateSliderInput(session,"igv_uprange_clustering","Range (x-axis):",
+                          value = c(start_position,end_position),
+                          step = 100, min = start_position - 10000, max = end_position + 10000)
+      }
     }
   }))
   
   output$igv_uprange_clustering <- renderUI({
     if(input$Species_clustering != "not selected"){
-    if(!is.null(goi_gene_position_clustering()) && !is.null(goi_promoter_position_clustering())){
-      y <- goi_promoter_position_clustering()
-      gene_position <- goi_gene_position_clustering()
-      start_position <- min(c(y$start,gene_position$start))-1000
-      end_position <- max(c(y$end,gene_position$end))+1000
-      sliderInput("igv_uprange_clustering","Range:",value = c(start_position,end_position),
-                  step = 100, min = start_position - 10000, max = end_position + 10000)
-    }
+      if(!is.null(goi_gene_position_clustering()) && !is.null(goi_promoter_position_clustering())){
+        y <- goi_promoter_position_clustering()
+        gene_position <- goi_gene_position_clustering()
+        start_position <- min(c(y$start,gene_position$start))-1000
+        end_position <- max(c(y$end,gene_position$end))+1000
+        sliderInput("igv_uprange_clustering","Range (x-axis):",value = c(start_position,end_position),
+                    step = 100, min = start_position - 10000, max = end_position + 10000)
+      }
     }
   })
   output$igv_ylim_clustering <- renderUI({
-    numericInput("igv_ylim_clustering","peak range:", value = 2, min = 0)
+    numericInput("igv_ylim_clustering","Max peak intensity (y-axis):", value = 2, min = 0)
   })
   
   gtrack_clustering <- reactive({
@@ -6573,7 +7252,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       }else{
         data <- range_changer(bw_count_clusterin_anno2()[input$clustering_kmeans_extract_table_rows_selected,])
         y <- as.data.frame(with(data, GRanges(seqnames = chr, 
-                                 ranges = IRanges(start,end))))
+                                              ranges = IRanges(start,end))))
       }
       return(y)
     }
@@ -6592,22 +7271,36 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   output$trackplot_additional_clustering <- renderUI({
-    fileInput("trackplot_additional1_clustering",
-              "Select additional bigwig files",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("trackplot_additional1_clustering",
+                  "Select additional bigwig files",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("trackplot_additional1_clustering",
+                "Select additional bigwig files",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   pre_track_additional_files_clustering <-reactive({
     if(!is.null(input$trackplot_additional1_clustering)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$trackplot_additional1_clustering[, 1])){
-        file <- input$trackplot_additional1_clustering[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$trackplot_additional1_clustering[nr,]$name))
-        files <- c(files,file)
+      if(length(list.files("./Volume/")) > 0){
+        files <- input$trackplot_additional1_clustering
+        name <- gsub(".+\\/","",input$trackplot_additional1_clustering)
+        names(files) <- gsub("\\..+$", "", name)
+      }else{
+        files<-c()
+        name<-c()
+        for(nr in 1:length(input$trackplot_additional1_clustering[, 1])){
+          file <- input$trackplot_additional1_clustering[[nr, 'datapath']]
+          name <- c(name, gsub("\\..+$", "", input$trackplot_additional1_clustering[nr,]$name))
+          files <- c(files,file)
+        }
+        names(files)<-name
       }
-      names(files)<-name
       return(files)
     }
   })
@@ -6781,7 +7474,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     return(RP_f(mmAnno=mmAnno_clustering(),txdb=txdb_clustering()))
   })
   regulatory_potential_clustering <- reactive({
-      return(regulatory_potential_f(species=input$Species_clustering,data=RNAseqDEG_anno_clustering(),
+    return(regulatory_potential_f(species=input$Species_clustering,data=RNAseqDEG_anno_clustering(),
                                   result_geneRP= RP_clustering(),DEG_fc=input$DEG_fc_clustering,
                                   DEG_fdr=input$DEG_fdr_clustering))
   })
@@ -6834,10 +7527,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       col <-c("gray","#F8766D")
     }else stat.test <- NULL
     if(!is.null(stat.test)){
-    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
-                           fill = "group", scales = "free", add = "jitter",
-                           xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
-      xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
+      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log2FoldChange",
+                                 fill = "group", scales = "free", add = "jitter",
+                                 xlab = FALSE, ylab = "log2FoldChange")+theme_bw(base_size = 15)+
+                 xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
     }
     return(p)
   })
@@ -6897,12 +7590,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   output$int_box_clustering <- renderPlot({
     withProgress(message = "Boxplot",{
-    if(!is.null(input$peak_distance_clustering) && !is.null(RNAseqDEG_clustering()) && 
-       !is.na(input$DEG_fdr_clustering) && !is.na(input$DEG_fc_clustering) && 
-       !is.null(bw_count_clustering()) && input$Species_clustering != "not selected" && 
-       !is.null(mmAnno_clustering())){
-      RNAseq_boxplot_clustering()
-    }
+      if(!is.null(input$peak_distance_clustering) && !is.null(RNAseqDEG_clustering()) && 
+         !is.na(input$DEG_fdr_clustering) && !is.na(input$DEG_fc_clustering) && 
+         !is.null(bw_count_clustering()) && input$Species_clustering != "not selected" && 
+         !is.null(mmAnno_clustering())){
+        RNAseq_boxplot_clustering()
+      }
     })
   })
   output$int_bar_clustering <- renderPlot({
@@ -7087,12 +7780,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       gene_position <- int_goi_gene_position_clustering()
       start_position <- min(c(y$start,gene_position$start))-1000
       end_position <- max(c(y$end,gene_position$end))+1000
-      sliderInput("int_igv_uprange_clustering","Range:",value = c(start_position,end_position),
+      sliderInput("int_igv_uprange_clustering","Range (x-axis):",value = c(start_position,end_position),
                   step = 100, min = start_position - 10000, max = end_position + 10000)
     }
   })
   output$int_igv_ylim_clustering <- renderUI({
-    numericInput("int_igv_ylim_clustering","peak range:", value = 2, min = 0)
+    numericInput("int_igv_ylim_clustering","Max peak intensity (y-axis):", value = 2, min = 0)
   })
   
   int_goi_promoter_position_clustering<- reactive({
@@ -7122,22 +7815,36 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   
   output$int_trackplot_additional_clustering <- renderUI({
-    fileInput("int_trackplot_additional1_clustering",
-              "Select additional bigwig files",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("int_trackplot_additional1_clustering",
+                  "Select additional bigwig files",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("int_trackplot_additional1_clustering",
+                "Select additional bigwig files",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   pre_int_track_additional_files_clustering <-reactive({
     if(!is.null(input$int_trackplot_additional1_clustering)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$int_trackplot_additional1_clustering[, 1])){
-        file <- input$int_trackplot_additional1_clustering[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1_clustering[nr,]$name))
-        files <- c(files,file)
+      if(length(list.files("./Volume/")) > 0){
+        files <- input$int_trackplot_additional1_clustering
+        name <- gsub(".+\\/","",input$int_trackplot_additional1_clustering)
+        names(files) <- gsub("\\..+$", "", name)
+      }else{
+        files<-c()
+        name<-c()
+        for(nr in 1:length(input$int_trackplot_additional1_clustering[, 1])){
+          file <- input$int_trackplot_additional1_clustering[[nr, 'datapath']]
+          name <- c(name, gsub("\\..+$", "", input$int_trackplot_additional1_clustering[nr,]$name))
+          files <- c(files,file)
+        }
+        names(files)<-name
       }
-      names(files)<-name
       return(files)
     }
   })
@@ -7398,19 +8105,19 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   })
   
-
+  
   selected_annoData_table_enrich <- reactive({
     withProgress(message = "Preparing annotation",{
       peak_list <- updistribution_enrich()$peaks
       df <- list()
       for(name in names(peak_list)){
         peak <- annotatePeak(peak_list[[name]],TxDb = txdb_enrich()) %>% as.data.frame()
-      my.symbols <- peak$geneId
-      gene_IDs<-id_convert(my.symbols,input$Species_enrich,type="ENTREZID")
-      colnames(gene_IDs) <- c("geneId","NearestGene")
-      data <- merge(gene_IDs,peak,by="geneId")
-      data <- data[,2:10] %>% as.data.frame()
-      df[[name]] <- data
+        my.symbols <- peak$geneId
+        gene_IDs<-id_convert(my.symbols,input$Species_enrich,type="ENTREZID")
+        colnames(gene_IDs) <- c("geneId","NearestGene")
+        data <- merge(gene_IDs,peak,by="geneId")
+        data <- data[,2:10] %>% as.data.frame()
+        df[[name]] <- data
       }
       return(df)
     })
@@ -7427,7 +8134,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$annotation_select_enrich <- renderUI({
     if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich()) && !is.null(updistribution_enrich()) &&
        input$Species_enrich != "not selected" ){
-    selectInput('annotation_select_enrich', 'Select bed file', names(updistribution_enrich()$peaks),multiple = F)
+      selectInput('annotation_select_enrich', 'Select bed file', names(updistribution_enrich()$peaks),multiple = F)
     }
   })
   
@@ -7441,10 +8148,10 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         peak_list <- updistribution_enrich()$peaks
         dir.create("Annotation/",showWarnings = FALSE)
         for(name in names(peak_list)){
-        file_name <- paste0("Annotation/",name,".txt")
-        peak <- selected_annoData_table_enrich()[[name]]
-        fs <- c(fs, file_name)
-        write.table(peak, file_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
+          file_name <- paste0("Annotation/",name,".txt")
+          peak <- selected_annoData_table_enrich()[[name]]
+          fs <- c(fs, file_name)
+          write.table(peak, file_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
         }
         if(input$enrich_pdf_height == 0){
           pdf_height <- 6
@@ -7496,9 +8203,9 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         if(!is.null(df[[name]])) {
           group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
           if(length(group1$id) != 0){
-          group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-          group1$Group <- name
-          data <- rbind(data, group1)
+            group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
+            group1$Group <- name
+            data <- rbind(data, group1)
           }else group1 <-NULL
         }else group1 <- NULL
       }
@@ -7517,11 +8224,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
         if(!is.null(df[[name]])) {
           group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
           if(length(group1$id) != 0){
-          group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
-          if (length(group1$p_adjust_hyper) > input$enrich_showCategory){
-            group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-            group1 <- group1[1:input$enrich_showCategory,]
-          }}else group1 <- NULL
+            group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
+            if (length(group1$p_adjust_hyper) > input$enrich_showCategory){
+              group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
+              group1 <- group1[1:input$enrich_showCategory,]
+            }}else group1 <- NULL
         }else group1 <- NULL
         data <- rbind(data, group1)
       }
@@ -7606,13 +8313,13 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   output$whichGeneSet_enrich <- renderUI({
     if(input$Species_enrich != "not selected" && !is.null(Enrich_peak_call_files())){
-    if(!is.null(input$intersection_enrich_fun)){
-      group <- input$intersection_enrich_fun
-      if(dim(as.data.frame(enrichment_1_1_enrich()))[1] != 0){
-      set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_enrich()), Group == group)$id)
-      selectInput('Pathway_list_enrich', 'Pathway list', set_list)
+      if(!is.null(input$intersection_enrich_fun)){
+        group <- input$intersection_enrich_fun
+        if(dim(as.data.frame(enrichment_1_1_enrich()))[1] != 0){
+          set_list <- unique(dplyr::filter(as.data.frame(enrichment_1_1_enrich()), Group == group)$id)
+          selectInput('Pathway_list_enrich', 'Pathway list', set_list)
+        }
       }
-    }
     }
   })
   
@@ -7698,8 +8405,8 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   output$homer_size2_enrich <- renderUI({
     if(!is.null(input$homer_size_enrich)){
-    if(input$homer_size_enrich == "custom"){
-      numericInput('homer_size2_enrich','Size of the region for motif finding',value=200, step=100)
+      if(input$homer_size_enrich == "custom"){
+        numericInput('homer_size2_enrich','Size of the region for motif finding',value=200, step=100)
       }}
   })
   output$homer_bg_enrich <- renderUI({
@@ -7747,7 +8454,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       files2 <- lapply(files, GetGRanges, simple = TRUE)
       names(files2)<-name
       if(length(names(files2)) > 1){
-      files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+        files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
       }
       return(files2)
     }
@@ -7755,7 +8462,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   output$homer_unknown_enrich <- renderUI({
     selectInput("homer_unknown_enrich","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
   })
-
+  
   enrich_motif_enrich <- reactive({
     if(updateCounter_enrich$i > 0 && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
        && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
@@ -7763,11 +8470,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
       if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich
       if(input$homer_bg_enrich == "peakcalling" && is.null(input$homer_bg2_enrich)){
         return(NULL)
-        }else return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,
-                       motif=input$homer_unknown_enrich, other_data = Enrich_peak_call_files_homer(),type="Other"))
+      }else return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,motif_length=input$homer_length_enrich,
+                             motif=input$homer_unknown_enrich, other_data = Enrich_peak_call_files_homer(),type="Other"))
     }
   })
-
+  
   output$motif_enrich_plot <- renderPlot({
     if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && 
        !is.null(input$homer_unknown_enrich) && input$Species_enrich != "not selected"){
@@ -7796,7 +8503,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
   )
   
-
+  
   output$download_motif_enrich_table = downloadHandler(
     filename = function() {
       paste0("known_motif_table",".txt")
@@ -7804,7 +8511,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     content = function(file){write.table(motif_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
   )
   
-
+  
   denovo_motif_table_enrich <- reactive({
     if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich())){
       return(denovo_motif(enrich_motif_enrich()))
@@ -7861,12 +8568,12 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     data <- Enrich_peak_call_files_geneId()
     df <- list()
     for(name in names(data)){
-    data2 <- data[[name]]
-    data2_gr <- with(data2, GRanges(seqnames = seqnames, 
-                              ranges = IRanges(start,end),
-                              strand = strand))
-    names(data2_gr) <- paste0(data2$ENTREZID,"_",data2$locus)
-    df[[name]] <- data2_gr
+      data2 <- data[[name]]
+      data2_gr <- with(data2, GRanges(seqnames = seqnames, 
+                                      ranges = IRanges(start,end),
+                                      strand = strand))
+      names(data2_gr) <- paste0(data2$ENTREZID,"_",data2$locus)
+      df[[name]] <- data2_gr
     }
     return(df)
   })
@@ -7903,11 +8610,17 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     isolate(updateCounter_int_enrich$i == 0)
     updateCounter_int_enrich <<- reactiveValues(i = 0)
   }) 
+  integrated_heatlist_enrich_plot <- reactive({
+    if(input$integrated_heatmapButton_enrich > 0 && !is.null(Enrich_peak_call_files_locus()) &&
+       !is.null(integrated_heatlist_enrich())){
+      return(draw(integrated_heatlist_enrich(),annotation_legend_list = list(integrated_legend_enrich()),
+           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
+    }
+  })
   output$integrated_heatmap_enrich <- renderPlot({
     if(input$integrated_heatmapButton_enrich > 0 && !is.null(Enrich_peak_call_files_locus()) &&
        !is.null(integrated_heatlist_enrich())){
-      draw(integrated_heatlist_enrich(),annotation_legend_list = list(integrated_legend_enrich()),
-           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+      integrated_heatlist_enrich_plot()
     }
   })
   output$download_integrated_heatmap_enrich = downloadHandler(
@@ -7921,8 +8634,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           pdf_width <- 10
         }else pdf_width <- input$enrich_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        draw(integrated_heatlist_enrich(),annotation_legend_list = list(integrated_legend_enrich()),
-             heatmap_legend_side = "bottom", ht_gap = unit(2, "mm"))
+        print(integrated_heatlist_enrich_plot())
         dev.off()
         incProgress(1)
       })
@@ -7978,102 +8690,19 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   })
   gene_type_rnaseq_DEGs_enrich <- reactive({
     files <- rnaseq_DEGs_enrich()
-    gene_types <- c()
-    name_list <- c()
-    if(!is.null(files)){
-      for(name in names(files)){
-        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_enrich(),Species=input$Species_enrich)
-        gene_types <- c(gene_types, type)
-        name_list <- c(name_list,name) 
-      }
-      names(gene_types) <- name_list
-      return(gene_types)
-    }
+    return(gene_type_for_integrated_heatmap(files=files,org=org_enrich(),Species=input$Species_enrich))
   })
   rnaseq_DEGs2_enrich <- reactive({
     files <- rnaseq_DEGs_enrich()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_DEGs_enrich())
-      if(length(names(df)) != 1){
-        matrix_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix[is.na(matrix)] <- 0
-          matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_list[[name]] <- matrix
-        }
-        base <- matrix_list[[1]]
-        int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
-        rownames(base) <- base$Row.names
-        colnames(base) <- gsub("\\.y$", "", colnames(base))
-        rna <- as.data.frame(base[,-1])
-        print(head(rna))
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      rna <- dplyr::select(rna, contains("log2FoldChange"))
-      return(rna)
-    }
+    return(rnaseqDEGs_for_integrated_heatmap(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_DEGs_enrich()))
   })
   gene_type_rnaseq_counts_enrich <- reactive({
     files <- rnaseq_count_enrich()
-    gene_types <- c()
-    name_list <- c()
-    if(!is.null(files)){
-      for(name in names(files)){
-        type <- gene_type(my.symbols=rownames(files[[name]]),org=org_enrich(),Species=input$Species_enrich)
-        gene_types <- c(gene_types, type)
-        name_list <- c(name_list,name) 
-      }
-      names(gene_types) <- name_list
-      return(gene_types)
-    }
+    return(gene_type_for_integrated_heatmap(files=files,org=org_enrich(),Species=input$Species_enrich))
   })
   rnaseq_count2_enrich <- reactive({
     files <- rnaseq_count_enrich()
-    if(!is.null(files)){
-      df <- files_name2ENTREZID(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_counts_enrich())
-      if(length(names(df)) != 1){
-        matrix_z_list <- list()
-        for (name in names(df)) {
-          matrix <- as.data.frame(df[name])
-          if(str_detect(colnames(matrix)[1], "ENTREZID")) {
-            rownames(matrix) <- matrix[,1]
-            matrix <- matrix[,-1]
-          }
-          matrix_z <- genescale(matrix, axis = 1, method = "Z")
-          print(head(matrix_z))
-          matrix_z[is.na(matrix_z)] <- 0
-          matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
-          matrix_z_list[[name]] <- matrix_z
-        }
-        base_z <- matrix_z_list[[1]]
-        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
-        rownames(base_z) <- base_z$Row.names
-        colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
-        rna <- as.data.frame(base_z[,-1])
-      }else{
-        rna <- df[[names(df)]]
-        if(str_detect(colnames(rna)[1], "ENTREZID")) {
-          rownames(rna) <- rna$ENTREZID
-          rna <- rna[,-1]
-        }
-        rna <- genescale(rna, axis = 1, method = "Z")
-        rna[is.na(rna)] <- 0
-        rna <- as.data.frame(rna)
-      }
-      return(rna)
-    }
+    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_counts_enrich()))
   })
   observeEvent(input$pair_rnaseq_DEGs_enrich, ({
     updateCollapse(session,id =  "z-score_count_enrich", open="Uploaded_DEGs_enrich")
@@ -8134,11 +8763,11 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     }
     mat <- integrated_heatmap_add1_enrich()[["mat"]]
     withProgress(message = "Heatmap of RNA-seq count data",{
-    ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
-                  top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
-                                                     col = list(files = file_name_color,
-                                                                condition = cond_color)),
-                  show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", 
+                    top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                       col = list(files = file_name_color,
+                                                                  condition = cond_color)),
+                    show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
     })
     return(ht)
   })
@@ -8164,53 +8793,77 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     colnames(m_z) <- gsub("\\.log2F.+$", "", colnames(m_z))
     mat <- integrated_heatmap_add1_enrich()[["mat"]]
     withProgress(message = "Heatmap of RNA-seq log2FoldChange",{
-    ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
-                  show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
-                  use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
-                  col = c("blue","white","gold"))
-    return(ht)
+      ht <- Heatmap(as.matrix(m_z)[rownames(mat),2:length(colnames(rna))],name = "RNA-seq\nlog2FC", 
+                    show_row_names = FALSE, width = unit(2.5, "cm"), column_names_gp = grid::gpar(fontsize = 9),
+                    use_raster = TRUE,column_names_side = "top",show_column_dend = FALSE,
+                    col = c("blue","white","gold"))
+      return(ht)
     })
   })
   
   output$integrated_bw1_enrich <- renderUI({
-    fileInput("integrated_bw_1_enrich",
-              "Select bigwig files (red)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_1_enrich",
+                  "Select bigwig files (red)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_1_enrich",
+                "Select bigwig files (red)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   output$integrated_bw2_enrich <- renderUI({
-    fileInput("integrated_bw_2_enrich",
-              "Option: Select additional bigwig files (blue)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_2_enrich",
+                  "Option: Select additional bigwig files (blue)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_2_enrich",
+                "Option: Select additional bigwig files (blue)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   output$integrated_bw3_enrich <- renderUI({
-    fileInput("integrated_bw_3_enrich",
-              "Option: Select additional bigwig files (green)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_3_enrich",
+                  "Option: Select additional bigwig files (green)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_3_enrich",
+                "Option: Select additional bigwig files (green)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   output$integrated_bw4_enrich <- renderUI({
-    fileInput("integrated_bw_4_enrich",
-              "Option: Select additional bigwig files (purple)",
-              accept = c("bw","BigWig"),
-              multiple = TRUE,
-              width = "80%")
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_4_enrich",
+                  "Option: Select additional bigwig files (purple)",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_4_enrich",
+                "Option: Select additional bigwig files (purple)",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
   })
   pre_integrated_additional1_enrich <-reactive({
     if(!is.null(input$integrated_bw_1_enrich)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_1_enrich[, 1])){
-        file <- input$integrated_bw_1_enrich[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_1_enrich[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
+      return(pre_integrated_additional(input$integrated_bw_1_enrich))
     }else{
       if(input$goButton_enrich > 0 ){
         file <- c("data/bigwig/A_1.BigWig",
@@ -8224,49 +8877,19 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
     if(!is.null(input$sample_order_enrich_comb1)) return(pre_integrated_additional1_enrich()[input$sample_order_enrich_comb1])
   })
   pre_integrated_additional2_enrich <-reactive({
-    if(!is.null(input$integrated_bw_2_enrich)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_2_enrich[, 1])){
-        file <- input$integrated_bw_2_enrich[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_2_enrich[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_2_enrich))
   })
   integrated_additional2_enrich <- reactive({
     if(!is.null(input$sample_order_enrich_comb2)) return(pre_integrated_additional2_enrich()[input$sample_order_enrich_comb2])
   })
   pre_integrated_additional3_enrich <-reactive({
-    if(!is.null(input$integrated_bw_3_enrich)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_3_enrich[, 1])){
-        file <- input$integrated_bw_3_enrich[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_3_enrich[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_3_enrich))
   })
   integrated_additional3_enrich <- reactive({
     if(!is.null(input$sample_order_enrich_comb3)) return(pre_integrated_additional3_enrich()[input$sample_order_enrich_comb3])
   })
   pre_integrated_additional4_enrich <-reactive({
-    if(!is.null(input$integrated_bw_4_enrich)){
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$integrated_bw_4_enrich[, 1])){
-        file <- input$integrated_bw_4_enrich[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$integrated_bw_4_enrich[nr,]$name))
-        files <- c(files,file)
-      }
-      names(files)<-name
-      return(bigwig_breakline(files))
-    }
+    return(pre_integrated_additional(input$integrated_bw_4_enrich))
   })
   integrated_additional4_enrich <- reactive({
     if(!is.null(input$sample_order_enrich_comb4)) return(pre_integrated_additional4_enrich()[input$sample_order_enrich_comb4])
@@ -8392,19 +9015,19 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
   
   interval_merge <- reactive({
     if(input$data_file_type_bed == "type1"){
-    files <- bed_peak_call_files1()
-    df <- list()
-    for(name in names(files)){
-      file <- files[[name]]
-      df[[name]] <- merge_bed(file, max_dist = input$bed_merge_dist)
-    }
+      files <- bed_peak_call_files1()
+      df <- list()
+      for(name in names(files)){
+        file <- files[[name]]
+        df[[name]] <- merge_bed(file, max_dist = input$bed_merge_dist)
+      }
     }else if(input$data_file_type_bed == "type2"){
       files <- bed_peak_call_files1()
       files2 <- bed_peak_call_files2()
       df <- list()
       for(i in 1:length(names(files))){
         name <- paste0(names(bed_peak_call_files1()[i])," - ", 
-                              names(bed_peak_call_files2()[i]))
+                       names(bed_peak_call_files2()[i]))
         df[[name]] <- subtract_bed(files[[i]],files2[[i]])
       }
     }else{
@@ -8437,7 +9060,7 @@ ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
           write.table(as.data.frame(files[[name]]), file_name,quote = F, row.names = F, col.names = F,sep = "\t")
         }
       })
-        zip(zipfile=fname, files=fs)
+      zip(zipfile=fname, files=fs)
     },
     contentType = "application/zip"
   )

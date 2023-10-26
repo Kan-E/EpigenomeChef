@@ -95,15 +95,12 @@ shinyUI(
                                               placement = "right",options = list(container = "body")),
                    ),
                    conditionalPanel(condition=c("input.data_file_type=='Row1' || input.data_file_type=='Row1_count'"),
-                                    fileInput("file1",
-                                              strong(
-                                                span("Select BigWig files"),
-                                                span(icon("info-circle"), id = "icon1", 
-                                                     options = list(template = popoverTempate))
-                                              ),
-                                              accept = c("bw","BigWig"),
-                                              multiple = TRUE,
-                                              width = "80%"),
+                                    strong(
+                                      span("Select BigWig files"),
+                                      span(icon("info-circle"), id = "icon1", 
+                                           options = list(template = popoverTempate))
+                                    ),
+                                    htmlOutput("file1"),
                                     bsPopover("icon1", "BigWig files (bw, BigWig):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>Short names are recommended for file names."), 
@@ -111,15 +108,12 @@ shinyUI(
                                     
                    ),
                    conditionalPanel(condition="input.data_file_type=='Row2'",
-                                    fileInput("file_bam",
                                               strong(
                                                 span("Select Bam files"),
                                                 span(icon("info-circle"), id = "icon1_bam", 
                                                      options = list(template = popoverTempate))
                                               ),
-                                              accept = c("bam"),
-                                              multiple = TRUE,
-                                              width = "80%"),
+                                    htmlOutput("file_bam"),
                                     bsPopover("icon1_bam", "Bam files (bam):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>Short names are recommended for file names.<br>"), 
@@ -140,16 +134,12 @@ shinyUI(
                                     )
                    ),
                    conditionalPanel(condition=c("input.Genomic_region=='Genome-wide' && input.data_file_type != 'Row1_count'"),
-                                    fileInput("peak_call_file1",
                                               strong(
                                                 span("Select peak call files"),
                                                 span(icon("info-circle"), id = "icon2", 
                                                      options = list(template = popoverTempate))
                                               ),
-                                              accept = c("bed","narrowPeak"),
-                                              multiple = TRUE,
-                                              width = "80%"),
-                                    
+                                    htmlOutput("peak_call_file1"),
                                     bsPopover("icon2", "peak call files (bed, narrowPeak):", 
                                               content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
                                                             "The second column is start position on the chromosome.<br>",
@@ -239,6 +229,16 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                                                         actionButton("createcountButton", "Create count data"),
+                                                         tags$head(tags$style("#createcountButton{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                                   tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                                   )),
                                                          selectizeInput("sample_order", "Sample order:", choices = "", multiple = T),
                                                          downloadButton("download_raw_count_table", "Download count table"),
                                                          dataTableOutput('raw_count_table')
@@ -278,21 +278,21 @@ shinyUI(
                                          bsCollapsePanel(title="DAR result:",
                                                          value="DEG_panel",
                                                          fluidRow(
-                                                           column(4, downloadButton("download_pair_DEG_result", "Download DEG result"))
+                                                           column(4, downloadButton("download_pair_DEG_result", "Download DAR result"))
                                                          ),
                                                          DTOutput("DEG_result")
                                          ),
-                                         bsCollapsePanel(title="Up_peaks:",
+                                         bsCollapsePanel(title="Red peaks:",
                                                          value="DEG_up_panel",
                                                          fluidRow(
-                                                           column(4, downloadButton("download_pair_DEG_up_result", "Download Up regions (.bed)"))
+                                                           column(4, downloadButton("download_pair_DEG_up_result", "Download red regions (.bed)"))
                                                          ),
                                                          DTOutput("DEG_up_result")
                                          ),
-                                         bsCollapsePanel(title="Down_peaks:",
+                                         bsCollapsePanel(title="Blue peaks:",
                                                          value="DEG_down_panel",
                                                          fluidRow(
-                                                           column(4, downloadButton("download_pair_DEG_down_result", "Download Down regions (.bed)"))
+                                                           column(4, downloadButton("download_pair_DEG_down_result", "Download blue regions (.bed)"))
                                                          ),
                                                          DTOutput("DEG_down_result")
                                          ),
@@ -312,19 +312,19 @@ shinyUI(
                                          )
                               )),
                      tabPanel("Peak distribution",
-                              downloadButton("download_input_peak_distribution", "Download Up DAR distribution"),
-                              column(4, textOutput("Spe_dist_promoter"),
+                              downloadButton("download_input_peak_distribution", "Download red DAR distribution"),
+                              textOutput("Spe_dist_promoter"),
                                      tags$head(tags$style("#Spe_dist_promoter{color: red;
                                  font-size: 20px;
             font-style: bold;
-            }"))),
+            }")),
                               textOutput("Spe_dist"),
                                      tags$head(tags$style("#Spe_dist{color: red;
                                  font-size: 20px;
             font-style: bold;
             }")),
                               plotOutput("input_peak_distribution"),
-                              downloadButton("download_deg_peak_distribution", "Download Down DAR distribution"),
+                              downloadButton("download_deg_peak_distribution", "Download blue DAR distribution"),
                               plotOutput("deg_peak_distribution"),
                      ),
                      tabPanel("Peak pattern",
@@ -399,12 +399,16 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
-                              htmlOutput("homer_unknown"),
+                              selectInput("homer_unknown","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif"),
                               fluidRow(
-                                column(4, htmlOutput("homer_size")),
+                                column(4, radioButtons('homer_size','Type of the region for motif finding',
+                                                       c('given (exact size)'="given",
+                                                         'custom size'="custom"
+                                                       ),selected = "custom")),
                                 column(4, htmlOutput("homer_size2"))
                               ),
                               htmlOutput("homer_bg"),
+                              selectInput("homer_length","Motif length",c(8,10,12,16,20),selected = c(8,10,12),multiple=TRUE),
                               fluidRow(
                                 column(4, actionButton("motifButton", "Start"),
                                        tags$head(tags$style("#motifButton{color: red;
@@ -418,18 +422,13 @@ shinyUI(
                                                  ))
                                 )
                               ),
-                              htmlOutput("homer_showCategory"),
+                              sliderInput("homer_showCategory","Most significant motifs", value=5, min=1,max=20),
                               plotOutput("motif_plot"),
                               bsCollapse(id="Promoter_motif_collapse_panel",open="motif_result_table",multiple = TRUE,
                                          bsCollapsePanel(title="Known motif",
                                                          value="motif_result_table",
                                                          downloadButton("download_motif_table", "Download motif enrichment result"),
                                                          DTOutput('motif_result')
-                                         ),
-                                         bsCollapsePanel(title= "de_novo_motif",
-                                                         value="Promoter_motif_region_panel",
-                                                         downloadButton("download_denovo_motif_table", "Download de novo motif"),
-                                                         dataTableOutput("denovo_motif_result")
                                          )
                               )
                      ),
@@ -437,7 +436,7 @@ shinyUI(
                               bsCollapse(id="RNAseqresult_pair_panel",open="RNAseqresult_pair_table",
                               bsCollapsePanel(title= p(span("RNA-seq result"),span(icon("info-circle"), id = "RNAseqresult_pair", 
                                                                                options = list(template = popoverTempate))),
-                                              bsPopover("RNAseqresult_pair", "RNA-seq result file:", 
+                                              bsPopover("RNAseqresult_pair", "RNA-seq data:", 
                                                         content=paste("You can use a pair-wise RNA-seq DEG result file as input.<br>",
                                                                       "First column must be gene name (Gene symbol or ENSEMBL ID).<br>", 
                                                                       "The file must contain", strong("log2FoldChange"), "and", strong("padj"), "columns.<br>",
@@ -445,11 +444,36 @@ shinyUI(
                                                                       img(src="input_format_volcano.png", width = 500,height = 230)), 
                                                         placement = "right",options = list(container = "body")),
                                               value="RNAseqresult_pair_table",
-                                              fluidRow(
-                                                column(8, htmlOutput("pairRNAseqresult"))
+                                              radioButtons('RNAseq_data_type','Input:',
+                                                           c('Raw_count'="Raw_pair",
+                                                             'DEG_Result'="Result"
+                                                           ),selected = "Raw_pair"),
+                                              htmlOutput("pairRNAseqresult"),
+                                              
+                                              conditionalPanel(condition="input.RNAseq_data_type !='Result'",
+                                                               htmlOutput('pair_RNAseq_order'),
+                                                               dataTableOutput('pair_RNAseq_raw'),
+                                                               actionButton("DEGanalysis_Button", "DESeq2 start"),
+                                                               tags$head(tags$style("#DEGanalysis_Button{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                                         tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                                         ))             
+                                              ),
+                                              conditionalPanel(condition="input.RNAseq_data_type =='Result'",
+                                                               fluidRow(
+                                                                 column(4,textInput("RNAseq_cond1_pair","Name of condition 1",value = "A")),
+                                                                 column(4,textInput("RNAseq_cond2_pair","Name of condition 2",value = "B"))
+                                                               ),
+                                                               verbatimTextOutput("RNAseq_condition")
                                               ),
                                               dataTableOutput('pair_DEG_result')
                               )),
+                              verbatimTextOutput("RNAseq_RPmean"),
                               htmlOutput("peak_distance"),
                               fluidRow(
                                 column(4, downloadButton("download_pairintbox","Download box plot"))
@@ -515,6 +539,85 @@ shinyUI(
                                                            column(4, downloadButton("download_pair_int_enrichment_table", "Download enrichment result"))
                                                          ),
                                                          dataTableOutput("int_enrichment_result")
+                                         ),
+                                         bsCollapsePanel(title="Combined heatmap:",
+                                                         value="heatmap_panel",
+                                                         htmlOutput("Group_integrated_heatmap"),
+                                                         fluidRow(
+                                                           column(4, htmlOutput("with_integrated_bw1"),
+                                                                  htmlOutput("with_sample_order_pair_comb1")),
+                                                           column(4, htmlOutput("with_integrated_bw2"),
+                                                                  htmlOutput("with_sample_order_pair_comb2")),
+                                                           column(4, htmlOutput("with_integrated_bw3"),
+                                                                  htmlOutput("with_sample_order_pair_comb3"))
+                                                         ),  
+                                                         fluidRow(
+                                                           column(4, actionButton("with_integrated_heatmapButton", "Start"),
+                                                                  tags$head(tags$style("#with_integrated_heatmapButton{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                                            tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                                            ))
+                                                           ),
+                                                           column(4, downloadButton("download_with_integrated_heatmap","Download heatmap"))
+                                                         ),
+                                                         div(
+                                                           plotOutput('with_integrated_heatmap', height = "100%"),
+                                                           style = "height: calc(75vh  - 75px)"
+                                                         )
+                                         ),
+                                         bsCollapsePanel(title="HOMER:",
+                                                         value="HOMER_panel",
+                                                         htmlOutput("Group_homer"),
+                                                         fluidRow(
+                                                           column(3, downloadButton("download_with_motif_plot", "Download motif plot")),
+                                                           column(3, downloadButton("download_with_homer_report", "Download homer report"),
+                                                                  tags$head(tags$style("#download_with_homer_report{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                                                         ),
+                                                         textOutput("with_Spe_motif"),
+                                                         tags$head(tags$style("#with_Spe_motif{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),
+                                                         selectInput("with_homer_unknown","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif"),
+                                                         fluidRow(
+                                                           column(4, radioButtons('with_homer_size','Type of the region for motif finding',
+                                                                                  c('given (exact size)'="given",
+                                                                                    'custom size'="custom"
+                                                                                  ),selected = "custom")),
+                                                           column(4, htmlOutput("with_homer_size2"))
+                                                         ),
+                                                         htmlOutput("with_homer_bg"),
+                                                         selectInput("with_homer_length","Motif length",c(8,10,12,16,20),selected = c(8,10,12),multiple=TRUE),
+                                                         fluidRow(
+                                                           column(4, actionButton("with_motifButton", "Start"),
+                                                                  tags$head(tags$style("#with_motifButton{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                                            tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                                            ))
+                                                           )
+                                                         ),
+                                                         sliderInput("with_homer_showCategory","Most significant motifs", value=5, min=1,max=20),
+                                                         plotOutput("with_motif_plot"),
+                                                         bsCollapse(id="with_Promoter_motif_collapse_panel",open="with_motif_result_table",multiple = TRUE,
+                                                                    bsCollapsePanel(title="Known motif",
+                                                                                    value="with_motif_result_table",
+                                                                                    downloadButton("download_with_motif_table", "Download motif enrichment result"),
+                                                                                    DTOutput('with_motif_result')
+                                                                    )
+                                                         )           
                                          )
                                          
                               )
@@ -574,15 +677,12 @@ shinyUI(
                sidebarLayout(
                  # venn diagram analysis---------------------------------
                  sidebarPanel(
-                   fileInput("peak_call_file_venn1",
-                             strong(
-                               span("Select bed files"),
-                               span(icon("info-circle"), id = "icon_venn1", 
-                                    options = list(template = popoverTempate))
-                             ),
-                             accept = c("bed","narrowPeak"),
-                             multiple = TRUE,
-                             width = "80%"),
+                   strong(
+                     span("Select bed files"),
+                     span(icon("info-circle"), id = "icon_venn1", 
+                          options = list(template = popoverTempate))
+                   ),
+                   htmlOutput("peak_call_file_venn1"),
                    bsPopover("icon_venn1", "Bed files (bed, narrowPeak):", 
                              content=paste(strong("The maximum number of uploads is five."),
                                            "The first column is chromosome (e.g. chr3, chrY) name.<br>",
@@ -590,19 +690,28 @@ shinyUI(
                                            "The third column is end position on the chromosome.<br>",
                                            strong("Short names are recommended for file names.")), 
                              placement = "right",options = list(container = "body")),
-                   fileInput("file_venn1",
-                             strong(
-                               span("Select BigWig files"),
-                               span(icon("info-circle"), id = "icon_venn2", 
-                                    options = list(template = popoverTempate))
-                             ),
-                             accept = c("bw","BigWig"),
-                             multiple = TRUE,
-                             width = "80%"),
+                   strong(
+                     span("Select BigWig files"),
+                     span(icon("info-circle"), id = "icon_venn2", 
+                          options = list(template = popoverTempate))
+                   ),
+                   htmlOutput("file_venn1"),
                    bsPopover("icon_venn2", "BigWig files (bw, BigWig):", 
                              content=paste(strong("Short names are recommended for file names.")), 
                              placement = "right",options = list(container = "body")),
-                   selectizeInput("sample_order_venn", "Sample order:", choices = "", multiple = T),
+                   fluidRow(
+                     column(8, selectizeInput("sample_order_venn", "Sample order:", choices = "", multiple = T)),
+                     column(4,  actionButton("vennButton", "Start"),
+                   tags$head(tags$style("#vennButton{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                             tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                             )))
+                   ),
                    fluidRow(
                      column(12, selectInput("Species_venn", "Species", species_list, selected = "not selected")),
                    ),
@@ -628,6 +737,7 @@ shinyUI(
                                            strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
                                            strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>",
                                            strong("combined heatmap:"), "height = 6, width = 10 <br>"),trigger = "click"), 
+                   
                    actionButton("goButton_venn", "example data (hg19)"),
                    tags$head(tags$style("#goButton_venn{color: black;
                                  font-size: 12px;
@@ -771,6 +881,7 @@ shinyUI(
                                 column(4, htmlOutput("homer_bg_venn")),
                                 column(4, htmlOutput("homer_bg2_venn"))
                               ),
+                              selectInput("homer_length_venn","Motif length",c(8,10,12,16,20),selected = c(8,10,12),multiple=TRUE),
                               fluidRow(
                                 column(4, actionButton("motifButton_venn", "Start"),
                                        tags$head(tags$style("#motifButton_venn{color: red;
@@ -956,15 +1067,12 @@ shinyUI(
                                 c('BigWig files'="Row1"
                                 ),selected = "Row1"),
                    conditionalPanel(condition="input.data_file_type_clustering=='Row1'",
-                                    fileInput("file1_clustering",
-                                              strong(
-                                                span("Select BigWig files"),
-                                                span(icon("info-circle"), id = "icon1_clustering", 
-                                                     options = list(template = popoverTempate))
-                                              ),
-                                              accept = c("bw","BigWig"),
-                                              multiple = TRUE,
-                                              width = "80%"),
+                                    strong(
+                                      span("Select BigWig files"),
+                                      span(icon("info-circle"), id = "icon1_clustering", 
+                                           options = list(template = popoverTempate))
+                                    ),
+                                    htmlOutput("file1_clustering"),
                                     bsPopover("icon1_clustering", "BigWig files (bw, BigWig):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>",
@@ -1017,15 +1125,12 @@ shinyUI(
                                               placement = "right",options = list(container = "body"))
                    ),
                    conditionalPanel(condition="input.Genomic_region_clustering=='Genome-wide'",
-                                    fileInput("peak_call_file1_clustering",
-                                              strong(
-                                                span("Select bed files"),
-                                                span(icon("info-circle"), id = "icon2_clustering", 
-                                                     options = list(template = popoverTempate))
-                                              ),
-                                              accept = c("bed","narrowPeak"),
-                                              multiple = TRUE,
-                                              width = "80%"),
+                                    strong(
+                                      span("Select bed files"),
+                                      span(icon("info-circle"), id = "icon2_clustering", 
+                                           options = list(template = popoverTempate))
+                                    ),
+                                    htmlOutput("peak_call_file1_clustering"),
                                     bsPopover("icon2_clustering", "Bed files (bed, narrowPeak):", 
                                               content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
                                                             "The second column is start position on the chromosome.<br>",
@@ -1100,6 +1205,16 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                                                         actionButton("createcountButton_clustering", "Create count data"),
+                                                         tags$head(tags$style("#createcountButton_clustering{color: red;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"),
+                                                                   tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                                   )),
                                                          selectizeInput("sample_order_clustering", "Sample order:", choices = "", multiple = T),
                                                          downloadButton("download_raw_count_clustering_table", "Download raw count table"),
                                                          dataTableOutput('raw_count_table_clustering')
@@ -1314,7 +1429,7 @@ shinyUI(
                                     options = list(template = popoverTempate))
                              ),
                              accept = c("bed", "narrowPeak"),
-                             multiple = FALSE,
+                             multiple = TRUE,
                              width = "80%"),
                    bsPopover("icon_enrich1", "Uploaded file format (bed, narrowPeak): ", 
                              content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
@@ -1424,6 +1539,7 @@ shinyUI(
                                 column(4, htmlOutput("homer_bg_enrich")),
                                 column(4, htmlOutput("homer_bg2_enrich"))
                               ),
+                              selectInput("homer_length_enrich","Motif length",c(8,10,12,16,20),selected = c(8,10,12),multiple=TRUE),
                               fluidRow(
                                 column(4, actionButton("motifButton_enrich", "Start"),
                                        tags$head(tags$style("#motifButton_enrich{color: red;
@@ -1547,7 +1663,7 @@ shinyUI(
                                           span("A: Select bed files (bed, narrowPeak)",style="color: red")
                                         ),
                                         accept = c("bed", "narrowPeak"),
-                                        multiple = FALSE,
+                                        multiple = TRUE,
                                         width = "80%"),
                               conditionalPanel(condition="input.data_file_type_bed=='type1'",
                                                htmlOutput("bed_merge_dist")
@@ -1558,7 +1674,7 @@ shinyUI(
                                                            span("B :Select bed files  (bed, narrowPeak)",style="color: blue")
                                                          ),
                                                          accept = c("bed", "narrowPeak"),
-                                                         multiple = FALSE,
+                                                         multiple = TRUE,
                                                          width = "80%"),
                               ),
                               conditionalPanel(condition="input.data_file_type_bed=='type3'",

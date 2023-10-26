@@ -67,7 +67,7 @@ library(plotmics)
 library(colorspace)
 library(ggcorrplot)
 library(RColorBrewer)
-library(bedtorch)
+
 library(venn)
 library(reshape2)
 library(ggsci)
@@ -78,6 +78,7 @@ library(magick)
 library(webshot)
 library(clue)
 library(TxDb.Mmusculus.UCSC.mm39.refGene)
+library(stringr)
 Sys.setenv(OPENSSL_CONF="/dev/null")
 options('homer_path' = "/usr/local/homer")
 check_homer()
@@ -140,9 +141,18 @@ read_df <- function(tmp, Species=NULL){
     return(df)
   }
 }
-read_dfs <- function(tmp, Species=NULL){
+read_dfs <- function(tmp, Volume=NULL,Species=NULL){
   name = c()
   upload = list()
+  if(!is.null(Volume)){
+    for(nr in 1:length(tmp)){
+      df <- read_df(tmp[[nr]])
+      file_name <- gsub(".+\\/","",tmp[[nr]])
+      name <- c(name, gsub("\\..+$", "", file_name))
+      upload[[nr]] <- df
+    }
+    names(upload) <- name
+  }else{
   for(nr in 1:length(tmp[, 1])){
     df <- read_df(tmp[[nr, 'datapath']])
     file_name <- gsub(paste0("\\.",tools::file_ext(tmp[[nr, 'datapath']]),"$"), "", tmp[nr,]$name)
@@ -150,6 +160,7 @@ read_dfs <- function(tmp, Species=NULL){
     upload[[nr]] <- df
   }
   names(upload) <- name
+  }
   return(upload)
 }
 txdb_function <- function(Species){
@@ -215,6 +226,9 @@ files_name2ENTREZID <- function(files,Species,gene_type){
 }
 filter_function <- function(filter, files){
   if(filter == "Reproducible_peaks"){
+    if(length(names(files)) == 1) {
+      consensus <- list(files[[1]],files[[1]])
+    }else{
     name_list <- names(files) %>% sort()
     files <- files[name_list]
     unique_col <- unique(gsub("\\_.+$", "", name_list))
@@ -223,6 +237,7 @@ filter_function <- function(filter, files){
     for(i in 1:length(unique_col)){
       cond <- length(which(gsub("\\_.+$", "", name_list) == unique_col[i]))
       files2 <- files[(1 + total):(total + cond)]
+      print(cond)
       if(cond == 1) files2 <- list(files2[[1]],files2[[1]])
         consensusToCount <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
         occurrences <- elementMetadata(consensusToCount) %>% as.data.frame %>% dplyr::select(-consensusIDs) %>% 
@@ -230,6 +245,9 @@ filter_function <- function(filter, files){
         consensusToCount <- consensusToCount[occurrences >= 2, ]
         consensus[[i]] <- consensusToCount
       total <- total + cond
+      print(consensus)
+    }
+    if(length(unique(gsub("\\_.+$", "", names(files)))) == 1) consensus <- list(consensus[[1]],consensus[[1]])
     }
     consensusToCount <- soGGi:::runConsensusRegions(GRangesList(consensus), "none")
   }else{
@@ -745,7 +763,8 @@ read_known_results<-function (path, homer_dir = TRUE) {
   dplyr::inner_join(known_results, hm, 
                     by = c("motif_name", "motif_family", "experiment", "accession"))
 }   
-findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,size,back="random",bw_count=NULL,other_data=NULL){
+findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
+                      motif,size,back="random",bw_count=NULL,other_data=NULL,motif_length){
   ref <- gsub(".+\\(","",gsub(")", "", Species))
     switch(motif,
            "known motif" = time <- "10 ~ 20",
@@ -821,7 +840,7 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",motif,siz
         y,
         path = group_dir,
         genome = ref, 
-        motif_length = c(8,10,12),
+        motif_length = motif_length,
         scan_size = size,
         optimize_count = 25,
         background = bg,
@@ -947,7 +966,7 @@ files2GRangelist <- function(files){
 }
 
 integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 1, 
-                                padj_threshold = 0.05) {
+                                padj_threshold = 0.05,up_name="up",down_name="down") {
   if ("GRanges" %in% class(result_geneRP)) {
     stop("sorry, please use the the simplify result or metadata(fullRP_hit)$peakRP_gene", 
          call. = FALSE)
@@ -960,12 +979,11 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
                                                                                                                     allGenes_N, TRUE ~ diff_rank), rankProduct = RP_rank * 
                                                    diff_rank, rankOf_rankProduct = rank(rankProduct)) %>% 
     dplyr::arrange(rankOf_rankProduct) %>% dplyr::mutate(gene_category = dplyr::case_when(log2FoldChange > 
-                                                                                            lfc_threshold & padj < padj_threshold ~ "up", log2FoldChange < 
-                                                                                            -lfc_threshold & padj < padj_threshold ~ "down", TRUE ~ 
-                                                                                            "NS"), gene_category = factor(gene_category, levels = c("up", 
-                                                                                                                                                        "down", "NS")))
-  upGenes_rank <- filter(merge_result, gene_category == "up")$RP_rank
-  downGenes_rank <- filter(merge_result, gene_category == "down")$RP_rank
+                                                                                            lfc_threshold & padj < padj_threshold ~ up_name, log2FoldChange < 
+                                                                                            -lfc_threshold & padj < padj_threshold ~ down_name, TRUE ~ "NS"), 
+                                                         gene_category = factor(gene_category, levels = c(up_name,down_name, "NS")))
+  upGenes_rank <- filter(merge_result, gene_category == up_name)$RP_rank
+  downGenes_rank <- filter(merge_result, gene_category == down_name)$RP_rank
   staticGenes_rank <- filter(merge_result, gene_category == 
                                "NS")$RP_rank
   if (length(upGenes_rank) == 0 & length(downGenes_rank) == 
@@ -991,19 +1009,19 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
   down_static_pvalue <- suppressWarnings(ks.test(downGenes_rank, 
                                                  staticGenes_rank)$p.value * 2)
   if(down_static_pvalue > 1) down_static_pvalue <- 1
-  ks_test <- paste0("\n Kolmogorov-Smirnov Tests ", "\n pvalue of up vs NS: ", 
+  ks_test <- paste0("\n Kolmogorov-Smirnov Tests ", "\n pvalue of ",up_name," vs NS: ", 
                     format(up_static_pvalue, digits = 3, scientific = TRUE), 
-                    "\n pvalue of down vs NS: ", format(down_static_pvalue, 
-                                                            digits = 3, scientific = TRUE))
+                    "\n pvalue of ", down_name," vs NS: ", format(down_static_pvalue, 
+                                                                  digits = 3, scientific = TRUE))
   annotate_df <- data.frame(xpos = -Inf, ypos = Inf, annotateText = ks_test, 
                             hjustvar = 0, vjustvar = 1)
   p <- merge_result %>% ggplot2::ggplot(aes(x = RP_rank)) + 
     ggplot2::stat_ecdf(aes(color = gene_category), geom = "line") + 
     ggplot2::geom_text(data = annotate_df, aes(x = xpos, 
                                                y = ypos, hjust = hjustvar, vjust = vjustvar, label = annotateText)) + 
-    ggplot2::xlab("Regulatory potential rank") + ggplot2::ylab("Cumulative Probability")+
-    ggplot2::scale_x_continuous(expand = c(0,0)) + ggplot2::theme_bw(base_size = 15) + 
-    ggplot2::scale_color_manual(breaks = c("up","down","NS"),values = c("#F8766D","#00BFC4","grey"))
+    ggplot2::xlab("Regulatory potential rank\n(RP-high gene -> RP-low gene)") + ggplot2::ylab("Cumulative Probability")+
+    ggplot2::scale_x_continuous(expand = c(0,0)) + ggplot2::theme_bw(base_size = 15) + guides(color=guide_legend(title="Expression\nstatus"))+ 
+    ggplot2::scale_color_manual(breaks = c(up_name,down_name,"NS"),values = c("#F8766D","#00BFC4","grey"))
   return(p)
 }
 
@@ -1579,7 +1597,7 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
     name <- gsub(" ", "\\_", name)
     ht <- EnrichedHeatmap(mat1, split = num_list, col = color,name=name,
                           axis_name = axis_name,pos_line = F,
-                          column_title =name,use_raster=TRUE,
+                          column_title =name,use_raster=TRUE, row_title_rot = 0,
                           top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:4, lty = 1),
                                                                                       axis_param = list(side = "right", facing = "inside"))))
     ht_list <- ht_list + ht
@@ -1628,3 +1646,108 @@ consensus_kmeans = function(mat, centers, km_repeats) {
   partition_consensus = cl_consensus(partition_list)
   as.vector(cl_class_ids(partition_consensus)) 
 }
+
+gene_type_for_integrated_heatmap <- function(files, Species, org) {
+  gene_types <- c()
+  name_list <- c()
+  if(!is.null(files)){
+    for(name in names(files)){
+      type <- gene_type(my.symbols=rownames(files[[name]]),org=org,Species=Species)
+      gene_types <- c(gene_types, type)
+      name_list <- c(name_list,name) 
+    }
+    names(gene_types) <- name_list
+    return(gene_types)
+  }
+}
+
+rnaseqDEGs_for_integrated_heatmap <- function(files,Species,gene_type){
+  if(!is.null(files)){
+    df <- files_name2ENTREZID(files = files,Species=Species,gene_type=gene_type)
+    if(length(names(df)) != 1){
+      matrix_list <- list()
+      for (name in names(df)) {
+        matrix <- as.data.frame(df[name])
+        if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+          rownames(matrix) <- matrix[,1]
+          matrix <- matrix[,-1]
+        }
+        matrix[is.na(matrix)] <- 0
+        matrix <- merge(matrix, matrix, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+        matrix_list[[name]] <- matrix
+      }
+      base <- matrix_list[[1]]
+      int_matrix <- lapply(matrix_list[-1], function(i) base <<- merge(base, i, by = "Row.names"))
+      rownames(base) <- base$Row.names
+      colnames(base) <- gsub("\\.y$", "", colnames(base))
+      rna <- as.data.frame(base[,-1])
+      print(head(rna))
+    }else{
+      rna <- df[[names(df)]]
+      if(str_detect(colnames(rna)[1], "ENTREZID")) {
+        rownames(rna) <- rna$ENTREZID
+        rna <- rna[,-1]
+      }
+      rna[is.na(rna)] <- 0
+      rna <- as.data.frame(rna)
+    }
+    rna <- dplyr::select(rna, contains("log2FoldChange"))
+    return(rna)
+  }
+}
+rnaseqCounts_for_integrated_heatmap <- function(files,Species,gene_type){
+  if(!is.null(files)){
+    df <- files_name2ENTREZID(files = files,Species=Species,gene_type = gene_type)
+    if(length(names(df)) != 1){
+      matrix_z_list <- list()
+      for (name in names(df)) {
+        matrix <- as.data.frame(df[name])
+        if(str_detect(colnames(matrix)[1], "ENTREZID")) {
+          rownames(matrix) <- matrix[,1]
+          matrix <- matrix[,-1]
+        }
+        matrix_z <- genescale(matrix, axis = 1, method = "Z")
+        matrix_z[is.na(matrix_z)] <- 0
+        matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+        matrix_z_list[[name]] <- matrix_z
+      }
+      base_z <- matrix_z_list[[1]]
+      int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+      rownames(base_z) <- base_z$Row.names
+      colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
+      rna <- as.data.frame(base_z[,-1])
+    }else{
+      rna <- df[[names(df)]]
+      if(str_detect(colnames(rna)[1], "ENTREZID")) {
+        rownames(rna) <- rna$ENTREZID
+        rna <- rna[,-1]
+      }
+      print(head(rna))
+      rna <- genescale(rna, axis = 1, method = "Z")
+      rna[is.na(rna)] <- 0
+      rna <- as.data.frame(rna)
+    }
+    return(rna)
+  }
+}
+
+pre_integrated_additional <- function(integrated_bw){
+if(!is.null(integrated_bw)){
+  if(length(list.files("./Volume/")) > 0){
+    files <- integrated_bw
+    name <- gsub(".+\\/","",integrated_bw)
+    names(files) <- gsub("\\..+$", "", name)
+  }else{
+    files<-c()
+    name<-c()
+    for(nr in 1:length(integrated_bw[, 1])){
+      file <- integrated_bw[[nr, 'datapath']]
+      name <- c(name, gsub("\\..+$", "", integrated_bw[nr,]$name))
+      files <- c(files,file)
+    }
+    names(files)<-name
+  }
+  return(bigwig_breakline(files))
+}
+}
+
