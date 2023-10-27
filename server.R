@@ -720,13 +720,13 @@ shinyServer(function(input, output, session) {
           data <- with(data, GRanges(seqnames = chr,ranges = IRanges(start=start,
                                                                      end=end)))
         }else data <- promoter_region()
-        data2 <- annotatePeak(data, TxDb= txdb())
+        data2 <- ChIPseeker::annotatePeak(data, TxDb= txdb())
         return(data2)
       })
     }
   })
   deg_result_anno2 <- reactive({
-    data <- as.data.frame(as.GRanges(deg_result_anno()))
+    data <- as.data.frame(ChIPseeker::as.GRanges(deg_result_anno()))
     Row.name <- paste0(data$seqnames,":",data$start,"-",data$end)
     data$locus <- Row.name
     my.symbols <- data$geneId
@@ -1294,8 +1294,8 @@ shinyServer(function(input, output, session) {
         withProgress(message = "enrichment analysis",{
           H_t2g <- Hallmark_set()
           H_t2g2 <- H_t2g %>% dplyr::select(gs_name, entrez_gene)
-          em_up <- try(enricher(dplyr::filter(data3, group == paste0(unique(collist)[2],"-high"))$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
-          em_down <- try(enricher(dplyr::filter(data3, group == paste0(unique(collist)[1],"-high"))$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
+          em_up <- try(clusterProfiler::enricher(dplyr::filter(data3, group == paste0(unique(collist)[2],"-high"))$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
+          em_down <- try(clusterProfiler::enricher(dplyr::filter(data3, group == paste0(unique(collist)[1],"-high"))$ENTREZID, TERM2GENE=H_t2g2, pvalueCutoff = 0.05))
           df <- list()
           df[[paste0(unique(collist)[2],"-high")]] <- em_up
           df[[paste0(unique(collist)[1],"-high")]] <- em_down
@@ -1303,7 +1303,7 @@ shinyServer(function(input, output, session) {
             if (length(as.data.frame(df[[name]])$ID) == 0) {
               df[[name]] <- NULL
             } else{
-              df[[name]] <- setReadable(df[[name]], org1(), 'ENTREZID')
+              df[[name]] <- clusterProfiler::setReadable(df[[name]], org1(), 'ENTREZID')
             }
           }
           incProgress(1)
@@ -1348,7 +1348,7 @@ shinyServer(function(input, output, session) {
           }
           if(length(data$Description) != 0) {
             data["Description"] <- lapply(data["Description"], gsub, pattern="HALLMARK_", replacement = "")
-            data$GeneRatio <- parse_ratio(data$GeneRatio)
+            data$GeneRatio <- DOSE::parse_ratio(data$GeneRatio)
             return(data)
           }else return(NULL)
         }else{return(NULL)}
@@ -1398,7 +1398,7 @@ shinyServer(function(input, output, session) {
           }
           if(length(data$Description) != 0){
             data["Description"] <- lapply(data["Description"], gsub, pattern="HALLMARK_", replacement = "")
-            data$GeneRatio <- parse_ratio(data$GeneRatio)
+            data$GeneRatio <- DOSE::parse_ratio(data$GeneRatio)
             if ((length(data$Description) == 0) || length(which(!is.na(unique(data$qvalue))))==0) {
               p1 <- NULL
             } else{
@@ -1413,7 +1413,7 @@ shinyServer(function(input, output, session) {
                               geom_point() +
                               scale_color_continuous(low="red", high="blue",
                                                      guide=guide_colorbar(reverse=TRUE)) +
-                              scale_size(range=c(1, 6))+ theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
+                              scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
                               scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
             }}else p1 <- NULL
         }
@@ -1448,7 +1448,7 @@ shinyServer(function(input, output, session) {
                             geom_point() +
                             scale_color_continuous(low="red", high="blue",
                                                    guide=guide_colorbar(reverse=TRUE)) +
-                            scale_size(range=c(1, 6))+ theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
+                            scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
                             scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
           }else p1 <- NULL
         }
@@ -1500,7 +1500,7 @@ shinyServer(function(input, output, session) {
         if(length(as.data.frame(df[[name]])$ID) == 0){
           cnet1 <- NULL
         } else {
-          cnet1 <- setReadable(df[[name]], org1(), 'ENTREZID')
+          cnet1 <- clusterProfiler::setReadable(df[[name]], org1(), 'ENTREZID')
         }
         if (length(as.data.frame(cnet1)$ID) == 0) {
           p2 <- NULL
@@ -1773,7 +1773,7 @@ shinyServer(function(input, output, session) {
     }
   })
   updistribution <- reactive({
-    return(genomicElementDistribution(deg_peak_list()[["Up"]], 
+    return(ChIPpeakAnno::genomicElementDistribution(deg_peak_list()[["Up"]], 
                                       TxDb = txdb()))
   })
   output$input_peak_distribution <- renderPlot({
@@ -1800,7 +1800,7 @@ shinyServer(function(input, output, session) {
     }
   })  
   downdistribution <- reactive({
-    return(genomicElementDistribution(deg_peak_list()[["Down"]], 
+    return(ChIPpeakAnno::genomicElementDistribution(deg_peak_list()[["Down"]], 
                                       TxDb = txdb()))
   })
   output$deg_peak_distribution <- renderPlot({
@@ -4293,7 +4293,7 @@ shinyServer(function(input, output, session) {
   venn_overlap <- reactive({
     if(updateCounter_vennStart$i > 0){
     withProgress(message = "Preparing intersection, takes a few minutes",{
-      ol <- findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
+      ol <- ChIPpeakAnno::findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
       names(ol$peaklist) <- gsub("///","-",names(ol$peaklist))
       return(ol)
     })
@@ -4608,7 +4608,7 @@ shinyServer(function(input, output, session) {
     }
   })
   vendistribution <- reactive({
-    return(genomicElementDistribution(selected_grange(), 
+    return(ChIPpeakAnno::genomicElementDistribution(selected_grange(), 
                                       TxDb = txdb_venn()))
   })
   output$venn_peak_distribution <- renderPlot({
@@ -4626,7 +4626,7 @@ shinyServer(function(input, output, session) {
   
   selected_annoData_table <- reactive({
     withProgress(message = "Preparing annotation",{
-      overlaps.anno <- annotatePeak(genomicElementDistribution(selected_grange(), 
+      overlaps.anno <- ChIPseeker::annotatePeak(ChIPpeakAnno::genomicElementDistribution(selected_grange(), 
                                                                TxDb = txdb_venn(),
                                                                plot = F)$peaks,
                                     TxDb = txdb_venn()) %>% as.data.frame()
@@ -5200,7 +5200,7 @@ shinyServer(function(input, output, session) {
                         geom_point() +
                         scale_color_continuous(low="red", high="blue",
                                                guide=guide_colorbar(reverse=TRUE)) +
-                        scale_size(range=c(1, 6))+ theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
+                        scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
                         scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
       }else p1 <- NULL
       p <- plot_grid(p1, nrow = 1)
@@ -6102,7 +6102,7 @@ shinyServer(function(input, output, session) {
     df <- list()
     for(name in names(peaks)){
       data <- peaks[[name]]
-      data2 <- as.data.frame(as.GRanges(annotatePeak(peak = data, TxDb = txdb_venn())))
+      data2 <- as.data.frame(ChIPseeker::as.GRanges(ChIPseeker::annotatePeak(peak = data, TxDb = txdb_venn())))
       data2 <- data2 %>% dplyr::filter(!is.na(geneId))
       data2$locus <- paste0(data2$seqnames,":",data2$start,"-",data2$end)
       colnames(data2)[which(colnames(data2) == "geneId")] <- "ENTREZID"
@@ -6786,8 +6786,8 @@ shinyServer(function(input, output, session) {
     if(!is.null(bw_count_clustering()) && !is.null(txdb_clustering())){
       withProgress(message = "preparing annotation",{
         data <- peak_kmeans_grange()
-        data2 <- annotatePeak(data, TxDb= txdb_clustering())
-        data <- as.data.frame(as.GRanges(data2))
+        data2 <- ChIPseeker::annotatePeak(data, TxDb= txdb_clustering())
+        data <- as.data.frame(ChIPseeker::as.GRanges(data2))
         Row.name <- paste0(data$seqnames,":",data$start,"-",data$end)
         data$locus <- Row.name
         my.symbols <- data$geneId
@@ -8094,7 +8094,7 @@ shinyServer(function(input, output, session) {
   
   #Annotation-----------
   updistribution_enrich <- reactive({
-    return(genomicElementDistribution(GRangesList(Enrich_peak_call_files()), 
+    return(ChIPpeakAnno::genomicElementDistribution(GRangesList(Enrich_peak_call_files()), 
                                       TxDb = txdb_enrich()))
   })
   output$input_peak_distribution_enrich <- renderPlot({
@@ -8111,7 +8111,7 @@ shinyServer(function(input, output, session) {
       peak_list <- updistribution_enrich()$peaks
       df <- list()
       for(name in names(peak_list)){
-        peak <- annotatePeak(peak_list[[name]],TxDb = txdb_enrich()) %>% as.data.frame()
+        peak <- ChIPseeker::annotatePeak(peak_list[[name]],TxDb = txdb_enrich()) %>% as.data.frame()
         my.symbols <- peak$geneId
         gene_IDs<-id_convert(my.symbols,input$Species_enrich,type="ENTREZID")
         colnames(gene_IDs) <- c("geneId","NearestGene")
@@ -8251,7 +8251,7 @@ shinyServer(function(input, output, session) {
                         geom_point() +
                         scale_color_continuous(low="red", high="blue",
                                                guide=guide_colorbar(reverse=TRUE)) +
-                        scale_size(range=c(1, 6))+ theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
+                        scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
                         scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
       }else p1 <- NULL
       p <- plot_grid(p1, nrow = 1)
@@ -8725,7 +8725,7 @@ shinyServer(function(input, output, session) {
     df <- list()
     for(name in names(peaks)){
       data <- peaks[[name]]
-      data2 <- as.data.frame(as.GRanges(annotatePeak(peak = data, TxDb = txdb_enrich())))
+      data2 <- as.data.frame(ChIPseeker::as.GRanges(ChIPseeker::annotatePeak(peak = data, TxDb = txdb_enrich())))
       data2 <- data2 %>% dplyr::filter(!is.na(geneId))
       data2$locus <- paste0(data2$seqnames,":",data2$start,"-",data2$end)
       colnames(data2)[which(colnames(data2) == "geneId")] <- "ENTREZID"

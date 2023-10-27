@@ -19,6 +19,7 @@ RUN cd ~ && export PHANTOM_JS="phantomjs-2.1.1-linux-x86_64" && \
     ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/local/bin
 RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('devtools', update = F)" && \
+    R -e "devtools::install_version('dbplyr', version = '2.3.4',repos = 'http://cran.us.r-project.org')" && \
     R -e "devtools::install_github('haizi-zh/bedtorch')" && \
     R -e "devtools::install_github('YuLab-SMU/clusterProfiler.dplyr')" && \
     R -e "BiocManager::install('shiny', update = F)" && \

@@ -42,9 +42,6 @@ library(cowplot)
 library(DESeq2)
 library(ggnewscale)
 library(AnnotationDbi)
-library(clusterProfiler)
-library(enrichplot)
-library(DOSE)
 library(msigdbr)
 library(genefilter)
 library(ComplexHeatmap)
@@ -55,9 +52,8 @@ library(BiocManager)
 library(clusterProfiler.dplyr)
 library(dorothea)
 library(GenomicRanges)
-library(soGGi) ##devtools::install_github("ColeWunderlich/soGGi")
 library(ChIPseeker)
-library(ChIPpeakAnno)
+
 library(rGREAT)
 library(FindIT2)
 library(limma)
@@ -934,7 +930,7 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL){
       geom_point() +
       scale_color_continuous(low="red", high="blue",
                              guide=guide_colorbar(reverse=TRUE)) +
-      scale_size(range=c(1, 6))+ theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
+      scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
       scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top")+
       theme(plot.margin=margin(l=-0.75,unit="cm"))
     df2 <- df2 %>% distinct(motif_name, .keep_all = T)
@@ -1039,10 +1035,10 @@ enrich_viewer_forMulti2 <- function(data3, Species, Gene_set, org, org_code, H_t
           colnames(df) <- c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", " qvalue", "geneID", "Count", "Group")
           for (name in unique(data3$Group)) {
             sum <- length(data3$ENTREZID[data3$Group == name])
-            em <- enricher(data3$ENTREZID[data3$Group == name], TERM2GENE=H_t2g2, pvalueCutoff = 0.05)
+            em <- clusterProfiler::enricher(data3$ENTREZID[data3$Group == name], TERM2GENE=H_t2g2, pvalueCutoff = 0.05)
             if (length(as.data.frame(em)$ID) != 0) {
               if(length(colnames(as.data.frame(em))) == 9){
-                cnet1 <- as.data.frame(setReadable(em, org, 'ENTREZID'))
+                cnet1 <- as.data.frame(clusterProfiler::setReadable(em, org, 'ENTREZID'))
                 cnet1$Group <- paste(name, "\n","(",sum, ")",sep = "")
                 df <- rbind(df, cnet1)
               }
@@ -1050,7 +1046,7 @@ enrich_viewer_forMulti2 <- function(data3, Species, Gene_set, org, org_code, H_t
           }
         }
         if(length(df$ID) !=0){
-          df$GeneRatio <- parse_ratio(df$GeneRatio)
+          df$GeneRatio <- DOSE::parse_ratio(df$GeneRatio)
           return(df)
         }else return(NULL)
       })
@@ -1070,10 +1066,10 @@ enrich_gene_list <- function(data, Gene_set, H_t2g, org){
         df <- list()
         for (name in unique(data$Group)) {
           sum <- length(data$ENTREZID[data$Group == name])
-          em <- enricher(data$ENTREZID[data$Group == name], TERM2GENE=H_t2g2, pvalueCutoff = 0.05)
+          em <- clusterProfiler::enricher(data$ENTREZID[data$Group == name], TERM2GENE=H_t2g2, pvalueCutoff = 0.05)
           if (length(as.data.frame(em)$ID) != 0) {
             if(length(colnames(as.data.frame(em))) == 9){
-              cnet1 <- setReadable(em, org, 'ENTREZID')
+              cnet1 <- clusterProfiler::setReadable(em, org, 'ENTREZID')
               df[[name]] <- cnet1
             }
           }
@@ -1108,7 +1104,7 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5){
     if ((length(df$Description) == 0) || length(which(!is.na(unique(df$qvalue)))) == 0) {
       p1 <- NULL
     } else{
-      df$GeneRatio <- parse_ratio(df$GeneRatio)
+      df$GeneRatio <- DOSE::parse_ratio(df$GeneRatio)
       df <- dplyr::filter(df, !is.na(qvalue))
       df$Description <- gsub("_", " ", df$Description)
       df <- dplyr::mutate(df, x = paste0(Group, 1/(-log10(eval(parse(text = "qvalue"))))))
@@ -1121,7 +1117,7 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5){
                       geom_point() +
                       scale_color_continuous(low="red", high="blue",
                                              guide=guide_colorbar(reverse=TRUE)) +
-                      scale_size(range=c(1, 6))+ theme_dose(font.size=12)+ylab(NULL)+xlab(NULL)+
+                      scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=12)+ylab(NULL)+xlab(NULL)+
                       scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
       p <- plot_grid(p1)
       return(p)
@@ -1452,12 +1448,12 @@ ggVennPeaks <- function (peak_list, peak_names = names(peak_list), percent = TRU
 }
 
 peak_pattern_function <- function(grange, files,rg = NULL,additional=NULL,plot=TRUE){
-  feature.recentered <- reCenterPeaks(grange, width=4000)
+  feature.recentered <- ChIPpeakAnno::reCenterPeaks(grange, width=4000)
   if(!is.null(additional)) files <- c(files, additional)
   cvglists <- sapply(files, import,which=feature.recentered,as="RleList")
   names(cvglists) <- gsub(".+\\/","",gsub("\\..+$", "", names(files)))
-  feature.center <- reCenterPeaks(grange, width=1)
-  sig <- featureAlignedSignal(cvglists, feature.center,
+  feature.center <- ChIPpeakAnno::reCenterPeaks(grange, width=1)
+  sig <- ChIPpeakAnno::featureAlignedSignal(cvglists, feature.center,
                               upstream=2000, downstream=2000)
   if(plot == TRUE){
   if(is.null(rg)){
@@ -1577,7 +1573,7 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
     num_list <- c()
     glist <- list()
     for(i in 1:length(names(files2))){
-      feature.recentered <- reCenterPeaks(files2[[i]], width=1)
+      feature.recentered <- ChIPpeakAnno::reCenterPeaks(files2[[i]], width=1)
       num <- dim(as.data.frame(feature.recentered))[1]
       num_list <- c(num_list, rep(names(files2)[[i]],num))
       glist[[i]] <- feature.recentered
@@ -1750,4 +1746,3 @@ if(!is.null(integrated_bw)){
   return(bigwig_breakline(files))
 }
 }
-
