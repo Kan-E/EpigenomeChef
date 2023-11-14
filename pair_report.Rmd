@@ -4,6 +4,7 @@ date: '`r format(Sys.time(), "%y/%m/%d %H:%M")`'
 params:
     raw_count: [some object]
     input: [some object]
+    collist_bw_pair: [some object]
     norm_count: [some object]
     deg_norm_count: [some object]
     input_list_data_pair: [some object]
@@ -19,6 +20,8 @@ params:
     gene: [some object]
     int_enrich_table: [some object]
     integrated_heatlist: [some object]
+    RNAseq_file: [some object]
+    with_integrated_heatlist_plot: [some object]
 output:
   word_document
 fontsize: 10pt
@@ -32,7 +35,7 @@ try(knitr::kable(params$input_list_data_pair))
 
  - Experimental condition: 
  **`r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[1]` vs `r unique(gsub("\\_.+$", "", colnames(params$deg_norm_count)))[2]`**
- - Experimental condition: 
+ - Filter condition: 
  **`r params$input$pair_filter`**
  - Species: 
  **`r params$input$Species`**
@@ -66,19 +69,19 @@ try(magick::image_read_pdf("./DAR_result/volcano_plot.pdf"))
 \newpage
 
 ## Peak distribution
- - Annotation of up DARs (peak_distribution/up_annotation.pdf)
+ - Annotation of `r params$collist_bw_pair[2]`_high peaks (peak_distribution/`r params$collist_bw_pair[2]`_high_annotation.pdf)
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
-try(magick::image_read_pdf("./peak_distribution/up_annotation.pdf"))
+try(magick::image_read_pdf(paste0("./peak_distribution/",unique(params$collist_bw_pair)[2],"_high_annotation.pdf")))
           }}else print("No plot")
 ```
 
- - Annotation of down DARs (peak_distribution/down_annotation.pdf)
+ - Annotation of `r params$collist_bw_pair[1]`_high peaks (peak_distribution/`r params$collist_bw_pair[1]`_high_annotation.pdf)
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
-try(magick::image_read_pdf("./peak_distribution/down_annotation.pdf"))
+try(magick::image_read_pdf(paste0("./peak_distribution/",unique(params$collist_bw_pair)[1],"_high_annotation.pdf")))
           }}else print("No plot")
 ```
 
@@ -115,32 +118,32 @@ information), including single exon transcripts such as "short noncoding."
 
 ## Peak pattern
 
- - Peak pattern of up DARs (line plot: peak_pattern/up_lineplot.pdf, heatmap: peak_pattern/up_heatmap.pdf)
+ - Peak pattern of `r params$collist_bw_pair[2]`_high peaks (line plot: peak_pattern/`r params$collist_bw_pair[2]`_high_lineplot.pdf, heatmap: peak_pattern/`r params$collist_bw_pair[2]`_high_heatmap.pdf)
  
 ```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_up_range)){
-  heatmap <- magick::image_read_pdf("./peak_pattern/up_heatmap.pdf")
+  heatmap <- magick::image_read_pdf(paste0("./peak_pattern/",unique(params$collist_bw_pair)[2],"_high_heatmap.pdf"))
   heatmap
           }else print("No plot")
 ```
 ```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_up_range)){
-  line <- magick::image_read_pdf("./peak_pattern/up_lineplot.pdf")
+  line <- magick::image_read_pdf(paste0("./peak_pattern/",unique(params$collist_bw_pair)[2],"_high_lineplot.pdf"))
   line
           }else print("No plot")
 ```
  
- - Peak pattern of down DARs (line plot: peak_pattern/down_lineplot.pdf, heatmap: peak_pattern/down_heatmap.pdf)
+ - Peak pattern of `r params$collist_bw_pair[1]`_high peaks (line plot: peak_pattern/`r params$collist_bw_pair[1]`_high_lineplot.pdf, heatmap: peak_pattern/`r params$collist_bw_pair[1]`_high_heatmap.pdf)
  
 ```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_down_range)){
-  heatmap <- magick::image_read_pdf("./peak_pattern/down_heatmap.pdf")
+  heatmap <- magick::image_read_pdf(paste0("./peak_pattern/",unique(params$collist_bw_pair)[1],"_high_heatmap.pdf"))
   heatmap
           }else print("No plot")
 ```
 ```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_down_range)){
-  line <- magick::image_read_pdf("./peak_pattern/down_lineplot.pdf")
+  line <- magick::image_read_pdf(paste0("./peak_pattern/",unique(params$collist_bw_pair)[1],"_high_lineplot.pdf"))
   line
           }else print("No plot")
 ```
@@ -201,7 +204,7 @@ magick::image_read_pdf(paste0(params$base_dir,"/homer_dotplot",".pdf"))
           }else print("No plot")
 ```
 
-- known motif of up DAR (`r params$base_dir`/Up/knownResults.html)
+- known motif of `r params$collist_bw_pair[2]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[1]`_high/knownResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
@@ -211,7 +214,7 @@ try(webshot(paste0("./",params$enrich_motif[[1]],"/knownResults.html"),file="img
           }else print("Not performed")
 ```
 
-- known motif of down DAR (`r params$base_dir`/Down/knownResults.html)
+- known motif of `r params$collist_bw_pair[1]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[1]`_high/knownResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
@@ -220,7 +223,7 @@ try(webshot(paste0("./",params$enrich_motif[[2]],"/knownResults.html"),file="img
           }else print("Not performed")
 ```
 
-- unknown motif of up DAR (`r params$base_dir`/Up/homerResults.html)
+- unknown motif of `r params$collist_bw_pair[2]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[2]`_high/homerResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
@@ -229,7 +232,7 @@ try(webshot(paste0("./",params$enrich_motif[[1]],"/homerResults.html"),file="img
           }else print("Not performed")
 ```
 
-- unknown motif of down DAR (`r params$base_dir`/Down/homerResults.html)
+- unknown motif of `r params$collist_bw_pair[1]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[1]`_high/homerResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
@@ -238,11 +241,24 @@ try(webshot(paste0("./",params$enrich_motif[[2]],"/homerResults.html"),file="img
           }else print("Not performed")
 ```
  
- 
+  
+\newpage
+
+## Combined heatmap
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c(""), echo=FALSE}
+if(params$input$Species != "not selected" && params$input$integrated_heatmapButton > 0 && 
+   !is.null(params$integrated_heatlist)){
+try(magick::image_read_pdf(paste0("combined_heatmap/","combined_heatmap.pdf")))
+}else print("Not performed")
+```
+
  
 \newpage
 
 ## withRNAseq
+
+ - Type of RNA-seq data: **`r params$input$RNAseq_data_type`**
 
  - Uploaded RNAseq DEG result (file: `r params$input$pair_DEG_result$name`)
  
@@ -252,35 +268,71 @@ if(params$input$Species != "not selected" && !is.null(params$input$peak_distance
 try(knitr::kable(head(params$RNAseqDEG)))
 }
 ```
- 
- 
- - Parameters: range = `r params$input$peak_distance`kb, FoldChange = `r params$input$DEG_fc`, FDR = `r params$input$DEG_fdr`
-
- - KS plot and barplot (`r params$dirname_withRNA`/KSplot.pdf and barplot.pdf)
- 
-```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", echo=FALSE}
+```{r echo = FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
    !is.na(params$input$DEG_fc)){
-    try(magick::image_read_pdf(paste0("./",params$dirname_withRNA,"barplot.pdf")))
-          }else print("Not performed")
+      if(params$input$RNAseq_data_type != "Result"){
+    if(!is.null(params$RNAseq_file)){
+      try(knitr::kable(head(params$RNAseq_file)))
+    }
+    }
+}
 ```
-```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", echo=FALSE}
+```{r echo = FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
    !is.na(params$input$DEG_fc)){
-    try(magick::image_read_pdf(paste0("./",params$dirname_withRNA,"KSplot.pdf")))
-          }else print("Not performed")
+      if(params$input$RNAseq_data_type == "Result"){
+    if(!is.null(params$RNAseq_file)){
+      paste0(params$input$RNAseq_cond1_pair, " vs ", params$input$RNAseq_cond2_pair, "\n",
+           "Please confirm if the Log2FoldChange in the uploaded result file was calulated as Log2(",params$input$RNAseq_cond1_pair,"/",params$input$RNAseq_cond2_pair,").")
+    }
+    }
+}
 ```
 
- - Boxplot (`r params$dirname_withRNA`boxplot.pdf)
+`r paste0("Epigenome analysis: ",unique(params$collist_bw_pair)[1], " vs ", unique(params$collist_bw_pair)[2], "\n",
+             "RP > 0 genes have a higher epigenetic potential in ", unique(params$collist_bw_pair)[2]," condition.\n",
+             "RP < 0 genes have a higher epigenetic potential in ", unique(params$collist_bw_pair)[1]," condition.\n",
+             "RP = 0 genes have no significant difference in epigenetic potential between ", unique(params$collist_bw_pair)[1], " and ", unique(params$collist_bw_pair)[2]," conditions.")`
+
+- Mode: `r params$input$RNAseq_mode`
+
+```{r echo = FALSE, results='asis'}
+if(params$input$RNAseq_mode == "Gene_scan") {
+  try(cat(paste0("range: **", params$input$peak_distance,"** kb\n\n")))
+}
+```
+
+ - Parameters: FoldChange = `r params$input$DEG_fc`, FDR = `r params$input$DEG_fdr`
+ 
+  - Boxplot (`r params$dirname_withRNA`boxplot.pdf)
+  
 ```{r, out.height=255.68181, out.width=357.954534, include=TRUE, fig.align="center", echo=FALSE}
-if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
-   !is.na(params$input$DEG_fc)){
+if(params$input$Species != "not selected" && !is.null(params$RNAseqDEG) && 
+   !is.na(params$input$DEG_fdr) && !is.na(params$input$DEG_fc)){
  path = paste0("./",params$dirname_withRNA,"boxplot.pdf")
  try(magick::image_read_pdf(path,density = 300))
           }else print("Not performed")
 ```
 
+ - KS plot and barplot (`r params$dirname_withRNA`/KSplot.pdf and barplot.pdf)
+ 
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
+if(params$input$Species != "not selected" &&  !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc)){
+    try(magick::image_read_pdf(paste0("./",params$dirname_withRNA,"barplot.pdf")))
+          }else print("Not performed")
+```
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
+if(params$input$Species != "not selected" &&  !is.null(params$RNAseqDEG) && 
+   !is.na(params$input$DEG_fdr) && !is.na(params$input$DEG_fc)){
+    try(magick::image_read_pdf(paste0("./",params$dirname_withRNA,"KSplot.pdf")))
+          }else print("Not performed")
+```
+
+
  - summary table (paste0(dirname_withRNA,"RP_summary.txt"))
+ 
 ```{r echo = FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
    !is.na(params$input$DEG_fc)){
@@ -288,10 +340,10 @@ try(knitr::kable(head(params$RP_all_table)))
 }
 ```
  
- - Selected table (.bed) (`r params$dirname_withRNA`/selected_bed(RNA-epigenome)/)
- - Selected table (.txt) (`r params$dirname_withRNA`/selected_table(RNA-epigenome)/)
+ - Selected table (.bed) (`r params$dirname_withRNA`/selected_bed(epigenome:RNA)/)
+ - Selected table (.txt) (`r params$dirname_withRNA`/selected_table(epigenome:RNA)/)
 
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c(""), echo=FALSE}
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected" && !is.null(params$input$peak_distance) && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
    !is.na(params$input$DEG_fc) && !is.null(params$input$RP_table_rows_selected) && 
    !is.null(params$int_goi_promoter_position) && !is.null(params$int_goi_gene_position) &&
@@ -320,16 +372,10 @@ try(knitr::kable(table, escape = F))
 }
 ```
  
- 
-\newpage
-
-## Combined heatmap
-
-```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c(""), echo=FALSE}
-if(params$input$Species != "not selected" && params$input$integrated_heatmapButton > 0 && 
-   !is.null(params$integrated_heatlist)){
-try(magick::image_read_pdf(paste0("combined_heatmap/","combined_heatmap.pdf")))
-}else print("Not performed")
+ - Combined heatmap (`r paste0(params$dirname_withRNA,"combined_heatmap/combined_heatmap.pdf")`)
+```{r echo = FALSE}
+if(params$input$Species != "not selected" && !is.null(params$RNAseqDEG) && !is.na(params$input$DEG_fdr) && 
+   !is.na(params$input$DEG_fc) && !is.null(params$input$Group_integrated_heatmap)){
+try(magick::image_read_pdf(paste0(params$dirname_withRNA,"combined_heatmap/combined_heatmap.pdf")))
+}
 ```
-
-

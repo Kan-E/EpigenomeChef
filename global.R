@@ -50,10 +50,7 @@ library(plotly,verbose=FALSE)
 library('shinyjs', verbose = FALSE)
 library(BiocManager)
 library(clusterProfiler.dplyr)
-library(dorothea)
 library(GenomicRanges)
-library(ChIPseeker)
-
 library(rGREAT)
 library(FindIT2)
 library(limma)
@@ -198,6 +195,7 @@ files_name2ENTREZID <- function(files,Species,gene_type){
     }else{
       if(gene_type[name] != "SYMBOL"){
         if(str_detect(rownames(count)[1], "FBgn")){
+          count <- as.data.frame(count)
           count$ENTREZID <- rownames(count)
           count2 <- count %>% dplyr::select(ENTREZID, everything())
         }else{
@@ -777,7 +775,6 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
     df2 <- list()
     path <- paste0(format(Sys.time(), "%Y%m%d_%H%M_homer_"),back,"_size-",size)
     dir.create(path = path)
-    print(group_name)
     for(name in group_name){
       group_dir <- paste0(path, "/",name)
       dir.create(path = group_dir)
@@ -907,7 +904,13 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL){
     colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
                        "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct","motif_pwm","log_odds_detection","Group")
     if(!is.null(section)){
-      if(section == "venn"){
+      if(section == "withRNAseq"){
+        df2$Group <- gsub("--", ":\n", df2$Group)
+        df2$Group <- gsub("_", " ", df2$Group)
+        for(i in 1:length(df2$Group)){
+          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
+        }
+      }else if(section == "venn"){
         df2$Group <- gsub("- ", "- ", df2$Group)
         for(i in 1:length(df2$Group)){
           df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
@@ -962,7 +965,7 @@ files2GRangelist <- function(files){
 }
 
 integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 1, 
-                                padj_threshold = 0.05,up_name="up",down_name="down") {
+                                padj_threshold = 0.05,name=NULL) {
   if ("GRanges" %in% class(result_geneRP)) {
     stop("sorry, please use the the simplify result or metadata(fullRP_hit)$peakRP_gene", 
          call. = FALSE)
@@ -970,14 +973,17 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
   merge_result <- dplyr::left_join(result_geneRP, result_geneDiff, 
                                    by = "gene_id")
   allGenes_N <- as.double(nrow(merge_result))
-  merge_result <- merge_result %>% dplyr::mutate(diff_rank = rank(padj, 
-                                                                  na.last = "keep"), diff_rank = dplyr::case_when(is.na(diff_rank) ~ 
-                                                                                                                    allGenes_N, TRUE ~ diff_rank), rankProduct = RP_rank * 
-                                                   diff_rank, rankOf_rankProduct = rank(rankProduct)) %>% 
-    dplyr::arrange(rankOf_rankProduct) %>% dplyr::mutate(gene_category = dplyr::case_when(log2FoldChange > 
-                                                                                            lfc_threshold & padj < padj_threshold ~ up_name, log2FoldChange < 
-                                                                                            -lfc_threshold & padj < padj_threshold ~ down_name, TRUE ~ "NS"), 
-                                                         gene_category = factor(gene_category, levels = c(up_name,down_name, "NS")))
+  if(length(name) <= 2 && length(merge_result$padj) != 0){
+    up_name=name[2]
+    down_name=name[1]
+  merge_result <- merge_result %>% 
+    dplyr::mutate(diff_rank = rank(padj, na.last = "keep"), 
+                  diff_rank = dplyr::case_when(is.na(diff_rank) ~ allGenes_N, TRUE ~ diff_rank), 
+                  rankProduct = RP_rank * diff_rank, rankOf_rankProduct = rank(rankProduct)) %>% 
+    dplyr::arrange(rankOf_rankProduct) %>% 
+    dplyr::mutate(gene_category = dplyr::case_when(log2FoldChange > lfc_threshold & padj < padj_threshold ~ up_name, 
+                                                   log2FoldChange < -lfc_threshold & padj < padj_threshold ~ down_name, 
+                                                   TRUE ~ "NS"), gene_category = factor(gene_category, levels = c(up_name,down_name, "NS")))
   upGenes_rank <- filter(merge_result, gene_category == up_name)$RP_rank
   downGenes_rank <- filter(merge_result, gene_category == down_name)$RP_rank
   staticGenes_rank <- filter(merge_result, gene_category == 
@@ -1000,15 +1006,19 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
   }
   #bonfferoni correction
   up_static_pvalue <- suppressWarnings(ks.test(upGenes_rank, 
-                                               staticGenes_rank)$p.value * 2)
+                                               staticGenes_rank)$p.value)
   if(up_static_pvalue > 1) up_static_pvalue <- 1
   down_static_pvalue <- suppressWarnings(ks.test(downGenes_rank, 
-                                                 staticGenes_rank)$p.value * 2)
+                                                 staticGenes_rank)$p.value)
   if(down_static_pvalue > 1) down_static_pvalue <- 1
   ks_test <- paste0("\n Kolmogorov-Smirnov Tests ", "\n pvalue of ",up_name," vs NS: ", 
                     format(up_static_pvalue, digits = 3, scientific = TRUE), 
                     "\n pvalue of ", down_name," vs NS: ", format(down_static_pvalue, 
                                                                   digits = 3, scientific = TRUE))
+  df <- data.frame(Group=c(paste0(up_name, " vs NS"), paste0(down_name, " vs NS")),
+                   pvalue=c(up_static_pvalue, down_static_pvalue))
+  padj <- p.adjust(df$pvalue,method="BH")
+  df$padj <- padj
   annotate_df <- data.frame(xpos = -Inf, ypos = Inf, annotateText = ks_test, 
                             hjustvar = 0, vjustvar = 1)
   p <- merge_result %>% ggplot2::ggplot(aes(x = RP_rank)) + 
@@ -1017,7 +1027,35 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
                                                y = ypos, hjust = hjustvar, vjust = vjustvar, label = annotateText)) + 
     ggplot2::xlab("Regulatory potential rank\n(RP-high gene -> RP-low gene)") + ggplot2::ylab("Cumulative Probability")+
     ggplot2::scale_x_continuous(expand = c(0,0)) + ggplot2::theme_bw(base_size = 15) + guides(color=guide_legend(title="Expression\nstatus"))+ 
-    ggplot2::scale_color_manual(breaks = c(up_name,down_name,"NS"),values = c("#F8766D","#00BFC4","grey"))
+    ggplot2::scale_color_manual(breaks = c(up_name,down_name,"NS"),values = c("#F8766D","#00BFC4","grey"))+theme(aspect.ratio = 1)
+  }else{
+    merge_result$Group[is.na(merge_result$Group)] <- "Other"
+    NS_rank <- filter(merge_result, Group == "Other")$RP_rank
+    Genes_rank <- list()
+    static_pvalue <- list()
+    df <- data.frame(matrix(rep(NA, 3), nrow=1))[numeric(0), ]
+    for(name in unique(merge_result$Group)){
+      if(name != "Other"){
+      Genes_rank[name] <- list(dplyr::filter(merge_result, Group == name)$RP_rank)
+      static_pvalue[name] <- list(ks.test(Genes_rank[[name]],NS_rank)$p.value)
+      df2 <- data.frame(Group = paste0(name," vs Other"), pvalue = static_pvalue[[name]])
+      df <- rbind(df, df2)
+      }
+    }
+    padj <- p.adjust(df$pvalue,method="BH")
+    df$padj <- padj
+    annotate_df <- data.frame(xpos = -Inf, ypos = Inf, annotateText = NA, 
+                              hjustvar = 0, vjustvar = 1)
+    p <- merge_result %>% 
+      ggplot2::ggplot(aes(x = RP_rank)) + 
+      ggplot2::stat_ecdf(aes(color = Group), geom = "line") + 
+      ggplot2::geom_text(data = annotate_df, aes(x = xpos, 
+                                                 y = ypos, hjust = hjustvar, vjust = vjustvar, label = annotateText)) + 
+      ggplot2::xlab("Regulatory potential rank\n(RP-high gene -> RP-low gene)") + ggplot2::ylab("Cumulative Probability")+
+      ggplot2::scale_x_continuous(expand = c(0,0)) + ggplot2::theme_bw(base_size = 15) + guides(color=guide_legend(title="Expression\nstatus"))+ 
+      theme(aspect.ratio = 1)
+  }
+  p$statistics <- df
   return(p)
 }
 
@@ -1080,7 +1118,7 @@ enrich_gene_list <- function(data, Gene_set, H_t2g, org){
   }
 }
 
-enrich_genelist <- function(data, enrich_gene_list, showCategory=5){
+enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL){
   if(is.null(data) || is.null(enrich_gene_list)){
     return(NULL)
   }else{
@@ -1104,6 +1142,11 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5){
     if ((length(df$Description) == 0) || length(which(!is.na(unique(df$qvalue)))) == 0) {
       p1 <- NULL
     } else{
+      if(!is.null(type)){
+        if(type == "withRNAseq"){
+          df$Group <- gsub(":", ":\n", df$Group)
+        }
+      }
       df$GeneRatio <- DOSE::parse_ratio(df$GeneRatio)
       df <- dplyr::filter(df, !is.na(qvalue))
       df$Description <- gsub("_", " ", df$Description)
@@ -1236,12 +1279,11 @@ RNAseqDEGimport <- function(tmp,exampleButton){
     }
   })
 }
-RNAseqDEG_ann <- function(RNAdata,Species,gene_type){
-  RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
+RNAseqDEG_ann <- function(RNAdata,Species,gene_type,input_type=NULL){
+  if(input_type != "List") RNAdata$log2FoldChange <- -RNAdata$log2FoldChange
   if(str_detect(rownames(RNAdata)[1], "FBgn")){
     RNAdata$gene_id <- rownames(RNAdata)
     data <- RNAdata
-    data <- merge(RNAdata, gene_IDs, by="Symbol")
   }else{
   if(gene_type != "SYMBOL"){
     my.symbols <- gsub("\\..*","", rownames(RNAdata))
@@ -1261,24 +1303,92 @@ RNAseqDEG_ann <- function(RNAdata,Species,gene_type){
   }
   return(data)
 }
-mmAnno <- function(peak,genomic_region=NULL,txdb,peak_distance){
+mmAnno <- function(peak,genomic_region=NULL,txdb,peak_distance,mode=NULL,group_name,distribution,DAR){
   if(!is.null(peak)){
-    if(!is.null(genomic_region)){
     if(genomic_region == "Promoter"){ 
       peak <- peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
       peak <- with(peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
-    }}
-    range <- peak_distance * 1000
-    mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
-    if(length(as.data.frame(peak)$seqnames) != 0){
-      mmAnno_up <- mm_geneScan(peak, txdb,upstream = range,downstream = range)
-    }else mmAnno_up <- NULL
-    return(mmAnno_up)
+      if(length(as.data.frame(peak)$seqnames) != 0){
+        mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
+        mmAnno_up <- mm_nearestGene(peak,txdb)
+        mmAnno_up$Group <- group_name
+      }
+    }else{
+      range <- peak_distance * 1000
+      if(mode == "Gene_scan"){
+        if(is.null(peak_distance)) validate("")
+        if(genomic_region != "Promoter"){ 
+          withProgress(message = paste0("Preparing annotation of ", group_name," peaks"),{
+            anno <- distribution
+            incProgress(1)
+          })
+          promoter <- subset(anno, geneLevel %in% "promoter")
+          other <- subset(anno, ! geneLevel %in% "promoter")
+          if(length(as.data.frame(promoter)$seqnames) != 0){
+            mcols(promoter) <- DataFrame(feature_id = paste0("peak_", seq_len(length(promoter))))
+            promoter_scan <- mm_geneScan(promoter, txdb,upstream = 2000,downstream = 100)
+            promoter_scan <- promoter_scan %>% plyranges::filter(distanceToTSS >= -2000 & distanceToTSS <= 100)
+          }else promoter_scan <- NULL
+          if(length(as.data.frame(other)$seqnames) != 0){
+            mcols(other) <- DataFrame(feature_id = paste0("peak_", seq_len(length(other))))
+            other_scan <- mm_geneScan(other, txdb,upstream = range,downstream = range)
+            other_scan <- other_scan %>% plyranges::filter(abs(distanceToTSS) <= range)
+          }else other_scan <- NULL
+          mmAnno_up <- plyranges::bind_ranges(promoter_scan, other_scan)
+        }
+        mmAnno_up$Group <- group_name
+      }else{
+        if(length(as.data.frame(peak)$seqnames) != 0){
+          mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
+          mmAnno_up <- mm_nearestGene(peak,txdb)
+          mmAnno_up <- mmAnno_up %>% plyranges::filter(abs(distanceToTSS) <= range)
+          mmAnno_up$Group <- group_name
+        }
+      }
+    }
+    if(!is.null(DAR)){
+    if(genomic_region == "Promoter") {
+      DAR <- data.frame(locus = DAR$locus,log2FoldChange = DAR[,2])
+    }else DAR <- data.frame(locus = rownames(DAR),log2FoldChange = DAR[,2])
+    mmano <- as.data.frame(mmAnno_up)
+    mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
+    print("mmano")
+    print(head(mmano))
+    print(head(DAR))
+    merge <- merge(mmano,DAR, by = "locus")
+    merge2<-with(merge,GRanges(seqnames,IRanges(start,end),
+                               feature_id = feature_id,
+                               gene_id = gene_id, distanceToTSS = distanceToTSS,
+                               Group = Group, Log2FoldChange = log2FoldChange))
+    print("merge2")
+    print(head(merge2))
+    return(merge2)
+    }else return(mmAnno_up)
   }else return(NULL)
 }
+DAR_withRNAseq <- function(DAR,genomic_region=NULL,Species){
+  if(genomic_region == "Promoter"){ 
+    if(str_detect(rownames(DAR)[1], "FBgn")){
+      DAR <- DAR
+    }else{
+      my.symbols <- rownames(DAR)
+      gene_IDs<-id_convert(my.symbols, Species,type="SYMBOL_single")
+      colnames(gene_IDs) <- c("Symbol", "gene_id")
+      gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T) %>% distinct(gene_id, .keep_all = T)
+      gene_IDs <- data.frame(row.names = gene_IDs$Symbol, gene_id = gene_IDs$gene_id)
+      data <- merge(DAR, gene_IDs, by=0)
+      locus <- as.data.frame(promoter_region())
+      locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
+      DAR <- merge(data,locus,by="gene_id")
+      DAR <- DAR[,-2]
+    }
+  }  
+  return(DAR)
+} 
+
 RP_f <- function(mmAnno,txdb){
   if(!is.null(mmAnno)) {
-    result_geneRP_up <- calcRP_TFHit(mmAnno = mmAnno,Txdb = txdb)
+    result_geneRP_up <- modified_calcRP_TFHit(mmAnno = mmAnno,Txdb = txdb)
   }else result_geneRP_up <- NULL
   if(!is.null(result_geneRP_up)) {
     result_geneRP <-result_geneRP_up
@@ -1287,11 +1397,12 @@ RP_f <- function(mmAnno,txdb){
     return(result_geneRP)
   }else return(NULL)
 }
-regulatory_potential_f <- function(species,data,result_geneRP,DEG_fc,DEG_fdr){
+regulatory_potential_f <- function(species,data,result_geneRP,DEG_fc,DEG_fdr,name){
   if(species != "not selected"){
     merge_data <- integrate_ChIP_RNA(
       result_geneRP = result_geneRP,
-      result_geneDiff = data,lfc_threshold = log(DEG_fc,2),padj_threshold = DEG_fdr
+      result_geneDiff = data,lfc_threshold = log(DEG_fc,2),padj_threshold = DEG_fdr,
+      name=name
     )
     return(merge_data)
   }
@@ -1400,6 +1511,87 @@ ref_for_GREAT <- function(Species){
           "Arabidopsis thaliana (tair10)" = source <- "TxDb.Athaliana.BioMart.plantsmart51")
   return(source)
 }
+getVennCounts <- function(peaks,
+                          conds = names(peaks),
+                          conds_order = conds,
+                          stranded = FALSE,
+                          plot = FALSE){
+  
+  if(!is.list(peaks)){ stop("'peaks' must be a (named) list of dataframes with the columns 'seqnames', 'start' and 'end'.") }
+  else if(is.null(conds)){ stop("'conds' must a not-NULL character vector with the conditions of the data frames in 'peaks.") }
+  else if(length(peaks) != length(conds)){ stop("'peaks' and 'conds' must have the same length.") }
+  
+  len <- length(peaks)
+  
+  # Change strand values to accepted values (e.g. . to *)
+  peaks <- peaks %>% purrr::map(~dplyr::mutate(.x, strand = if_else(strand %in% c(".", "*", "\\.", "\\*"), "*", strand)))
+  
+  # Set names of the elements in the list
+  peaks <- peaks %>% purrr::set_names(nm = conds)
+  
+  # If stranded, separate...
+  if(!stranded){
+    
+    overlaps <- suppressMessages(peaks %>%
+                                   purrr::map(~plyranges::as_granges(.x)) %>%
+                                   ChIPpeakAnno::makeVennDiagram(Peaks = ., NameOfPeaks = conds, plot = plot, ignore.strand = !stranded))
+    
+    overlaps <- overlaps$vennCounts
+    
+  } else {
+    
+    # Separate peaks by strand
+    peaks_plus     <- peaks %>% purrr::map(~dplyr::filter(.x, strand == "+"))
+    peaks_minus    <- peaks %>% purrr::map(~dplyr::filter(.x, strand == "-"))
+    peaks_nostrand <- peaks %>% purrr::map(~dplyr::filter(.x, strand %in% c(".", "*", "\\.", "\\*"))) %>% purrr::map(~dplyr::mutate(.x, strand = "*"))
+    
+    # Overlap peaks by strand
+    overlaps_plus     <- suppressMessages(peaks_plus %>% purrr::map(~plyranges::as_granges(.x)) %>%
+                                            ChIPpeakAnno::makeVennDiagram(Peaks = ., NameOfPeaks = conds, plot = plot))
+    
+    overlaps_minus    <- suppressMessages(peaks_minus %>% purrr::map(~plyranges::as_granges(.x)) %>%
+                                            ChIPpeakAnno::makeVennDiagram(Peaks = ., NameOfPeaks = conds, plot = plot))
+    
+    overlaps_nostrand <- suppressMessages(peaks_nostrand %>% purrr::map(~plyranges::as_granges(.x)) %>%
+                                            ChIPpeakAnno::makeVennDiagram(Peaks = ., NameOfPeaks = conds, plot = plot))
+    
+    overlaps_plus     <- overlaps_plus$vennCounts
+    overlaps_minus    <- overlaps_minus$vennCounts
+    overlaps_nostrand <- overlaps_nostrand$vennCounts
+    
+    overlaps <- overlaps_plus
+    for (i in 1:nrow(overlaps)){
+      
+      overlaps[i,ncol(overlaps)] <- sum(overlaps_plus[i,ncol(overlaps)], overlaps_minus[i,ncol(overlaps)], overlaps_nostrand[i,ncol(overlaps)])
+      
+    }
+  }
+  
+  # Create matrix of overlapping peaks
+  matrix <- matrix(data = rep(0, len), ncol = len, byrow=T) %>% set_colnames(conds)
+  for(row in 1:nrow(overlaps)){
+    
+    counts <- overlaps[row, len+1]
+    
+    m <- matrix(rep(overlaps[row, 1:len], counts), ncol = len, byrow = T)
+    
+    matrix <- rbind(matrix, m)
+    
+  }
+  
+  x <- matrix %>%
+    na.omit %>%
+    as.data.frame() %>%
+    dplyr::mutate(rowSum = rowSums(.)) %>%
+    dplyr::filter(rowSum != 0) %>%
+    dplyr::mutate(peak = paste("peak", 1:nrow(.), sep = "")) %>%
+    dplyr::select(peak, everything(), -rowSum)
+  
+  return(list("matrix" = x, "vennCounts" = overlaps))
+  
+  
+  
+}
 ggVennPeaks <- function (peak_list, peak_names = names(peak_list), percent = TRUE, 
           stranded = FALSE, true_overlaps = FALSE, in_fill = c("blue", 
                                                                      "gold3"), alpha = 0.4, out_color = "black", name_color = "black", 
@@ -1436,6 +1628,7 @@ ggVennPeaks <- function (peak_list, peak_names = names(peak_list), percent = TRU
   peaks2 <- peak_list[[2]] %>% plyranges::as_granges()
   overlaps1 <- plyranges::filter_by_overlaps(peaks1, peaks2)
   overlaps2 <- plyranges::filter_by_overlaps(peaks2, peaks1)
+  print(class(peak_list))
   x <- getVennCounts(peaks = peak_list, conds = peak_names, 
                      stranded = stranded)
   y <- x$matrix %>% as_tibble() %>% magrittr::set_colnames(c("Peak", 
@@ -1465,10 +1658,10 @@ peak_pattern_function <- function(grange, files,rg = NULL,additional=NULL,plot=T
   }
   range <- c()
   for(n in length(names(files))) {range <- c(range, rg)}
-  heat <- featureAlignedHeatmap(sig, feature.center,
+  heat <- ChIPpeakAnno::featureAlignedHeatmap(sig, feature.center,
                                 upstream=2000, downstream=2000,
                                 upper.extreme=range,color = brewer.pal(n = 9, name = 'OrRd'))
-  line <- featureAlignedDistribution(sig, feature.center,
+  line <- ChIPpeakAnno::featureAlignedDistribution(sig, feature.center,
                                      upstream=2000, downstream=2000,
                                      type="l")
   df <- list()
@@ -1564,9 +1757,16 @@ pdf_w <- function(rowlist){
 }
 
 batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
-                          color=c("white", "red"),signal="signal"){
+                          color=c("white", "red"),signal="signal",withRNAseq=FALSE){
   ht_list <- NULL
   perc <- 0
+  if(withRNAseq == F){
+    names(files2) <- gsub("\\..+$", "",names(files2))
+    names(files2) <- gsub("_", " ",names(files2))
+    for(i in 1:length(names(files2))){
+      names(files2)[i] <- paste(strwrap(names(files2)[i], width = 15),collapse = "\n")
+    }
+  }
   withProgress(message = "Preparing heatmap",{
   for(k in 1:length(names(files_bw))){
     perc<-perc+1
@@ -1591,10 +1791,12 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
     name <- gsub("-", " ", name)
     name <- paste(strwrap(name, width = 8),collapse = "\n")
     name <- gsub(" ", "\\_", name)
+    print("heat")
+    print(unique(num_list))
     ht <- EnrichedHeatmap(mat1, split = num_list, col = color,name=name,
                           axis_name = axis_name,pos_line = F,
                           column_title =name,use_raster=TRUE, row_title_rot = 0,
-                          top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:4, lty = 1),
+                          top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:8, lty = 1),
                                                                                       axis_param = list(side = "right", facing = "inside"))))
     ht_list <- ht_list + ht
     list <- list()
@@ -1606,12 +1808,16 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
   })
   return(list)  
 }
-lgd <- function(files2){
+lgd <- function(files2,withRNAseq=FALSE){
+  if(withRNAseq == F){
   leg_name <- gsub("\\..+$", "",names(files2))
   leg_name <- gsub("_", " ",leg_name)
   for(i in 1:length(leg_name)){
     leg_name[i] <- paste(strwrap(leg_name[i], width = 15),collapse = "\n")
   }
+  }else leg_name <- names(files2)
+  print(leg_name)
+  leg_name <- sort(leg_name)
   lgd = Legend(at = leg_name, title = "Group", 
                type = "lines", legend_gp = gpar(col = 1:8))
   return(lgd)
@@ -1745,4 +1951,86 @@ if(!is.null(integrated_bw)){
   }
   return(bigwig_breakline(files))
 }
+}
+
+
+modified_calcRP_TFHit <- function (mmAnno, Txdb, decay_dist = 1000, report_fullInfo = FALSE, 
+                                   verbose = TRUE) 
+{
+  peak_scaned_center <- GenomicRanges::resize(mmAnno, width = 1, 
+                                              fix = "center")
+  all_gene_location <- GenomicFeatures::genes(Txdb)
+  gene_scaned <- all_gene_location[mmAnno$gene_id]
+  gene_scaned_TSS <- GenomicRanges::resize(gene_scaned, width = 1, 
+                                           fix = "start")
+  mmAnno$centerToTSS <- GenomicRanges::distance(peak_scaned_center, 
+                                                gene_scaned_TSS)
+  scan_result <- as.data.frame(mmAnno)
+    if (verbose) {
+      message(">> calculating RP using centerToTSS and TF hit\t\t", 
+              format(Sys.time(), "%Y-%m-%d %X"))
+    }
+  if(length(mmAnno$Log2FoldChange) != 0) {
+    mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist/2^abs(mmAnno$Log2FoldChange))
+  }else mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist)
+  if (verbose) {
+    message(">> merging all info together\t\t", format(Sys.time(), 
+                                                       "%Y-%m-%d %X"))
+  }
+  peakRP_gene <- mcols(mmAnno) %>% data.frame(stringsAsFactors = FALSE) %>% 
+    dplyr::group_by(gene_id) %>% dplyr::summarise(withPeakN = dplyr::n(), 
+                                                  sumRP = sum(RP)) %>% dplyr::arrange(-sumRP) %>% dplyr::mutate(RP_rank = rank(-sumRP))
+  if (verbose) {
+    message(">> done\t\t", format(Sys.time(), "%Y-%m-%d %X"))
+  }
+  if (report_fullInfo) {
+    metadata(mmAnno)$peakRP_gene <- peakRP_gene
+    return(mmAnno)
+  }
+  else {
+    return(peakRP_gene)
+  }
+}
+donut_replot <- function(dat){
+  labs <- list(geneLevel=c(promoter="Promoter",
+                           geneDownstream="Downstream",
+                           geneBody="Gene body",
+                           distalIntergenic="Distal Intergenic"),
+               ExonIntron=c(exon="Exon",
+                            intron="Intron",
+                            intergenic="Intergenic"),
+               Exons=c(utr5="5' UTR",
+                       utr3="3' UTR",
+                       CDS="CDS",
+                       otherExon="Other exon"))
+  labelCols = c(promoter="#D55E00",
+                geneDownstream="#E69F00",
+                geneBody="#51C6E6",
+                distalIntergenic="#AAAAAA",
+                exon="#009DDA",
+                intron="#666666",
+                intergenic="#DDDDDD",
+                utr5="#0072B2",
+                utr3="#56B4E9",
+                CDS="#0033BF",
+                otherExon="#009E73",
+                undefined="#FFFFFF")
+  l <- unlist(unname(labs))
+  l1 <- paste0(l, " (",
+               round(dplyr::filter(dat,source=="rep1")$percentage[match(names(l), dplyr::filter(dat,source=="rep1")$type)]*100,
+                     digits = 1), "%)")
+  names(l1) <- names(l)
+  l1 <- c(l1, undefined="")
+  p <- ggplot(dat, 
+              aes_string(x="category", y="percentage", 
+                         fill="type"))+
+    geom_col() +
+    coord_polar("y") + 
+    geom_text(data = subset(dat, !duplicated(dat$category)),
+              aes_string(x="category", label="category"),
+              y=1) +
+    theme_void() + 
+    scale_fill_manual(values = labelCols, labels=l1, name=NULL,
+                      guide = guide_legend(reverse=TRUE))
+  return(p)
 }
