@@ -577,7 +577,6 @@ shinyServer(function(input, output, session) {
       colnames(count) <- gsub("\\-","\\_",colnames(count))
       collist<- gsub("\\-","\\_",collist)
       collist<- factor(collist, levels = unique(collist),ordered = TRUE)
-      print(collist)
       eset = new("ExpressionSet", exprs=as.matrix(count))
       design <- model.matrix(~0+collist)
       colnames(design) <- factor(unique(collist),levels = unique(collist))
