@@ -546,7 +546,7 @@ shinyServer(function(input, output, session) {
   ##pair-wise deseq2--------
   collist_bw_pair <- reactive({
     count <- bw_count()
-    collist <- factor(gsub("\\_.+$", "", colnames(count)))
+    collist <- gsub("\\_.+$", "", colnames(count))
     return(collist)
   })
   dds <- reactive({
@@ -602,8 +602,11 @@ shinyServer(function(input, output, session) {
       if(input$data_file_type == "Row2"){
         count <- bw_count()
         collist <- collist_bw_pair()
-        dds <- dds()
         contrast <- c("con", unique(collist))
+        print(unique(collist))
+        print(dds())
+        dds <- dds()
+        print(contrast)
         res <- results(dds,  contrast = contrast)
         res <- as.data.frame(res)
       }
