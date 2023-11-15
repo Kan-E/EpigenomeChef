@@ -54,18 +54,20 @@ shinyUI(
                           align="center"),br(),br(),style={'background-color:mintcream;font-size: 16px;'},
                  ),
                  column(12,br(),
-                        h3("Pair-wise DAR detects and visualizes differentially accessible regions"),br(),
-                        img(src="pair-wise_DAR.png", width = 1200,height = 1600),br(),br(),hr(),
-                        h3("Venn diagram detects and visualizes the overlap between DARs from multiple datasets"),br(),
-                        img(src="Venn.png", width = 1200,height = 700),br(),br(),hr(), 
-                        h3("Clustering identifies similar samples and DNA binding patterns by clustering methods"),br(),
-                        img(src="Clustering.png", width = 1000,height = 900),br(),hr(),
-                        img(src="combined.png", width = 1200,height = 600),br(),hr(),
+                        h3("'Pair-wise' detects and visualizes differentially accessible regions"),br(),
+                        div(img(src="pair-wise_DAR.png", width = 1200,height = 1800), style="text-align: center;"),br(),br(),hr(),
+                        fluidRow(
+                        column(5,h3("'Venn diagram' detects and visualizes the overlap between peaks from multiple datasets")),
+                        column(7,h3("'Peaks of interest' dissects the annotation, function, motif, and correlation with gene expression of peaks of interest."))
+                        ),br(),
+                        div(img(src="Venn.png", width = 1200,height = 1600), style="text-align: center;"),br(),br(),hr(), 
+                        h3("'Clustering' identifies similar samples and DNA binding patterns by clustering methods"),br(),
+                        div(img(src="Clustering.png", width = 1000,height = 700), style="text-align: center;"),br(),hr(),
                  )
                )
       ),
       # pair-wise -------------------------------------
-      tabPanel("Pair-wise DAR",
+      tabPanel("Pair-wise",
                sidebarLayout(
                  # sidebar---------------------------------
                  sidebarPanel(
@@ -172,7 +174,7 @@ shinyUI(
                                            strong("Volcano-plot:"), "height = 4, width = 4 <br>",
                                            strong("Heatmap:"), "height = 4, width = 3 <br>",
                                            strong("Trackplot:"), "height = 4, width = 7 <br>",
-                                           strong("Peak distribution:"), "height = 6, width = 10 <br>",
+                                           strong("Annotation:"), "height = 6, width = 10 <br>",
                                            strong("Peak pattern heatmap:"), "height = 6, width = 6 <br>",
                                            strong("Peak pattern line plot:"), "height = 5, width = 5 <br>",
                                            strong("Dotplot (GREAT):"), "height = 5, width = 6 <br>",
@@ -286,7 +288,7 @@ shinyUI(
                                          bsCollapsePanel(title="DAR result:",
                                                          value="DEG_panel",
                                                          fluidRow(
-                                                           column(4, downloadButton("download_pair_DEG_result", "Download DAR result"))
+                                                           column(4, downloadButton("download_pair_DEG_result", "Download result"))
                                                          ),
                                                          DTOutput("DEG_result")
                                          ),
@@ -319,8 +321,8 @@ shinyUI(
                                                          dataTableOutput("pair_PCA_data")
                                          )
                               )),
-                     tabPanel("Peak distribution",
-                              downloadButton("download_input_peak_distribution", "Download distribution"),
+                     tabPanel("Annotation",
+                              downloadButton("download_input_peak_distribution", "Download plot"),
                               textOutput("Spe_dist_promoter"),
                                      tags$head(tags$style("#Spe_dist_promoter{color: red;
                                  font-size: 20px;
@@ -334,7 +336,7 @@ shinyUI(
                               plotOutput("input_peak_distribution"),
                               downloadButton("download_input_peak_distribution_table", "Download table"),
                               dataTableOutput("up_distribution_table"),
-                              downloadButton("download_deg_peak_distribution", "Download blue DAR distribution"),
+                              downloadButton("download_deg_peak_distribution", "Download plot"),
                               plotOutput("deg_peak_distribution"),
                               downloadButton("download_down_peak_distribution_table", "Download table"),
                               dataTableOutput("down_distribution_table"),
@@ -749,7 +751,7 @@ shinyUI(
                    bsPopover("venn_pdf_icon", "Output plot size setting for pdf (default: 0): ", 
                              content=paste("You can adjust the plot size by using", strong('pdf_height'), "and", strong('pdf_width'), "parameters.<br>", 
                                            "Default size: <br>",strong("Venn diagram:"), "height = 3, width = 3<br>", 
-                                           strong("Peak distribution:"), "height = 4.5, width = 6 <br>",
+                                           strong("Annotation:"), "height = 4.5, width = 6 <br>",
                                            strong("Peak pattern heatmap:"), "height = 6, width = 6 <br>",
                                            strong("Peak pattern line plot:"), "height = 5, width = 5 <br>",
                                            strong("Track plot:"), "height = 4, width = 7 <br>",
@@ -807,7 +809,7 @@ shinyUI(
                      ),
                      tabPanel("Annotation",
                               fluidRow(
-                                column(4, downloadButton("download_venn_peak_distribution", "download peak distribution"))
+                                column(4, downloadButton("download_venn_peak_distribution", "download annotation"))
                               ),
                               textOutput("Spe_venn_distribution"),
                               tags$head(tags$style("#Spe_venn_distribution{color: red;
@@ -1232,7 +1234,7 @@ shinyUI(
                                            strong("Correlation plot:"), "height = 5, width = 7<br>", 
                                            strong("Heatmap:"), "height = 10, width = 7<br>", 
                                            strong("Trackplot:"), "height = 4, width = 7 <br>",
-                                           strong("Peak distribution:"), "height = 6, width = 10 <br>",
+                                           strong("Annotation:"), "height = 6, width = 10 <br>",
                                            strong("Peak pattern heatmap:"), "height = 6, width = 6 <br>",
                                            strong("Peak pattern line plot:"), "height = 5, width = 5 <br>",
                                            strong("Dotplot (GREAT):"), "height = 5, width = 6 <br>",
@@ -1409,8 +1411,8 @@ shinyUI(
 
                ) #sidebarLayout
       ),
-      # enrichment viewer -------------------------------------
-      tabPanel("Enrichment viewer",
+      # enrichment viewer (Peak) -------------------------------------
+      tabPanel("Peaks of interest",
                sidebarLayout(
                  # enrichment viewer---------------------------------
                  sidebarPanel(

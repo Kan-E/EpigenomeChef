@@ -272,6 +272,10 @@ shinyServer(function(input, output, session) {
     isolate(updateCounter_createCount$i == 0)
     updateCounter_createCount <<- reactiveValues(i = 0)
   }) 
+  observeEvent(bws(), {
+    isolate(updateCounter_createCount$i == 0)
+    updateCounter_createCount <<- reactiveValues(i = 0)
+  }) 
   observeEvent(peak_call_files(), {
     isolate(updateCounter_createCount$i == 0)
     updateCounter_createCount <<- reactiveValues(i = 0)
@@ -573,21 +577,21 @@ shinyServer(function(input, output, session) {
     withProgress(message = "Detecting differential accessible region",{
       count <- log(bw_count() + 1,2)
       if(!is.null(input$regression_mode)){
-      collist <- collist_bw_pair()
-      colnames(count) <- gsub("\\-","\\_",colnames(count))
-      collist<- gsub("\\-","\\_",collist)
-      collist<- factor(collist, levels = unique(collist),ordered = TRUE)
-      eset = new("ExpressionSet", exprs=as.matrix(count))
-      design <- model.matrix(~0+collist)
-      colnames(design) <- factor(unique(collist),levels = unique(collist))
-      fit <- lmFit(eset, design)
-      comparisons <-  paste(unique(collist)[1],"-",unique(collist)[2],sep="")
-      cont.matrix <- makeContrasts(contrasts=comparisons, levels=design)
-      fit <- contrasts.fit(fit, cont.matrix)
-      fit2 <- eBayes(fit,trend = TRUE,robust = input$regression_mode)
-      result =topTable(fit2, number = 1e12)
-      colnames(result) <- c("log2FoldChange","baseMean","t","pval","padj","B")
-      return(result)
+        collist <- collist_bw_pair()
+        colnames(count) <- gsub("\\-","\\_",colnames(count))
+        collist<- gsub("\\-","\\_",collist)
+        collist<- factor(collist, levels = unique(collist),ordered = TRUE)
+        eset = new("ExpressionSet", exprs=as.matrix(count))
+        design <- model.matrix(~0+collist)
+        colnames(design) <- factor(unique(collist),levels = unique(collist))
+        fit <- lmFit(eset, design)
+        comparisons <-  paste(unique(collist)[1],"-",unique(collist)[2],sep="")
+        cont.matrix <- makeContrasts(contrasts=comparisons, levels=design)
+        fit <- contrasts.fit(fit, cont.matrix)
+        fit2 <- eBayes(fit,trend = TRUE,robust = input$regression_mode)
+        result =topTable(fit2, number = 1e12)
+        colnames(result) <- c("log2FoldChange","baseMean","t","pval","padj","B")
+        return(result)
       }
       incProgress(1)
     })
@@ -744,35 +748,35 @@ shinyServer(function(input, output, session) {
   })
   deg_result_anno2 <- reactive({
     if(!is.null(deg_result())){
-    data <- as.data.frame(ChIPseeker::as.GRanges(deg_result_anno()))
-    Row.name <- paste0(data$seqnames,":",data$start,"-",data$end)
-    data$locus <- Row.name
-    my.symbols <- data$geneId
-    gene_IDs<-id_convert(my.symbols,input$Species,type="ENTREZID")
-    colnames(gene_IDs) <- c("geneId","NearestGene")
-    data <- merge(data, gene_IDs, by="geneId")
-    data <- data %>% distinct(locus, .keep_all = T)
-    rownames(data)<-data$locus
-    return(data)
+      data <- as.data.frame(ChIPseeker::as.GRanges(deg_result_anno()))
+      Row.name <- paste0(data$seqnames,":",data$start,"-",data$end)
+      data$locus <- Row.name
+      my.symbols <- data$geneId
+      gene_IDs<-id_convert(my.symbols,input$Species,type="ENTREZID")
+      colnames(gene_IDs) <- c("geneId","NearestGene")
+      data <- merge(data, gene_IDs, by="geneId")
+      data <- data %>% distinct(locus, .keep_all = T)
+      rownames(data)<-data$locus
+      return(data)
     }
   })
   
   deg_result2 <- reactive({
     if(!is.null(deg_result())){
-    if(input$Genomic_region == "Genome-wide"){
-      anno <- deg_result_anno2()
-      anno <- dplyr::arrange(anno, locus)
-      data <- data.frame(NearestGene = anno$NearestGene,
-                         locus = anno$locus)
-      deg_result <- deg_result()
-      deg_result$locus <- rownames(deg_result())
-      deg_result <- dplyr::arrange(deg_result, locus)
-      data2 <- merge(data,deg_result,by="locus")
-      rownames(data2) <- data2$locus
-      data2 <- data2[, - which(colnames(data2) == "locus")]
-      print(head(data2))
-      return(data2)
-    }
+      if(input$Genomic_region == "Genome-wide"){
+        anno <- deg_result_anno2()
+        anno <- dplyr::arrange(anno, locus)
+        data <- data.frame(NearestGene = anno$NearestGene,
+                           locus = anno$locus)
+        deg_result <- deg_result()
+        deg_result$locus <- rownames(deg_result())
+        deg_result <- dplyr::arrange(deg_result, locus)
+        data2 <- merge(data,deg_result,by="locus")
+        rownames(data2) <- data2$locus
+        data2 <- data2[, - which(colnames(data2) == "locus")]
+        print(head(data2))
+        return(data2)
+      }
     }
   })
   pre_DEG_result <- reactive({
@@ -1215,8 +1219,14 @@ shinyServer(function(input, output, session) {
   })
   data_degcount_up_bed <-reactive({
     if(input$Genomic_region == "Genome-wide"){
-      data <- range_changer(data_degcount_up())
-      data2 <- data.frame(chr = data$chr, start = data$start, end = data$end)
+      if(input$Species != "not selected"){
+        data <- range_changer(data_degcount_up())
+        data2 <- data.frame(chr = data$chr, start = data$start, end = data$end) 
+      }else{
+        data <- deg_result() %>% dplyr::filter(log2FoldChange < -log2(input$fc) & padj < input$fdr)
+        data <- range_changer(data)
+        data2 <- data.frame(chr = data$chr, start = data$start, end = data$end) 
+      }
     }else{
       up <- symbol2gene_id(data_degcount_up(),org1())
       up2 <- subset(promoter_region(), gene_id %in% up$gene_id) %>% as.data.frame()
@@ -1226,8 +1236,14 @@ shinyServer(function(input, output, session) {
   })
   data_degcount_down_bed <-reactive({
     if(input$Genomic_region == "Genome-wide"){
+      if(input$Species != "not selected"){
       data <- range_changer(data_degcount_down())
       data2 <- data.frame(chr = data$chr, start = data$start, end = data$end)
+      }else{
+        data <- deg_result() %>% dplyr::filter(log2FoldChange > log2(input$fc) & padj < input$fdr)
+        data <- range_changer(data)
+        data2 <- data.frame(chr = data$chr, start = data$start, end = data$end) 
+      }
     }else{
       down <- symbol2gene_id(data_degcount_down(),org1())
       down2 <- subset(promoter_region(), gene_id %in% down$gene_id) %>% as.data.frame()
@@ -1767,12 +1783,12 @@ shinyServer(function(input, output, session) {
   })
   updistribution <- reactive({
     return(ChIPpeakAnno::genomicElementDistribution(deg_peak_list()[["Up"]], 
-                                      TxDb = txdb()))
+                                                    TxDb = txdb()))
   })
   output$input_peak_distribution <- renderPlot({
     if(input$Genomic_region == "Genome-wide"){
       if(!is.null(deg_peak_list()) && input$Species != "not selected"){
-        withProgress(message = "Plot peak distribution of up DAR",{
+        withProgress(message = "Plot peak distribution of up peak",{
           updistribution()$plot
         })
       }
@@ -1789,7 +1805,7 @@ shinyServer(function(input, output, session) {
                               NearestGene = NearestGene,
                               log2FoldChange = log2FoldChange,
                               padj = padj
-                              ))
+      ))
       down2 <- with(down, GRanges(seqnames = chr,
                                   ranges = IRanges(start=start,end=end),
                                   NearestGene = NearestGene,
@@ -1802,11 +1818,11 @@ shinyServer(function(input, output, session) {
   })  
   downdistribution <- reactive({
     return(ChIPpeakAnno::genomicElementDistribution(deg_peak_list()[["Down"]], 
-                                      TxDb = txdb()))
+                                                    TxDb = txdb()))
   })
-
+  
   output$deg_peak_distribution <- renderPlot({
-    withProgress(message = "Plot peak distribution of down DAR",{
+    withProgress(message = "Plot peak distribution of down peak",{
       if(input$Genomic_region == "Genome-wide"){
         if(!is.null(deg_peak_list()) && input$Species != "not selected"){
           downdistribution()$plot
@@ -1932,7 +1948,7 @@ shinyServer(function(input, output, session) {
   })
   output$peak_pattern_up_heat_range <- renderUI({
     if(!is.null(deg_result())){
-      withProgress(message = "Preparing peak pattern for up DAR",{
+      withProgress(message = "Preparing peak pattern for up peak",{
         rg <- pair_pattern_range_up()
         sliderInput("peak_up_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
       })
@@ -2050,7 +2066,7 @@ shinyServer(function(input, output, session) {
   ###Peak pattern comparison down--------
   output$peak_pattern_down_heat_range <- renderUI({
     if(!is.null(deg_result())){
-      withProgress(message = "Preparing peak pattern for down DAR",{
+      withProgress(message = "Preparing peak pattern for down peak",{
         rg <- pair_pattern_range_down()
         sliderInput("peak_down_range","Intensity range",value=rg,min = 0,max=ceiling(rg*2),step=ceiling(rg*2)/100)
       })
@@ -2175,19 +2191,19 @@ shinyServer(function(input, output, session) {
   })
   output$pair_RNAseq_order <- renderUI({
     if(input$RNAseq_data_type != "Result"){
-  selectInput("pair_RNAseq_order","Select samples:",
-              choices = colnames(pre_RNAseq_file()),selected = colnames(pre_RNAseq_file()),multiple = T)
+      selectInput("pair_RNAseq_order","Select samples:",
+                  choices = colnames(pre_RNAseq_file()),selected = colnames(pre_RNAseq_file()),multiple = T)
     }
-})
+  })
   RNAseq_file <- reactive({
     if(input$RNAseq_data_type != "Result"){
-        count <- pre_RNAseq_file()
-        order <- input$pair_RNAseq_order
-        data <- try(count[,order])
-        if(length(data) == 1){
-          if(class(data) == "try-error") validate("")
-        }
-        return(data)
+      count <- pre_RNAseq_file()
+      order <- input$pair_RNAseq_order
+      data <- try(count[,order])
+      if(length(data) == 1){
+        if(class(data) == "try-error") validate("")
+      }
+      return(data)
     }
   })
   updateCounter_DEGanalysis <- reactiveValues(i = 0)
@@ -2198,7 +2214,7 @@ shinyServer(function(input, output, session) {
       updateCounter_DEGanalysis$i <- updateCounter_DEGanalysis$i + 1
     })
   })
-
+  
   #Restart
   observeEvent(RNAseq_file(), {
     isolate(updateCounter_DEGanalysis$i == 0)
@@ -2222,7 +2238,7 @@ shinyServer(function(input, output, session) {
   RNAseqDEG <- reactive({
     withProgress(message = "Importing row count matrix, please wait",{
       if(input$RNAseq_data_type == "Result"){
-      return(pre_RNAseq_file())
+        return(pre_RNAseq_file())
       }else{
         if(input$DEGanalysis_Button > 0 && updateCounter_DEGanalysis$i > 0){
           count <- RNAseq_file()
@@ -2231,7 +2247,7 @@ shinyServer(function(input, output, session) {
           contrast <- c("con", unique(collist))
           res <- results(dds,  contrast = contrast)
           res <- as.data.frame(res)
-        return(res)
+          return(res)
         }
       }
     })
@@ -2252,15 +2268,15 @@ shinyServer(function(input, output, session) {
   })
   output$pair_RNAseq_raw <- renderDataTable({
     if(input$RNAseq_data_type != "Result"){
-    if(!is.null(RNAseq_file())){
-      RNAseq_file() 
-    }
+      if(!is.null(RNAseq_file())){
+        RNAseq_file() 
+      }
     }
   })
   output$RNAseq_condition <- renderText({
     if(!is.null(RNAseqDEG())){
-    paste0(input$RNAseq_cond1_pair, " vs ", input$RNAseq_cond2_pair, "\n",
-           "Please confirm if the Log2FoldChange in the uploaded result file was calulated as Log2(",input$RNAseq_cond1_pair,"/",input$RNAseq_cond2_pair,").")
+      paste0(input$RNAseq_cond1_pair, " vs ", input$RNAseq_cond2_pair, "\n",
+             "Please confirm if the Log2FoldChange in the uploaded result file was calulated as Log2(",input$RNAseq_cond1_pair,"/",input$RNAseq_cond2_pair,").")
     }
   })
   output$pair_DEG_result <- renderDataTable({
@@ -2281,16 +2297,16 @@ shinyServer(function(input, output, session) {
     }
     return(c(cond1,cond2))
   })
-
+  
   RNAseqDEG_anno <- reactive({
     return(RNAseqDEG_ann(RNAdata=RNAseqDEG(),Species=input$Species,gene_type = gene_type_pair_DEG_result(),input_type=input$RNAseq_data_type))
   })
   
   output$RNAseq_RPmean <- renderText({
-      paste0("Epigenome analysis: ",unique(collist_bw_pair())[1], " vs ", unique(collist_bw_pair())[2], "\n",
-             "RP > 0 genes have a higher epigenetic potential in ", unique(collist_bw_pair())[2]," condition.\n",
-             "RP < 0 genes have a higher epigenetic potential in ", unique(collist_bw_pair())[1]," condition.\n",
-             "RP = 0 genes have no significant difference in epigenetic potential between ", unique(collist_bw_pair())[1], " and ", unique(collist_bw_pair())[2]," conditions.")
+    paste0("Epigenome analysis: ",unique(collist_bw_pair())[1], " vs ", unique(collist_bw_pair())[2], "\n",
+           "RP > 0 genes have a higher epigenetic potential in ", unique(collist_bw_pair())[2]," condition.\n",
+           "RP < 0 genes have a higher epigenetic potential in ", unique(collist_bw_pair())[1]," condition.\n",
+           "RP = 0 genes have no significant difference in epigenetic potential between ", unique(collist_bw_pair())[1], " and ", unique(collist_bw_pair())[2]," conditions.")
   })
   
   mmAnno_up <- reactive({
@@ -2319,47 +2335,47 @@ shinyServer(function(input, output, session) {
   })
   
   RP <- reactive({
-    mmAnno_up <- mmAnno_up()
-    print(mmAnno_up)
-    if(!is.null(mmAnno_up)) {
-      result_geneRP_up <- modified_calcRP_TFHit(mmAnno = mmAnno_up,Txdb = txdb())
-      print(head(result_geneRP_up))
-      colnames(result_geneRP_up)[2:4] <- paste0(colnames(result_geneRP_up)[2:4], "_up")
-    }else result_geneRP_up <- NULL
-    mmAnno_down <- mmAnno_down()
-    if(!is.null(mmAnno_down)) {
-      result_geneRP_down <- modified_calcRP_TFHit(mmAnno = mmAnno_down,Txdb = txdb())
-      colnames(result_geneRP_down)[2:4] <- paste0(colnames(result_geneRP_down)[2:4], "_down")
-      print(head(result_geneRP_down))
-    }else result_geneRP_down <- NULL
-    if(!is.null(result_geneRP_up) && !is.null(result_geneRP_down)){
-      result_geneRP <- merge(result_geneRP_up,result_geneRP_down,by="gene_id",all =T) 
-      result_geneRP$sumRP <- apply(data.frame(result_geneRP$sumRP_up,
-                                              -result_geneRP$sumRP_down),1,sum,na.rm=TRUE)
-    }
-    if(!is.null(result_geneRP_up) && is.null(result_geneRP_down)) {
-      result_geneRP <-result_geneRP_up
-      result_geneRP$sumRP <- result_geneRP$sumRP_up
-    }
-    if(is.null(result_geneRP_up) && !is.null(result_geneRP_down)) {
-      result_geneRP <-result_geneRP_down
-      result_geneRP$sumRP <- -result_geneRP$sumRP_down
-    }
-    if(is.null(result_geneRP_up) && is.null(result_geneRP_down)){
-      return(NULL)
-    }else{
-      result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
-      result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
-      return(result_geneRP)
-    }
+    withProgress(message = "Calculating regulatory potential",{
+      mmAnno_up <- mmAnno_up()
+      print(mmAnno_up)
+      if(!is.null(mmAnno_up)) {
+        result_geneRP_up <- modified_calcRP_TFHit(mmAnno = mmAnno_up,Txdb = txdb())
+        print(head(result_geneRP_up))
+        colnames(result_geneRP_up)[2:4] <- paste0(colnames(result_geneRP_up)[2:4], "_up")
+      }else result_geneRP_up <- NULL
+      mmAnno_down <- mmAnno_down()
+      if(!is.null(mmAnno_down)) {
+        result_geneRP_down <- modified_calcRP_TFHit(mmAnno = mmAnno_down,Txdb = txdb())
+        colnames(result_geneRP_down)[2:4] <- paste0(colnames(result_geneRP_down)[2:4], "_down")
+        print(head(result_geneRP_down))
+      }else result_geneRP_down <- NULL
+      if(!is.null(result_geneRP_up) && !is.null(result_geneRP_down)){
+        result_geneRP <- merge(result_geneRP_up,result_geneRP_down,by="gene_id",all =T) 
+        result_geneRP$sumRP <- apply(data.frame(result_geneRP$sumRP_up,
+                                                -result_geneRP$sumRP_down),1,sum,na.rm=TRUE)
+      }
+      if(!is.null(result_geneRP_up) && is.null(result_geneRP_down)) {
+        result_geneRP <-result_geneRP_up
+        result_geneRP$sumRP <- result_geneRP$sumRP_up
+      }
+      if(is.null(result_geneRP_up) && !is.null(result_geneRP_down)) {
+        result_geneRP <-result_geneRP_down
+        result_geneRP$sumRP <- -result_geneRP$sumRP_down
+      }
+      if(is.null(result_geneRP_up) && is.null(result_geneRP_down)){
+        return(NULL)
+      }else{
+        result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
+        result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
+        return(result_geneRP)
+      }
+      incProgress(1)
+    })
   })
   regulatory_potential <- reactive({
     if(input$Species != "not selected" && !is.null(RP()) && !is.null(RNAseqDEG_anno())){
       data <- RNAseqDEG_anno()
       result_geneRP <- RP()
-      print(head(data))
-      print(head(result_geneRP))
-      print(RNAseq_name())
       merge_data <- integrate_ChIP_RNA(
         result_geneRP = result_geneRP,
         result_geneDiff = data,lfc_threshold = log(input$DEG_fc,2),
@@ -2395,35 +2411,38 @@ shinyServer(function(input, output, session) {
   pari_RNAseq_boxplot <- reactive({
     RNA <- RNAseqDEG_anno()
     if(is.null(RP()) || is.null(RNA)) validate("")
-    RNA <- dplyr::filter(RNA, !is.na(gene_id))
-    data <- merge(RNA,RP(), by="gene_id",all=T)
-    data$group <- "Others"
-    data$group[data$sumRP > input$DEG_fdr] <- "RP > 1"
-    data$group[data$sumRP < -input$DEG_fdr] <- "RP < -1"
-    data$group <- factor(data$group,levels=c("Others","RP > 1","RP < -1"),ordered=TRUE)
-    data$log10FoldChange <- log10(2^(data$log2FoldChange))
-    collist <- unique(data$group)
-    if (length(collist) >= 3){
-      stat.test <- data %>% tukey_hsd(log10FoldChange ~ group)
-      stat.test <- stat.test %>% add_significance("p.adj")
-      stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-      col <- c("gray","#F8766D","#00BFC4")
-    }else{
-      group1 <- dplyr::filter(data, group == collist[1])
-      group2 <- dplyr::filter(data, group == collist[2])
-      if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
-        stat.test <- data %>% t_test(log10FoldChange ~ group)
-        stat.test <- stat.test %>% add_significance()
+    withProgress(message = "Preparing boxplot",{
+      RNA <- dplyr::filter(RNA, !is.na(gene_id))
+      data <- merge(RNA,RP(), by="gene_id",all=T)
+      data$group <- "Others"
+      data$group[data$sumRP > input$DEG_fdr] <- "RP > 1"
+      data$group[data$sumRP < -input$DEG_fdr] <- "RP < -1"
+      data$group <- factor(data$group,levels=c("Others","RP > 1","RP < -1"),ordered=TRUE)
+      data$log10FoldChange <- log10(2^(data$log2FoldChange))
+      collist <- unique(data$group)
+      if (length(collist) >= 3){
+        stat.test <- data %>% tukey_hsd(log10FoldChange ~ group)
+        stat.test <- stat.test %>% add_significance("p.adj")
         stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-        col <-c("gray","#F8766D")
-      }else stat.test <- NULL
-    }
-    if(!is.null(stat.test)){
-      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
-                                 fill = "group", scales = "free", 
-                                 xlab = FALSE, ylab = "log10FoldChange")+theme_bw(base_size = 15)+guides(fill=guide_legend(title="RP\nstatus"))+
-                 xlab(NULL)+ylab("RNAseq log10FoldChange")+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T,size = 5))
-    }
+        col <- c("gray","#F8766D","#00BFC4")
+      }else{
+        group1 <- dplyr::filter(data, group == collist[1])
+        group2 <- dplyr::filter(data, group == collist[2])
+        if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
+          stat.test <- data %>% t_test(log10FoldChange ~ group)
+          stat.test <- stat.test %>% add_significance()
+          stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
+          col <-c("gray","#F8766D")
+        }else stat.test <- NULL
+      }
+      if(!is.null(stat.test)){
+        p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
+                                   fill = "group", scales = "free", 
+                                   xlab = FALSE, ylab = "log10FoldChange")+theme_bw(base_size = 15)+guides(fill=guide_legend(title="RP\nstatus"))+
+                   xlab(NULL)+ylab("RNAseq log10FoldChange")+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T,size = 5))
+      }
+      incProgress(1)
+    })
     return(p)
   })
   output$RNAseq_boxplot_error <- renderText({
@@ -2448,23 +2467,26 @@ shinyServer(function(input, output, session) {
   })
   RNAseq_popu <- reactive({
     if(!is.null(collist_bw_pair()) && !is.null(RP_all_table())){
-    epi_up_name <- paste0(unique(collist_bw_pair())[2], "_high_only")
-    epi_down_name <- paste0(unique(collist_bw_pair())[1], "_high_only")
-    up_name <- RNAseq_name()[2]
-    down_name <- RNAseq_name()[1]
-    table <- RP_all_table() %>% dplyr::mutate(
-      type =if_else(withUpPeakN > 0 & withDownPeakN > 0, "both",
-                    if_else(withUpPeakN > 0 & withDownPeakN == 0, epi_up_name,
-                            if_else(withUpPeakN == 0 & withDownPeakN > 0, epi_down_name,"no")))
-    )
-    table$Group <- gsub(".+\\:","",table$Group)
-    table$Group <- paste0(table$Group," genes")
-    table$type <- factor(table$type,levels = c(epi_down_name,epi_up_name,"both"))
-    p2 <- ggplot(table,aes(x = TotalPeakN, fill = type)) + geom_bar(position = "stack") +
-      theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free") +
-      scale_fill_manual(values = c("#00BFC4","#F8766D","grey")) +
-      xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_peak_type"))
-    return(p2)
+      withProgress(message = "Preparing bar plot",{
+        epi_up_name <- paste0(unique(collist_bw_pair())[2], "_high_only")
+        epi_down_name <- paste0(unique(collist_bw_pair())[1], "_high_only")
+        up_name <- RNAseq_name()[2]
+        down_name <- RNAseq_name()[1]
+        table <- RP_all_table() %>% dplyr::mutate(
+          type =if_else(withUpPeakN > 0 & withDownPeakN > 0, "both",
+                        if_else(withUpPeakN > 0 & withDownPeakN == 0, epi_up_name,
+                                if_else(withUpPeakN == 0 & withDownPeakN > 0, epi_down_name,"no")))
+        )
+        table$Group <- gsub(".+\\:","",table$Group)
+        table$Group <- paste0(table$Group," genes")
+        table$type <- factor(table$type,levels = c(epi_down_name,epi_up_name,"both"))
+        p2 <- ggplot(table,aes(x = TotalPeakN, fill = type)) + geom_bar(position = "stack") +
+          theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free") +
+          scale_fill_manual(values = c("#00BFC4","#F8766D","grey")) +
+          xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_peak_type"))
+        incProgress(1)
+      })
+      return(p2)
     }
   })
   output$int_boxplot <- renderPlot({
@@ -2484,30 +2506,32 @@ shinyServer(function(input, output, session) {
     RNA <- RNAseqDEG_anno()
     mmano_up <- as.data.frame(mmAnno_up())
     mmano_down <- as.data.frame(mmAnno_down())
-    if(!is.null(RNA) && !is.null(mmano_up) && !is.null(mmano_down)){
-    mmano <- rbind(mmano_up,mmano_down)
-    mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
-    up_name <- paste0(RNAseq_name()[2]," gene only")
-    down_name <- paste0(RNAseq_name()[1]," gene only")
-    merge <- merge(mmano,RNA, by = "gene_id")
-    merge <- merge %>% dplyr::filter(padj < input$DEG_fdr & abs(log2FoldChange) > log(input$DEG_fc,2))
-    merge <- merge %>% group_by(locus) %>% dplyr::mutate(Up_gene = if_else(log2FoldChange > 0, 1, 0),
-                                                         Down_gene = if_else(log2FoldChange < 0, 1, 0))
-    merge2 <- merge %>% group_by(locus) %>% summarise(Total_associated_gene = n(),Group = Group,
-                                                      Up_gene = sum(Up_gene), Down_gene = sum(Down_gene))
-    table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene > 0, "both_associated",
-                                                      if_else(Up_gene > 0 & Down_gene == 0, up_name,
-                                                              if_else(Up_gene == 0 & Down_gene > 0, down_name,"no"))))
-    table$type <- factor(table$type,levels = c(down_name,up_name,"both_associated"))
-    table$Group <- paste0(table$Group," peak")
-    if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
-    print(unique(table)$type)
-    col <- c("#00BFC4","#F8766D","grey")
-    p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
-      theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free") +
-      scale_fill_manual(values = col) + ylab("Number of peaks")+
-      xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
-    return(p2)
+    if(!is.null(RNA) && !is.null(mmano_up) && !is.null(mmano_down) && !is.null(RNAseq_name())){
+      mmano <- rbind(mmano_up,mmano_down)
+      mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
+      up_name <- paste0(RNAseq_name()[2]," gene only")
+      down_name <- paste0(RNAseq_name()[1]," gene only")
+      merge <- merge(mmano,RNA, by = "gene_id")
+      merge <- merge  %>% dplyr::mutate(Up_gene = if_else(padj < input$DEG_fdr & log2FoldChange > log(input$DEG_fc,2), 1, 0),
+                                        Down_gene = if_else(padj < input$DEG_fdr & log2FoldChange < -log(input$DEG_fc,2), 1, 0),
+                                        NS_gene = if_else(padj >= input$DEG_fdr | baseMean == 0 | is.na(padj) |
+                                                            (padj <= input$DEG_fdr & abs(log2FoldChange) <= log(input$DEG_fc,2)), 1, 0))
+      merge[is.na(merge)] <- 0
+      merge2 <- merge %>% group_by(locus,Group) %>% summarise(Total_associated_gene = sum(Up_gene)+sum(Down_gene)+sum(NS_gene),Group = Group,
+                                                              Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
+      table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
+                                                       if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
+                                                               if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "NS gene only", "Multiple type of genes"))))
+      table$type <- factor(table$type,levels = c(down_name,up_name,"NS gene only","Multiple type of genes"))
+      table$Group <- paste0(table$Group," peak")
+      if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
+      col <- c("#00BFC4","#F8766D","grey","black")
+      p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
+        theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free") +
+        scale_fill_manual(values = col) + 
+        ylab("Number of peaks")+
+        xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
+      return(p2)
     }
   })
   RP_all_table <- reactive({
@@ -3057,76 +3081,76 @@ shinyServer(function(input, output, session) {
   })
   with_gene_type_rnaseq_counts <- reactive({
     if(input$RNAseq_data_type != "Result"){
-    files <- list()
-    files[["count"]] <- RNAseqDEG_norm()
-    print(files)
-    return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
+      files <- list()
+      files[["count"]] <- RNAseqDEG_norm()
+      print(files)
+      return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
     }
   })
   with_rnaseq_count2 <- reactive({
     if(input$RNAseq_data_type != "Result"){
-    files <- list()
-    files[["count"]] <- RNAseqDEG_norm()
-    print(with_gene_type_rnaseq_counts())
-    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species,gene_type=with_gene_type_rnaseq_counts()))
+      files <- list()
+      files[["count"]] <- RNAseqDEG_norm()
+      print(with_gene_type_rnaseq_counts())
+      return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species,gene_type=with_gene_type_rnaseq_counts()))
     }
   })
   with_rnaseq_count_heatmap <- reactive({
     rna <-  with_rnaseq_count2()
     if(!is.null(rna)){
-    group <- input$Group_integrated_heatmap
-    list <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    for(name in group){
-      table <- RP_all_table() %>% dplyr::filter(Group == name)
-      gene <- table$gene_id
-      if(input$Genomic_region == "Promoter"){
-        tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
-        peak <- subset(tss, gene_id %in% gene)
-      }else{
-        type <- gsub("\\:.+$","", name)
-        if(type == paste0(unique(collist_bw_pair())[2], "_high")) {
-          peak <- subset(mmAnno_up(), gene_id %in% gene)
+      group <- input$Group_integrated_heatmap
+      list <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+      for(name in group){
+        table <- RP_all_table() %>% dplyr::filter(Group == name)
+        gene <- table$gene_id
+        if(input$Genomic_region == "Promoter"){
+          tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
+          peak <- subset(tss, gene_id %in% gene)
+        }else{
+          type <- gsub("\\:.+$","", name)
+          if(type == paste0(unique(collist_bw_pair())[2], "_high")) {
+            peak <- subset(mmAnno_up(), gene_id %in% gene)
+          }
+          if(type == paste0(unique(collist_bw_pair())[1], "_high")) {
+            peak <- subset(mmAnno_down(), gene_id %in% gene)
+          }
         }
-        if(type == paste0(unique(collist_bw_pair())[1], "_high")) {
-          peak <- subset(mmAnno_down(), gene_id %in% gene)
-        }
+        locus <- as.data.frame(peak)
+        locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
+        list <-rbind(list, locus)
       }
-      locus <- as.data.frame(peak)
-      locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
-      list <-rbind(list, locus)
-    }
-    rna$gene_id <- rownames(rna)
-    print(head(rna))
-    m_z <- merge(rna,list,by="gene_id",all=T)
-    m_z <- m_z %>% dplyr::filter(!is.na(locus))
-    rownames(m_z) <- paste0(m_z$gene_id,"_",m_z$locus)
-    m_z <- m_z[,2:length(colnames(rna))]
-    m_z[is.na(m_z)] <- 0
-    print(head(m_z))
-    mat <- with_integrate_h()[["mat"]]
-    
-    cond <- gsub(".+\\.", "", colnames(m_z))
-    cond <- gsub("\\_.+$", "", cond)
-    cond <- factor(cond, levels = unique(cond), ordered = TRUE)
-    cond_color <- rainbow_hcl(length(unique(cond)),c=100)
-    names(cond_color) <- unique(cond)
-    if(length(names(rnaseq_count())) == 1){
-      file_name <- NULL
-      file_name_color <- NULL
-    }else{
-      file_name <- gsub("\\..+$", "", colnames(m_z))
-      file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
-      file_name_color <- rainbow_hcl(length(file_name))
-      names(file_name_color) <- file_name
-    }
-    withProgress(message = "Heatmap of RNA-seq count data",{
-      ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", column_order = colnames(as.matrix(m_z)[rownames(mat),]),
-                    top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
-                                                       col = list(files = file_name_color,
-                                                                  condition = cond_color)),
-                    show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
-    })
-    return(ht)
+      rna$gene_id <- rownames(rna)
+      print(head(rna))
+      m_z <- merge(rna,list,by="gene_id",all=T)
+      m_z <- m_z %>% dplyr::filter(!is.na(locus))
+      rownames(m_z) <- paste0(m_z$gene_id,"_",m_z$locus)
+      m_z <- m_z[,2:length(colnames(rna))]
+      m_z[is.na(m_z)] <- 0
+      print(head(m_z))
+      mat <- with_integrate_h()[["mat"]]
+      
+      cond <- gsub(".+\\.", "", colnames(m_z))
+      cond <- gsub("\\_.+$", "", cond)
+      cond <- factor(cond, levels = unique(cond), ordered = TRUE)
+      cond_color <- rainbow_hcl(length(unique(cond)),c=100)
+      names(cond_color) <- unique(cond)
+      if(length(names(rnaseq_count())) == 1){
+        file_name <- NULL
+        file_name_color <- NULL
+      }else{
+        file_name <- gsub("\\..+$", "", colnames(m_z))
+        file_name <- factor(file_name, levels = unique(file_name), ordered = TRUE)
+        file_name_color <- rainbow_hcl(length(file_name))
+        names(file_name_color) <- file_name
+      }
+      withProgress(message = "Heatmap of RNA-seq count data",{
+        ht <- Heatmap(as.matrix(m_z)[rownames(mat),],name = "RNA-seq\nz-score", column_order = colnames(as.matrix(m_z)[rownames(mat),]),
+                      top_annotation = HeatmapAnnotation(files = file_name, condition = cond,
+                                                         col = list(files = file_name_color,
+                                                                    condition = cond_color)),
+                      show_row_names = FALSE, show_column_names = FALSE, width = unit(5, "cm"),use_raster = TRUE)
+      })
+      return(ht)
     }
   })
   with_rnaseq_DEGs_heatmap <- reactive({
@@ -3347,16 +3371,16 @@ shinyServer(function(input, output, session) {
        && input$Species != "not selected" && !is.null(input$with_homer_unknown)){
       if(input$with_homer_size == "given") size <- "given"
       if(input$with_homer_size == "custom") size <- input$with_homer_size2
-        return(findMotif(df= with_preMotif_list(), other_data = promoter_region(),back = input$with_homer_bg,
-                         motif_length=input$with_homer_length,type="Other",
-                         Species = input$Species, motif=input$with_homer_unknown,size=size,bw_count=bw_count()))
+      return(findMotif(df= with_preMotif_list(), other_data = promoter_region(),back = input$with_homer_bg,
+                       motif_length=input$with_homer_length,type="Other",
+                       Species = input$Species, motif=input$with_homer_unknown,size=size,bw_count=bw_count()))
     }else return(NULL)
   })
   
   output$with_motif_plot <- renderPlot({
     if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
        !is.null(input$with_homer_unknown) && input$Species != "not selected"){
-      homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
+      homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory,section = "withRNAseq")
     }
   })
   output$download_with_motif_plot = downloadHandler(
@@ -3576,7 +3600,7 @@ shinyServer(function(input, output, session) {
   })
   gene_type_rnaseq_counts <- reactive({
     files <- rnaseq_count()
-      return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
+    return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
   })
   rnaseq_count2 <- reactive({
     files <- rnaseq_count()
@@ -4261,11 +4285,11 @@ shinyServer(function(input, output, session) {
   })
   venn_overlap <- reactive({
     if(!is.null(Venn_peak_call_files()) && updateCounter_vennStart$i > 0){
-    withProgress(message = "Preparing intersection, takes a few minutes",{
-      ol <- ChIPpeakAnno::findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
-      names(ol$peaklist) <- gsub("///","-",names(ol$peaklist))
-      return(ol)
-    })
+      withProgress(message = "Preparing intersection, takes a few minutes",{
+        ol <- ChIPpeakAnno::findOverlapsOfPeaks(Venn_peak_call_files(),connectedPeaks = "keepAll")
+        names(ol$peaklist) <- gsub("///","-",names(ol$peaklist))
+        return(ol)
+      })
     }
   })
   make_venn <-reactive({
@@ -4393,39 +4417,39 @@ shinyServer(function(input, output, session) {
                         annotation, row.names = F, col.names = T,sep = "\t", quote = F)
           }
         }
-          line_plot_all_bed <- paste0("lineplot_bed.pdf")
-          fs <- c(fs, line_plot_all_bed)
-          rowlist <- length(names(venn_overlap()$peaklist))
-          pdf(line_plot_all_bed, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
-          print(venn_batch_lineplot()[["bed"]])
+        line_plot_all_bed <- paste0("lineplot_bed.pdf")
+        fs <- c(fs, line_plot_all_bed)
+        rowlist <- length(names(venn_overlap()$peaklist))
+        pdf(line_plot_all_bed, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
+        print(venn_batch_lineplot()[["bed"]])
+        dev.off()
+        
+        if(!is.null(bws_venn())){
+          line_plot_all_bw <- paste0("lineplot_bigwig.pdf")
+          fs <- c(fs, line_plot_all_bw)
+          rowlist <- length(names(bws_venn()))
+          pdf(line_plot_all_bw, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
+          print(venn_batch_lineplot()[["bigwig"]])
           dev.off()
-          
-          if(!is.null(bws_venn())){
-            line_plot_all_bw <- paste0("lineplot_bigwig.pdf")
-            fs <- c(fs, line_plot_all_bw)
-            rowlist <- length(names(bws_venn()))
-            pdf(line_plot_all_bw, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
-            print(venn_batch_lineplot()[["bigwig"]])
+          if(!is.null(input$intersect_select2)){
+            dir.create(input$intersect_select2,showWarnings = FALSE)
+            input_bw_list <- "Input/input_bw_list.txt"
+            heatmap <- paste0(input$intersect_select2,"/heatmap.pdf")
+            lineplot <- paste0(input$intersect_select2,"/lineplot.pdf")
+            fs <- c(fs, heatmap, lineplot,input_bw_list)
+            write.table(input_list_data_venn()[["bw"]], input_bw_list, row.names = F, sep = "\t", quote = F)
+            pdf(heatmap, height = 6, width = 6)
+            print(plot_grid(peak_venn_alinedHeatmap()[["heat"]]))
             dev.off()
-            if(!is.null(input$intersect_select2)){
-              dir.create(input$intersect_select2,showWarnings = FALSE)
-              input_bw_list <- "Input/input_bw_list.txt"
-              heatmap <- paste0(input$intersect_select2,"/heatmap.pdf")
-              lineplot <- paste0(input$intersect_select2,"/lineplot.pdf")
-              fs <- c(fs, heatmap, lineplot,input_bw_list)
-              write.table(input_list_data_venn()[["bw"]], input_bw_list, row.names = F, sep = "\t", quote = F)
-              pdf(heatmap, height = 6, width = 6)
-              print(plot_grid(peak_venn_alinedHeatmap()[["heat"]]))
-              dev.off()
-              pdf(lineplot, height = 5, width = 5)
-              matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
-                      type="l",ylab="density",lty=1,xaxt="n")
-              axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
-              legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
-                     lty=1, lwd=1)
-              dev.off()
-            }
+            pdf(lineplot, height = 5, width = 5)
+            matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
+                    type="l",ylab="density",lty=1,xaxt="n")
+            axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
+            legend("topright", legend=colnames(peak_venn_alinedHeatmap()[["line"]]), col=1:6,
+                   lty=1, lwd=1)
+            dev.off()
           }
+        }
         if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
            !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
           path_list <- enrich_motif_venn()
@@ -4487,11 +4511,11 @@ shinyServer(function(input, output, session) {
           
           dir.create(paste0(dirname,"KSplot/"),showWarnings = FALSE)
           for(name in names(venn_overlap()$peaklist)){
-          ksplot <- paste0(dirname,"KSplot/",name,".pdf")
-          fs <- c(fs,ksplot)
-          pdf(ksplot, height = 5, width = 7)
-          print(regulatory_potential_venn()[[name]])
-          dev.off()
+            ksplot <- paste0(dirname,"KSplot/",name,".pdf")
+            fs <- c(fs,ksplot)
+            pdf(ksplot, height = 5, width = 7)
+            print(regulatory_potential_venn()[[name]])
+            dev.off()
           }
           dir.create(paste0(dirname,"selected_table(intersection--RNA)/"),showWarnings = FALSE)
           dir.create(paste0(dirname,"selected_bed(intersection--RNA)/"),showWarnings = FALSE)
@@ -4615,7 +4639,7 @@ shinyServer(function(input, output, session) {
                   c(names(venn_overlap()$peaklist)),multiple = F)
     }
   })
-    output$intersect_select <- renderUI({
+  output$intersect_select <- renderUI({
     if(!is.null(Venn_peak_call_files())){
       selectInput("intersect_select", "Select intersect",
                   c(names(venn_overlap()$peaklist)),multiple = F)
@@ -4630,23 +4654,23 @@ shinyServer(function(input, output, session) {
   
   vendistribution <- reactive({
     return(ChIPpeakAnno::genomicElementDistribution(GRangesList(venn_overlap()$peaklist), 
-                                      TxDb = txdb_venn()))
+                                                    TxDb = txdb_venn()))
   })
   output$venn_peak_distribution <- renderPlot({
     withProgress(message = "Peak distribution",{
-        if(!is.null(venn_overlap()) && input$Species_venn != "not selected"){
-          vendistribution()$plot
-        }
+      if(!is.null(venn_overlap()) && input$Species_venn != "not selected"){
+        vendistribution()$plot
+      }
     })
   })
   output$selected_venn_peak_distribution <- renderPlot({
     if(!is.null(input$intersect_select) &&
        input$Species_venn != "not selected" ){
-    withProgress(message = "Peak distribution",{
-      if(!is.null(venn_overlap()) && input$Species_venn != "not selected"){
-        donut_replot(dplyr::filter(vendistribution()$plot[[1]], source == input$intersect_select))
-      }
-    })
+      withProgress(message = "Peak distribution",{
+        if(!is.null(venn_overlap()) && input$Species_venn != "not selected"){
+          donut_replot(dplyr::filter(vendistribution()$plot[[1]], source == input$intersect_select))
+        }
+      })
     }
   })
   
@@ -4667,7 +4691,7 @@ shinyServer(function(input, output, session) {
       return(df)
     })
   })
-
+  
   output$selected_intersect_annotation <- DT::renderDT({
     if(!is.null(input$intersect_select) &&
        input$Species_venn != "not selected" ){
@@ -5407,12 +5431,12 @@ shinyServer(function(input, output, session) {
   
   peak_venn_grange_RNA  <- reactive({
     if(!is.null(input$intersect_RNA)){
-        return(venn_overlap()$peaklist[[input$intersect_RNA]])
-      }
+      return(venn_overlap()$peaklist[[input$intersect_RNA]])
+    }
   })
   
   
-
+  
   output$vennRNAseqresult <- renderUI({
     if(input$RNAseq_data_type_venn == "Result") {
       label <- "Select RNA-seq DEG result file"
@@ -5514,16 +5538,16 @@ shinyServer(function(input, output, session) {
           }
           return(tmp)
         }else{
-        if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
-        if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
-        if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
-        rownames(df) = gsub("\"", "", rownames(df))
-        if(length(colnames(df)) != 0){
-          if(str_detect(colnames(df)[1], "^X\\.")){
-            colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+          if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+          if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
+          if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
+          rownames(df) = gsub("\"", "", rownames(df))
+          if(length(colnames(df)) != 0){
+            if(str_detect(colnames(df)[1], "^X\\.")){
+              colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+            }
           }
-        }
-        return(df)
+          return(df)
         }
       }
     })
@@ -5539,15 +5563,15 @@ shinyServer(function(input, output, session) {
   })
   RNAseq_file_venn <- reactive({
     if(!is.null(pre_RNAseq_file_venn())){
-    if(input$RNAseq_data_type_venn != "Result"){
-      count <- pre_RNAseq_file_venn()
-      order <- input$venn_RNAseq_order
-      data <- try(count[,order])
-      if(length(data) == 1){
-        if(class(data) == "try-error") validate("")
+      if(input$RNAseq_data_type_venn != "Result"){
+        count <- pre_RNAseq_file_venn()
+        order <- input$venn_RNAseq_order
+        data <- try(count[,order])
+        if(length(data) == 1){
+          if(class(data) == "try-error") validate("")
+        }
+        return(data)
       }
-      return(data)
-    }
     }
   })
   updateCounter_DEGanalysis_venn <- reactiveValues(i = 0)
@@ -5657,7 +5681,7 @@ shinyServer(function(input, output, session) {
       RNAseqDEG_venn() 
     }
   })
-
+  
   RNAseq_name_venn <- reactive({
     if(!is.null(pre_RNAseq_file_venn())){
       if(input$RNAseq_data_type_venn != "Result"){
@@ -5701,33 +5725,36 @@ shinyServer(function(input, output, session) {
   
   
   
-
+  
   
   mmAnno_venn <- reactive({
     return(pre_mmAnno_venn()[[input$intersect_RNA]])
   })
   
   RP_venn <- reactive({
-    if(!is.null(pre_mmAnno_venn())){
-    RP_list <- list()
-    for(name in names(pre_mmAnno_venn())){
-      data <- RP_f(mmAnno=pre_mmAnno_venn()[[name]],txdb=txdb_venn())
-      RP_list[[name]] <- data
-    }
-    return(RP_list)
-    }
+    withProgress(message = "Calculating regulatory potential",{
+      if(!is.null(pre_mmAnno_venn())){
+        RP_list <- list()
+        for(name in names(pre_mmAnno_venn())){
+          data <- RP_f(mmAnno=pre_mmAnno_venn()[[name]],txdb=txdb_venn())
+          RP_list[[name]] <- data
+        }
+        return(RP_list)
+      }
+      incProgress(1)
+    })
   })
   regulatory_potential_venn <- reactive({
     if(!is.null(RNAseqDEG_anno_venn()) && !is.null(RP_venn()) && 
        !is.null(RNAseq_name_venn())){
-    RP_list <- list()
-    for(name in names(RP_venn())){
-      data <- regulatory_potential_f(species=input$Species_venn,data=RNAseqDEG_anno_venn(),
-                                     result_geneRP= RP_venn()[[name]],DEG_fc=input$DEG_fc_venn,
-                                     DEG_fdr=input$DEG_fdr_venn,name=RNAseq_name_venn())
-      RP_list[[name]] <- data
-    }
-    return(RP_list)
+      RP_list <- list()
+      for(name in names(RP_venn())){
+        data <- regulatory_potential_f(species=input$Species_venn,data=RNAseqDEG_anno_venn(),
+                                       result_geneRP= RP_venn()[[name]],DEG_fc=input$DEG_fc_venn,
+                                       DEG_fdr=input$DEG_fdr_venn,name=RNAseq_name_venn())
+        RP_list[[name]] <- data
+      }
+      return(RP_list)
     }
   })
   
@@ -5784,6 +5811,7 @@ shinyServer(function(input, output, session) {
   RNAseq_boxplot_venn <- reactive({
     RNA <- RNAseqDEG_anno_venn()
     if(input$RNAseq_data_type_venn == "List") validate("Boxplot is not available for this input type. Please use 'DEG_result' or 'Raw_count' data.")
+    withProgress(message = "Preparing boxplot",{
     RNA <- dplyr::filter(RNA, !is.na(gene_id))
     df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
     for(name in venn_select_RNA_debounce()){
@@ -5805,48 +5833,53 @@ shinyServer(function(input, output, session) {
     if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
     
     data$intersection <- gsub("-","-\n",data$intersection)
-      stat.test <- data %>% dplyr::group_by(intersection)  %>% 
-        t_test(log10FoldChange ~ group)  %>% 
-        add_significance() %>% 
-        add_xy_position(scales = "free", step.increase = 0.2)
-      col <-c("gray","#F8766D")
-      
-      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
-                                 fill = "group", scales = "free", 
-                                 xlab = FALSE, ylab = "RNAseq log10FoldChange")+theme_bw(base_size = 15)+
-                 xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
-     p <- facet(p, facet.by = "intersection",
-                panel.labs.background = list(fill = "transparent", color = "transparent"),
-                scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
+    stat.test <- data %>% dplyr::group_by(intersection)  %>% 
+      t_test(log10FoldChange ~ group)  %>% 
+      add_significance() %>% 
+      add_xy_position(scales = "free", step.increase = 0.2)
+    col <-c("gray","#F8766D")
+    
+    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
+                               fill = "group", scales = "free", 
+                               xlab = FALSE, ylab = "RNAseq log10FoldChange")+theme_bw(base_size = 15)+
+               xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
+    p <- facet(p, facet.by = "intersection",
+               panel.labs.background = list(fill = "transparent", color = "transparent"),
+               scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
+    incProgress(1)
+    })
     return(p)
   })
   
   
   RNAseq_popu_venn <- reactive({
     if(!is.null(pre_RP_all_table_venn()) && !is.null(RNAseq_name_venn())){
-    up_name <- RNAseq_name_venn()[2]
-    down_name <- RNAseq_name_venn()[1]
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    for(name in venn_select_RNA_debounce()){
-      epi_name <- paste0(name, "_associated")
-      table <- pre_RP_all_table_venn()[[name]] %>% dplyr::mutate(
-        type =if_else(withPeakN > 0, epi_name, "not_associated")
-      )
-      table$Group <- gsub(".+\\:","",table$Group)
-      table$Group <- paste0(table$Group," genes")
-      table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
-      table$intersection <- name
-      df <- rbind(df, table)
-    }
-    table <- df
-    table$intersection <- gsub("-","-\n",table$intersection)
-    table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
-      summarise(count = n(), .groups = "drop")
-    p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
-      geom_col(position=position_dodge2(preserve = "single")) +
-      theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
-      xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
-    return(p)
+      withProgress(message = "Preparing barplot",{
+      up_name <- RNAseq_name_venn()[2]
+      down_name <- RNAseq_name_venn()[1]
+      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+      for(name in venn_select_RNA_debounce()){
+        epi_name <- paste0(name, "_associated")
+        table <- pre_RP_all_table_venn()[[name]] %>% dplyr::mutate(
+          type =if_else(withPeakN > 0, epi_name, "not_associated")
+        )
+        table$Group <- gsub(".+\\:","",table$Group)
+        table$Group <- paste0(table$Group," genes")
+        table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
+        table$intersection <- name
+        df <- rbind(df, table)
+      }
+      table <- df
+      table$intersection <- gsub("-","-\n",table$intersection)
+      table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
+        summarise(count = n(), .groups = "drop")
+      p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
+        geom_col(position=position_dodge2(preserve = "single")) +
+        theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
+        xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
+      incProgress(1)
+      })
+      return(p)
     }
   })
   output$int_box_venn <- renderPlot({
@@ -5877,53 +5910,59 @@ shinyServer(function(input, output, session) {
   ChIPseq_popu_venn <- reactive({
     RNA <- RNAseqDEG_anno_venn()
     if(!is.null(RNA) && !is.null(pre_mmAnno_venn())){
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    for(name in venn_select_RNA_debounce()){
-    mmano <- as.data.frame(pre_mmAnno_venn()[[name]])
-    mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
-    up_name <- paste0(RNAseq_name_venn()[2]," gene only")
-    down_name <- paste0(RNAseq_name_venn()[1]," gene only")
-    merge <- merge(mmano,RNA, by = "gene_id")
-    if(input$RNAseq_data_type_venn != "List"){
-    merge <- merge %>% dplyr::filter(padj < input$DEG_fdr_venn & abs(log2FoldChange) > log(input$DEG_fc_venn,2))
-    merge <- merge %>% group_by(locus) %>% dplyr::mutate(Up_gene = if_else(log2FoldChange > 0, 1, 0),
-                                                         Down_gene = if_else(log2FoldChange < 0, 1, 0))
-    merge2 <- merge %>% group_by(locus) %>% summarise(Total_associated_gene = n(),Group = Group,
-                                                      Up_gene = sum(Up_gene), Down_gene = sum(Down_gene))
-    table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene > 0, "both_associated",
-                                                     if_else(Up_gene > 0 & Down_gene == 0, up_name,
-                                                             if_else(Up_gene == 0 & Down_gene > 0, down_name,"no"))))
-    table$type <- factor(table$type,levels = c(down_name,up_name,"both_associated"))
-    }else{
-      merge2 <- merge %>% group_by(locus, Group.y) %>% summarise(Count = n()) 
-      merge2 <- spread(merge2,Group.y,Count)
-      merge2[is.na(merge2)] <- 0
-      namelist <- unique(merge$Group.y)
-      merge2$Total_associated_gene <- rowSums(merge2[,-1],na.rm = TRUE)
-      vec <- c()
-      merge3 <- merge2[,-1]
-      merge3 <- merge3[,-length(colnames(merge3))]
-      for(i in 1:dim(merge3)[1]){
-        type <- merge3[i,]
-        type <- paste(names(type[which(type != 0)]),collapse = "&")
-        vec <- c(vec,type) 
+      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+      for(name in venn_select_RNA_debounce()){
+        mmano <- as.data.frame(pre_mmAnno_venn()[[name]])
+        mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
+        up_name <- paste0(RNAseq_name_venn()[2]," gene only")
+        down_name <- paste0(RNAseq_name_venn()[1]," gene only")
+        merge <- merge(mmano,RNA, by = "gene_id")
+        if(input$RNAseq_data_type_venn != "List"){
+          merge <- merge  %>% dplyr::mutate(Up_gene = if_else(padj < input$DEG_fdr_venn & log2FoldChange > log(input$DEG_fc_venn,2), 1, 0),
+                                            Down_gene = if_else(padj < input$DEG_fdr_venn & log2FoldChange < -log(input$DEG_fc_venn,2), 1, 0),
+                                            NS_gene = if_else(padj >= input$DEG_fdr_venn | baseMean == 0 | is.na(padj) |
+                                                                (padj <= input$DEG_fdr_venn & abs(log2FoldChange) <= log(input$DEG_fc_venn,2)), 1, 0))
+          merge[is.na(merge)] <- 0
+          merge2 <- merge %>% group_by(locus,Group) %>% summarise(Total_associated_gene = sum(Up_gene)+sum(Down_gene)+sum(NS_gene),Group = Group,
+                                                                  Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
+          table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
+                                                           if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
+                                                                   if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "NS gene only", "Multiple type of genes"))))
+          table$type <- factor(table$type,levels = c(down_name,up_name,"NS gene only","Multiple type of genes"))
+        }else{
+          merge2 <- merge %>% group_by(locus, Group.y) %>% summarise(Count = n()) 
+          merge2 <- spread(merge2,Group.y,Count)
+          merge2[is.na(merge2)] <- 0
+          namelist <- unique(merge$Group.y)
+          merge2$Total_associated_gene <- rowSums(merge2[,-1],na.rm = TRUE)
+          vec <- c()
+          merge3 <- merge2[,-1]
+          merge3 <- merge3[,-length(colnames(merge3))]
+          for(i in 1:dim(merge3)[1]){
+            type <- merge3[i,]
+            type <- paste(names(type[which(type != 0)]),collapse = "&")
+            vec <- c(vec,type) 
+          }
+          merge2$type <- vec
+          table <- merge2
+        }
+        table$Group <- paste0(table$Group," peak")
+        if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
+        table$intersection <- name
+        df <- rbind(df, table)
       }
-      merge2$type <- vec
-      table <- merge2
-    }
-    table$Group <- paste0(table$Group," peak")
-    if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
-    table$intersection <- name
-    df <- rbind(df, table)
-    }
-    table <- df
-    table$intersection <- gsub("-","\n",table$intersection)
-    col <- c("#00BFC4","#F8766D","grey")
-    p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
-      theme_bw(base_size = 15)+facet_wrap(~intersection,scales = "free") +
-      scale_fill_manual(values = col) + ylab("Number of peaks") +
-      xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
-    return(p2)
+      table <- df
+      table$intersection <- gsub("-","\n",table$intersection)
+      
+      p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
+        theme_bw(base_size = 15)+facet_wrap(~intersection,scales = "free") +
+        ylab("Number of peaks") +
+        xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
+      if(input$RNAseq_data_type_venn != "List"){
+        col <- c("#00BFC4","#F8766D","grey","black")
+        p2 <- p2 + scale_fill_manual(values = col)
+      } 
+      return(p2)
     }
   })
   pre_RP_all_table_venn <- reactive({
@@ -5940,13 +5979,13 @@ shinyServer(function(input, output, session) {
         }else symbol <- target_result$Symbol
         if(!is.null(pre_mmAnno_venn()[[name]])) {
           if(input$RNAseq_data_type_venn != "List"){
-          table <- data.frame(Symbol = symbol,
-                              Group = paste0(target_result$epigenome_category,":",target_result$gene_category),
-                              RNA_log2FC = -target_result$log2FoldChange,
-                              RNA_padj = target_result$padj,
-                              regulatory_potential = target_result$sumRP,
-                              withPeakN = target_result$withPeakN,
-                              gene_id = target_result$gene_id)
+            table <- data.frame(Symbol = symbol,
+                                Group = paste0(target_result$epigenome_category,":",target_result$gene_category),
+                                RNA_log2FC = -target_result$log2FoldChange,
+                                RNA_padj = target_result$padj,
+                                regulatory_potential = target_result$sumRP,
+                                withPeakN = target_result$withPeakN,
+                                gene_id = target_result$gene_id)
           }else{
             my.symbols <- target_result$gene_id
             gene_IDs <- id_convert(my.symbols,Species = input$Species_venn,type = "ENTREZID")
@@ -6258,7 +6297,7 @@ shinyServer(function(input, output, session) {
     if(!is.null(input$intGroup_venn)) return(input$intGroup_venn) else return(NULL)
   })
   intGroup_venn_debounce <- debounce(pre_intGroup_venn_debounce, 1000)
-    
+  
   output$intGeneset_venn <- renderUI({
     selectInput('intGeneset_venn', 'Gene Set', gene_set_list)
   })
@@ -6389,8 +6428,8 @@ shinyServer(function(input, output, session) {
     if(!is.null(input$venn_heatmap_group)){
       if(input$integrated_heatmapButton_venn > 0 && !is.null(Venn_peak_call_files_locus()) &&
          !is.null(integrated_heatlist_venn())){
-      return(draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
-                  heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
+        return(draw(integrated_heatlist_venn(),annotation_legend_list = list(integrated_legend_venn()),
+                    heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
       }
     }
   })
@@ -7005,44 +7044,44 @@ shinyServer(function(input, output, session) {
   observeEvent(peak_call_files_clustering(), ({
     updateCollapse(session,id =  "input_collapse_panel_clustering", open="peak_call_files_panel")
   }))
-
+  
   # clustering limma--------
   limma_clustering <- reactive({
     if(!is.null(input$regression_mode_clustering)){
-    count <- bw_count_clustering()
-    count <- log(count + 1,2)
-    collist <- gsub("\\_.+$", "", colnames(count))
-    if(is.element(TRUE, duplicated(collist)) == TRUE){
-      withProgress(message = "Detecting differential accessible region",{
-      meta <- data.frame(condition = factor(collist))
-      design <- model.matrix(~0+collist)
-      colnames(design) <- factor(unique(collist),levels = unique(collist))
-      cont <- c()
-      for(i in 1:choose(n=length(unique(meta$condition)),k=2)){
-        contrast = paste0(as.character(unique(meta$condition)[combn(x=length(unique(meta$condition)),m=2)[1,i]]),"-",as.character(unique(meta$condition)[combn(x=length(unique(meta$condition)),m=2)[2,i]]))
-        cont <- c(cont,contrast)
+      count <- bw_count_clustering()
+      count <- log(count + 1,2)
+      collist <- gsub("\\_.+$", "", colnames(count))
+      if(is.element(TRUE, duplicated(collist)) == TRUE){
+        withProgress(message = "Detecting differential accessible region",{
+          meta <- data.frame(condition = factor(collist))
+          design <- model.matrix(~0+collist)
+          colnames(design) <- factor(unique(collist),levels = unique(collist))
+          cont <- c()
+          for(i in 1:choose(n=length(unique(meta$condition)),k=2)){
+            contrast = paste0(as.character(unique(meta$condition)[combn(x=length(unique(meta$condition)),m=2)[1,i]]),"-",as.character(unique(meta$condition)[combn(x=length(unique(meta$condition)),m=2)[2,i]]))
+            cont <- c(cont,contrast)
+          }
+          cont.matrix <- makeContrasts(contrasts=cont, levels=design)
+          eset = new("ExpressionSet", exprs=as.matrix(count))
+          fit1 <- lmFit(eset,design)
+          fit2 <- contrasts.fit(fit1, cont.matrix)
+          fit3 <- eBayes(fit2,trend = TRUE ,robust = input$regression_mode_clustering)
+          result <- topTable(fit3,coef=1:length(cont), number = 1e12)
+          lab <- paste0("log2(",cont,")")
+          lab <- gsub("-","/",lab)
+          if(length(cont) != 1) label <- c(lab,"AveExpr","F","p_value","padj") else label <- c(lab,"AveExpr","F","p_value","padj","B")
+          colnames(result) <- label
+          incProgress(1)
+        })
+        return(result)
       }
-      cont.matrix <- makeContrasts(contrasts=cont, levels=design)
-      eset = new("ExpressionSet", exprs=as.matrix(count))
-      fit1 <- lmFit(eset,design)
-      fit2 <- contrasts.fit(fit1, cont.matrix)
-      fit3 <- eBayes(fit2,trend = TRUE ,robust = input$regression_mode_clustering)
-      result <- topTable(fit3,coef=1:length(cont), number = 1e12)
-      lab <- paste0("log2(",cont,")")
-      lab <- gsub("-","/",lab)
-      if(length(cont) != 1) label <- c(lab,"AveExpr","F","p_value","padj") else label <- c(lab,"AveExpr","F","p_value","padj","B")
-      colnames(result) <- label
-      incProgress(1)
-      })
-      return(result)
-    }
     }
   })
   output$clustering_Statistical_data <- renderDataTable({
     if(!is.null(bw_count_clustering())){
-    if(!is.null(limma_clustering())){
-      limma_clustering()
-    }
+      if(!is.null(limma_clustering())){
+        limma_clustering()
+      }
     }
   })
   output$download_clustering_Statistical_table = downloadHandler(
@@ -7055,7 +7094,7 @@ shinyServer(function(input, output, session) {
       "Statistical analysis is skipped due to the absence of replicates (n = 1 for each sample).\nYou can use the fold change cut-off alone for filtering."
     }
   })
-
+  
   output$regression_mode_clustering <- renderUI({
     count <- bw_count_clustering()
     collist <- gsub("\\_.+$", "", colnames(count))
@@ -7228,7 +7267,7 @@ shinyServer(function(input, output, session) {
     })
   })
   
-
+  
   #Restart
   observeEvent(input$clustering_kmeans_number, {
     isolate(updateCounter_kmeans$i == 0)
@@ -7323,10 +7362,10 @@ shinyServer(function(input, output, session) {
       print(input$basemean_clustering)
       result <- limma_clustering()
       if(!is.null(result)){
-      result_padj_cutoff <- result %>% dplyr::filter(padj < input$fdr_clustering)
-      data <- merge(result_padj_cutoff,data,by=0)
-      rownames(data) <- data$Row.names
-      data <- data[,-1:-(length(colnames(result))+1)]
+        result_padj_cutoff <- result %>% dplyr::filter(padj < input$fdr_clustering)
+        data <- merge(result_padj_cutoff,data,by=0)
+        rownames(data) <- data$Row.names
+        data <- data[,-1:-(length(colnames(result))+1)]
       }
       data2 <- data %>% dplyr::filter(apply(.,1,mean) > input$basemean_clustering)
       if(dim(data2)[1] != 0){
@@ -7965,7 +8004,7 @@ shinyServer(function(input, output, session) {
   #Annotation-----------
   enrichdistribution <- reactive({
     return(ChIPpeakAnno::genomicElementDistribution(GRangesList(Enrich_peak_call_files()), 
-                                      TxDb = txdb_enrich()))
+                                                    TxDb = txdb_enrich()))
   })
   output$input_peak_distribution_enrich <- renderPlot({
     if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich())){
@@ -7977,7 +8016,7 @@ shinyServer(function(input, output, session) {
   output$selected_enrich_peak_distribution <- renderPlot({
     if(!is.null(input$annotation_select_enrich) &&
        input$Species_venn != "not selected" ){
-          print(donut_replot(dplyr::filter(enrichdistribution()$plot[[1]], source == input$annotation_select_enrich)))
+      print(donut_replot(dplyr::filter(enrichdistribution()$plot[[1]], source == input$annotation_select_enrich)))
     }
   })
   output$download_selected_enrich_annotation_table <- downloadHandler(
@@ -8509,7 +8548,7 @@ shinyServer(function(input, output, session) {
     if(input$integrated_heatmapButton_enrich > 0 && !is.null(Enrich_peak_call_files_locus()) &&
        !is.null(integrated_heatlist_enrich())){
       return(draw(integrated_heatlist_enrich(),annotation_legend_list = list(integrated_legend_enrich()),
-           heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
+                  heatmap_legend_side = "bottom", ht_gap = unit(2, "mm")))
     }
   })
   output$integrated_heatmap_enrich <- renderPlot({
@@ -8553,7 +8592,7 @@ shinyServer(function(input, output, session) {
                 width = "90%")
     }
   })
-
+  
   rnaseq_count_enrich <- reactive({
     withProgress(message = "Importing row count matrix, please wait",{
       tmp <- input$pair_rnaseq_count_enrich
@@ -8901,17 +8940,17 @@ shinyServer(function(input, output, session) {
             upload["genelist"] <- list(read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = ""))
             name <- "genelist"
           }else{
-          for(nr in 1:length(input$enrich_DEG_result[, 1])){
-            if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "xlsx") {
-              df <- try(as.data.frame(read_xlsx(input$enrich_DEG_result[[nr, 'datapath']])))
+            for(nr in 1:length(input$enrich_DEG_result[, 1])){
+              if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "xlsx") {
+                df <- try(as.data.frame(read_xlsx(input$enrich_DEG_result[[nr, 'datapath']])))
+              }
+              if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "csv") df <- read.csv(input$enrich_DEG_result[[nr, 'datapath']], header=TRUE, sep = ",",quote = "")
+              if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "txt" || 
+                 tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "tsv") df <- read.table(input$enrich_DEG_result[[nr, 'datapath']], header=TRUE, sep = "\t",quote = "")
+              file_name <- gsub(paste0("\\.",tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]),"$"), "", input$enrich_DEG_result[nr,]$name)
+              name <- c(name, file_name)
+              upload[nr] <- list(df)
             }
-            if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "csv") df <- read.csv(input$enrich_DEG_result[[nr, 'datapath']], header=TRUE, sep = ",",quote = "")
-            if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "txt" || 
-               tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "tsv") df <- read.table(input$enrich_DEG_result[[nr, 'datapath']], header=TRUE, sep = "\t",quote = "")
-            file_name <- gsub(paste0("\\.",tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]),"$"), "", input$enrich_DEG_result[nr,]$name)
-            name <- c(name, file_name)
-            upload[nr] <- list(df)
-          }
           }
           names(upload) <- name
           if(length(names(upload)) == 1){
@@ -8949,16 +8988,16 @@ shinyServer(function(input, output, session) {
           }
           return(tmp)
         }else{
-        if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
-        if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
-        if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
-        rownames(df) = gsub("\"", "", rownames(df))
-        if(length(colnames(df)) != 0){
-          if(str_detect(colnames(df)[1], "^X\\.")){
-            colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+          if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+          if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
+          if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
+          rownames(df) = gsub("\"", "", rownames(df))
+          if(length(colnames(df)) != 0){
+            if(str_detect(colnames(df)[1], "^X\\.")){
+              colnames(df) = str_sub(colnames(df), start = 3, end = -2) 
+            }
           }
-        }
-        return(df)
+          return(df)
         }
       }
     })
@@ -9021,29 +9060,29 @@ shinyServer(function(input, output, session) {
         return(pre_RNAseq_file_enrich())
       }else{
         if(input$RNAseq_data_type_enrich != "List"){
-        if(input$DEGanalysis_Button_enrich > 0 && updateCounter_DEGanalysis_enrich$i > 0){
-          count <- RNAseq_file_enrich()
-          collist <- gsub("\\_.+$", "", colnames(count))
-          dds <- pre_RNAseqDEG_enrich()
-          contrast <- c("con", unique(collist))
-          res <- results(dds,  contrast = contrast)
-          res <- as.data.frame(res)
-          return(res)
-        }
+          if(input$DEGanalysis_Button_enrich > 0 && updateCounter_DEGanalysis_enrich$i > 0){
+            count <- RNAseq_file_enrich()
+            collist <- gsub("\\_.+$", "", colnames(count))
+            dds <- pre_RNAseqDEG_enrich()
+            contrast <- c("con", unique(collist))
+            res <- results(dds,  contrast = contrast)
+            res <- as.data.frame(res)
+            return(res)
+          }
         }else {
           if(!is.null(input$genelist_input_choice_enrich)){
-          RNAdata <- pre_RNAseq_file_enrich()
-          if(!is.null(input$pre_genelist_input_choice_enrich)){
-            if(input$pre_genelist_input_choice_enrich == "File name"){
-              file_name <- gsub(paste0("\\.",tools::file_ext(input$enrich_DEG_result[[1, 'datapath']]),"$"), "", input$enrich_DEG_result[1,]$name)
-              RNAdata$Group <- file_name
+            RNAdata <- pre_RNAseq_file_enrich()
+            if(!is.null(input$pre_genelist_input_choice_enrich)){
+              if(input$pre_genelist_input_choice_enrich == "File name"){
+                file_name <- gsub(paste0("\\.",tools::file_ext(input$enrich_DEG_result[[1, 'datapath']]),"$"), "", input$enrich_DEG_result[1,]$name)
+                RNAdata$Group <- file_name
+              }
             }
-          }
-          group <- factor(input$genelist_input_choice_enrich, levels = input$genelist_input_choice_enrich)
-          RNAdata <- RNAdata %>% dplyr::filter(Group %in% group)
-          if(is.element(TRUE, duplicated(RNAdata$Gene)) == TRUE) validate("Duplication of gene names are not allowed.")
-          rownames(RNAdata) <- RNAdata$Gene
-          return(RNAdata)
+            group <- factor(input$genelist_input_choice_enrich, levels = input$genelist_input_choice_enrich)
+            RNAdata <- RNAdata %>% dplyr::filter(Group %in% group)
+            if(is.element(TRUE, duplicated(RNAdata$Gene)) == TRUE) validate("Duplication of gene names are not allowed.")
+            rownames(RNAdata) <- RNAdata$Gene
+            return(RNAdata)
           }
         }
       }
@@ -9098,20 +9137,20 @@ shinyServer(function(input, output, session) {
           if(input$RNAseq_data_type_enrich == "List"){
             return(c(unique(RNAseqDEG_enrich()$Group)))
           }else{
-          collist <- gsub("\\_.+$", "", colnames(RNAseq_file_enrich()))
-          cond1 <- paste0(unique(collist)[1],"_high")
-          cond2 <- paste0(unique(collist)[2],"_high")
-          return(c(cond1, cond2))
+            collist <- gsub("\\_.+$", "", colnames(RNAseq_file_enrich()))
+            cond1 <- paste0(unique(collist)[1],"_high")
+            cond2 <- paste0(unique(collist)[2],"_high")
+            return(c(cond1, cond2))
           }
         }
       }else{
-          cond1 <- paste0(input$RNAseq_cond1_enrich,"_high")
-          cond2 <- paste0(input$RNAseq_cond2_enrich,"_high")
-          return(c(cond1, cond2))
+        cond1 <- paste0(input$RNAseq_cond1_enrich,"_high")
+        cond2 <- paste0(input$RNAseq_cond2_enrich,"_high")
+        return(c(cond1, cond2))
       }
     }
   })
-
+  
   pre_mmAnno_enrich <- reactive({
     if(input$Species_enrich == "not selected") validate ("Please select 'Species'")
     mmAnno_list <- list()
@@ -9142,14 +9181,17 @@ shinyServer(function(input, output, session) {
   })
   
   RP_enrich <- reactive({
-    if(!is.null(pre_mmAnno_enrich())){
-      RP_list <- list()
-      for(name in names(pre_mmAnno_enrich())){
-        data <- RP_f(mmAnno=pre_mmAnno_enrich()[[name]],txdb=txdb_enrich())
-        RP_list[[name]] <- data
+    withProgress(message = "Calculating regulatory potential",{
+      if(!is.null(pre_mmAnno_enrich())){
+        RP_list <- list()
+        for(name in names(pre_mmAnno_enrich())){
+          data <- RP_f(mmAnno=pre_mmAnno_enrich()[[name]],txdb=txdb_enrich())
+          RP_list[[name]] <- data
+        }
+        return(RP_list)
       }
-      return(RP_list)
-    }
+      incProgress(1)
+    })
   })
   regulatory_potential_enrich <- reactive({
     if(!is.null(RNAseqDEG_anno_enrich()) && !is.null(RP_enrich()) && 
@@ -9217,6 +9259,7 @@ shinyServer(function(input, output, session) {
   RNAseq_boxplot_enrich <- reactive({
     RNA <- RNAseqDEG_anno_enrich()
     if(input$RNAseq_data_type_enrich == "List") validate("Boxplot is not available for this input type. Please use 'DEG_result' or 'Raw_count' data.")
+    withProgress(message = "Preparing boxplot",{
     RNA <- dplyr::filter(RNA, !is.na(gene_id))
     df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
     for(name in enrich_select_RNA_debounce()){
@@ -9251,35 +9294,40 @@ shinyServer(function(input, output, session) {
     p <- facet(p, facet.by = "intersection",
                panel.labs.background = list(fill = "transparent", color = "transparent"),
                scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
+    incProgress(1)
+    })
     return(p)
   })
   
   
   RNAseq_popu_enrich <- reactive({
     if(!is.null(pre_RP_all_table_enrich()) && !is.null(RNAseq_name_enrich())){
-    up_name <- RNAseq_name_enrich()[2]
-    down_name <- RNAseq_name_enrich()[1]
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    for(name in enrich_select_RNA_debounce()){
-      epi_name <- paste0(name, "_associated")
-      table <- pre_RP_all_table_enrich()[[name]] %>% dplyr::mutate(
-        type =if_else(withPeakN > 0, epi_name, "not_associated")
-      )
-      table$Group <- gsub(".+\\:","",table$Group)
-      table$Group <- paste0(table$Group," genes")
-      table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
-      table$intersection <- name
-      df <- rbind(df, table)
-    }
-    table <- df
-    table$intersection <- gsub("-","-\n",table$intersection)
-    table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
-      summarise(count = n(), .groups = "drop")
-    p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
-      geom_col(position=position_dodge2(preserve = "single")) +
-      theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
-      xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
-    return(p)
+      withProgress(message = "Preparing barplot",{
+      up_name <- RNAseq_name_enrich()[2]
+      down_name <- RNAseq_name_enrich()[1]
+      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+      for(name in enrich_select_RNA_debounce()){
+        epi_name <- paste0(name, "_associated")
+        table <- pre_RP_all_table_enrich()[[name]] %>% dplyr::mutate(
+          type =if_else(withPeakN > 0, epi_name, "not_associated")
+        )
+        table$Group <- gsub(".+\\:","",table$Group)
+        table$Group <- paste0(table$Group," genes")
+        table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
+        table$intersection <- name
+        df <- rbind(df, table)
+      }
+      table <- df
+      table$intersection <- gsub("-","-\n",table$intersection)
+      table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
+        summarise(count = n(), .groups = "drop")
+      p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
+        geom_col(position=position_dodge2(preserve = "single")) +
+        theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
+        xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
+      incProgress(1)
+      })
+      return(p)
     }
   })
   output$int_box_enrich <- renderPlot({
@@ -9310,59 +9358,59 @@ shinyServer(function(input, output, session) {
   ChIPseq_popu_enrich <- reactive({
     RNA <- RNAseqDEG_anno_enrich()
     if(!is.null(RNA) && !is.null(pre_mmAnno_enrich())){
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    for(name in enrich_select_RNA_debounce()){
-      mmano <- as.data.frame(pre_mmAnno_enrich()[[name]])
-      mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
-      merge <- merge(mmano,RNA, by = "gene_id")
-      if(input$RNAseq_data_type_enrich != "List"){
-      up_name <- paste0(RNAseq_name_enrich()[2]," gene only")
-      down_name <- paste0(RNAseq_name_enrich()[1]," gene only")
-      merge <- merge %>% dplyr::filter(padj < input$DEG_fdr_enrich & abs(log2FoldChange) > log(input$DEG_fc_enrich,2))
-      merge <- merge %>% group_by(locus) %>% dplyr::mutate(Up_gene = if_else(log2FoldChange > 0, 1, 0),
-                                                           Down_gene = if_else(log2FoldChange < 0, 1, 0))
-      merge2 <- merge %>% group_by(locus) %>% summarise(Total_associated_gene = n(),Group = Group,
-                                                        Up_gene = sum(Up_gene), Down_gene = sum(Down_gene))
-      table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene > 0, "both_associated",
-                                                       if_else(Up_gene > 0 & Down_gene == 0, up_name,
-                                                               if_else(Up_gene == 0 & Down_gene > 0, down_name,"no"))))
-      table$type <- factor(table$type,levels = c(down_name,up_name,"both_associated"))
-      }else{
-        merge2 <- merge %>% group_by(locus, Group.y) %>% summarise(Count = n()) 
-        print(head(merge2))
-        print(spread(merge2,Group.y,Count))
-        merge2 <- spread(merge2,Group.y,Count)
-        merge2[is.na(merge2)] <- 0
-        namelist <- unique(merge$Group.y)
-        merge2$Total_associated_gene <- rowSums(merge2[,-1],na.rm = TRUE)
-        vec <- c()
-        merge3 <- merge2[,-1]
-        merge3 <- merge3[,-length(colnames(merge3))]
-        for(i in 1:dim(merge3)[1]){
-          type <- merge3[i,]
-          type <- paste(names(type[which(type != 0)]),collapse = "&")
-          vec <- c(vec,type) 
+      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+      for(name in enrich_select_RNA_debounce()){
+        mmano <- as.data.frame(pre_mmAnno_enrich()[[name]])
+        mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
+        merge <- merge(mmano,RNA, by = "gene_id")
+        if(input$RNAseq_data_type_enrich != "List"){
+          up_name <- paste0(RNAseq_name_enrich()[2]," gene only")
+          down_name <- paste0(RNAseq_name_enrich()[1]," gene only")
+          merge <- merge  %>% dplyr::mutate(Up_gene = if_else(padj < input$DEG_fdr_enrich & log2FoldChange > log(input$DEG_fc_enrich,2), 1, 0),
+                                            Down_gene = if_else(padj < input$DEG_fdr_enrich & log2FoldChange < -log(input$DEG_fc_enrich,2), 1, 0),
+                                            NS_gene = if_else(padj >= input$DEG_fdr_enrich | baseMean == 0 | is.na(padj) |
+                                                                (padj <= input$DEG_fdr_enrich & abs(log2FoldChange) <= log(input$DEG_fc_enrich,2)), 1, 0))
+          merge[is.na(merge)] <- 0
+          merge2 <- merge %>% group_by(locus,Group) %>% summarise(Total_associated_gene = sum(Up_gene)+sum(Down_gene)+sum(NS_gene),Group = Group,
+                                                                  Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
+          table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
+                                                           if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
+                                                                   if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "NS gene only", "Multiple type of genes"))))
+          table$type <- factor(table$type,levels = c(down_name,up_name,"NS gene only","Multiple type of genes"))
+        }else{
+          merge2 <- merge %>% group_by(locus, Group.y) %>% summarise(Count = n()) 
+          merge2 <- spread(merge2,Group.y,Count)
+          merge2[is.na(merge2)] <- 0
+          namelist <- unique(merge$Group.y)
+          merge2$Total_associated_gene <- rowSums(merge2[,-1],na.rm = TRUE)
+          vec <- c()
+          merge3 <- merge2[,-1]
+          merge3 <- merge3[,-length(colnames(merge3))]
+          for(i in 1:dim(merge3)[1]){
+            type <- merge3[i,]
+            type <- paste(names(type[which(type != 0)]),collapse = "&")
+            vec <- c(vec,type) 
+          }
+          merge2$type <- vec
+          table <- merge2
         }
-        merge2$type <- vec
-        table <- merge2
+        table$Group <- paste0(table$Group," peak")
+        if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
+        table$RNA_group <- name
+        df <- rbind(df, table)
       }
-      table$Group <- paste0(table$Group," peak")
-      if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
-      table$RNA_group <- name
-      df <- rbind(df, table)
-    }
-    table <- df
-    table$RNA_group <- gsub("-","\n",table$RNA_group)
-    
-    p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
-      theme_bw(base_size = 15)+facet_wrap(~RNA_group,scales = "free") + ylab("Number of peaks") +
-      xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
-    if(input$RNAseq_data_type_enrich != "List"){
-      col <- c("#00BFC4","#F8766D","grey")
-      p2 <- p2 +
-        scale_fill_manual(values = col) 
-    }
-    return(p2)
+      table <- df
+      table$RNA_group <- gsub("-","\n",table$RNA_group)
+      
+      p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
+        theme_bw(base_size = 15)+facet_wrap(~RNA_group,scales = "free") + ylab("Number of peaks") +
+        xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
+      if(input$RNAseq_data_type_enrich != "List"){
+        col <- c("#00BFC4","#F8766D","grey","black")
+        p2 <- p2 +
+          scale_fill_manual(values = col) 
+      }
+      return(p2)
     }
   })
   pre_RP_all_table_enrich <- reactive({
@@ -9379,13 +9427,13 @@ shinyServer(function(input, output, session) {
         }else symbol <- target_result$Symbol
         if(!is.null(pre_mmAnno_enrich()[[name]])) {
           if(input$RNAseq_data_type_enrich != "List"){
-          table <- data.frame(Symbol = symbol,
-                              Group = paste0(target_result$epigenome_category,":",target_result$gene_category),
-                              RNA_log2FC = -target_result$log2FoldChange,
-                              RNA_padj = target_result$padj,
-                              regulatory_potential = target_result$sumRP,
-                              withPeakN = target_result$withPeakN,
-                              gene_id = target_result$gene_id)
+            table <- data.frame(Symbol = symbol,
+                                Group = paste0(target_result$epigenome_category,":",target_result$gene_category),
+                                RNA_log2FC = -target_result$log2FoldChange,
+                                RNA_padj = target_result$padj,
+                                regulatory_potential = target_result$sumRP,
+                                withPeakN = target_result$withPeakN,
+                                gene_id = target_result$gene_id)
           }else{
             my.symbols <- target_result$gene_id
             gene_IDs <- id_convert(my.symbols,Species = input$Species_enrich,type = "ENTREZID")
