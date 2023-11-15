@@ -285,7 +285,7 @@ shinyUI(
             }"))),
                                                          plotOutput("trackplot_goi")
                                          ),
-                                         bsCollapsePanel(title="DAR result:",
+                                         bsCollapsePanel(title="Result table:",
                                                          value="DEG_panel",
                                                          fluidRow(
                                                            column(4, downloadButton("download_pair_DEG_result", "Download result"))

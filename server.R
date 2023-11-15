@@ -4003,6 +4003,7 @@ shinyServer(function(input, output, session) {
               }
               motif <- paste0(base_dir,"/homer_dotplot",".pdf")
               p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
+              fs <- c(fs, motif)
               pdf(motif, height = 6, width = 7)
               print(p1)
               dev.off()
@@ -4104,6 +4105,28 @@ shinyServer(function(input, output, session) {
                 pdf(intcomheat, height = 6, width = 10)
                 with_integrated_heatlist_plot()
                 dev.off()
+              }
+              if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
+                 !is.null(input$with_homer_unknown)){
+                withProgress(message = "HOMER",{
+                  with_path_list <- with_enrich_motif()
+                  with_base_dir <- gsub("\\/.+$", "", path_list[[names(with_path_list)[1]]])
+                  for(name in names(with_path_list)){
+                    files <-list.files(with_path_list[[name]],pattern = "*.*")
+                    for(i in 1:length(files)){
+                      data <- paste0(with_path_list[[name]],"/",files[[i]])
+                      fs <- c(fs, data)
+                    }
+                  }
+                  with_motif <- paste0(dirname_withRNA,"/homer_dotplot",".pdf")
+                  p1 <- homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
+                  fs <- c(fs, with_motif)
+                  pdf(with_motif, height = 6, width = 7)
+                  print(p1)
+                  dev.off()
+                })
+              }else {
+                with_base_dir <- NULL
               }
             })
           }else {

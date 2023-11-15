@@ -1,4 +1,4 @@
-FROM rocker/shiny-verse:latest
+FROM rocker/shiny-verse:4.2.3
 MAINTAINER Kan Etoh
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -19,7 +19,6 @@ RUN cd ~ && export PHANTOM_JS="phantomjs-2.1.1-linux-x86_64" && \
     ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/local/bin
 RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('devtools', update = F)" && \
-    R -e "devtools::install_version('dbplyr', version = '2.3.4',repos = 'http://cran.us.r-project.org')" && \
     R -e "devtools::install_github('haizi-zh/bedtorch')" && \
     R -e "devtools::install_github('YuLab-SMU/clusterProfiler.dplyr')" && \
     R -e "BiocManager::install('shiny', update = F)" && \
@@ -99,7 +98,8 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "install.packages('pdftools', repos = 'https://ropensci.r-universe.dev')" && \
     R -e "BiocManager::install('webshot', update = F)" && \
     R -e "BiocManager::install('clue', update = F)" && \
-    R -e "BiocManager::install('TxDb.Mmusculus.UCSC.mm39.refGene', update = F)"
+    R -e "BiocManager::install('TxDb.Mmusculus.UCSC.mm39.refGene', update = F)" \
+    R -e "BiocManager::install('statmod', update = F)"
 ##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
