@@ -399,6 +399,7 @@ shinyUI(
                               ),
                               DTOutput('region_gene_associations')
                      ),
+                     ##pair-wise HOMER-----
                      tabPanel("HOMER",
                               fluidRow(
                                 column(3, downloadButton("download_motif_plot", "Download motif plot")),
@@ -446,6 +447,7 @@ shinyUI(
                                          )
                               )
                      ),
+                     ##pair-wise HOMER end-----
                      tabPanel("Combined heatmap",
                               textOutput("Spe_rnaseq2"),
                               tags$head(tags$style("#Spe_rnaseq2{color: red;
@@ -507,7 +509,7 @@ shinyUI(
                                                         placement = "right",options = list(container = "body")),
                                               value="RNAseqresult_pair_table",
                                               radioButtons('RNAseq_data_type','Input:',
-                                                           c('Raw_count'="Raw_pair",
+                                                           c('Raw_count (2 condition)'="Raw_pair",
                                                              'DEG_Result'="Result"
                                                            ),selected = "Raw_pair"),
                                               htmlOutput("pairRNAseqresult"),
@@ -691,7 +693,7 @@ shinyUI(
                                                                                     DTOutput('with_motif_result')
                                                                     )
                                                          )           
-                                         )
+                                         ) ##pair-wise withRNAseq HOMER end
                                          
                               )
                      )
@@ -947,7 +949,7 @@ shinyUI(
                                                          dataTableOutput("denovo_motif_venn_result")
                                          )
                               )
-                     ),
+                     ),##venn HOMER end
                      tabPanel("Combined heatmap",
                               textOutput("Spe_rnaseq2_venn"),
                               tags$head(tags$style("#Spe_rnaseq2_venn{color: red;
@@ -1017,7 +1019,7 @@ shinyUI(
                                                          value="RNAseqresult_venn_table",
                                                          
                                                          radioButtons('RNAseq_data_type_venn','Input:',
-                                                                      c('Raw_count'="Raw_pair",
+                                                                      c('Raw_count (2 condition)'="Raw_pair",
                                                                         'DEG_Result'="Result",
                                                                         'Gene_list'="List"
                                                                       ),selected = "Result"),
@@ -1136,9 +1138,30 @@ shinyUI(
                  # Clustering---------------------------------
                  sidebarPanel(
                    radioButtons('data_file_type_clustering','Input:',
-                                c('BigWig files'="Row1"
+                                c('BigWig files'="Row1",
+                                  'Count file + BigWig files'="Row1_count"
                                 ),selected = "Row1"),
-                   conditionalPanel(condition="input.data_file_type_clustering=='Row1'",
+                   conditionalPanel(condition="input.data_file_type_clustering=='Row1_count'",
+                                    radioButtons('count_file_type_clustering','Type:',
+                                                 c('Normalized count'="Norm",
+                                                   'Raw count'="Raw"
+                                                 ),selected = "Norm") ,
+                                    fileInput("file1_count_clustering",
+                                              strong(
+                                                span("Select a count file from clustering analysis"),
+                                                span(icon("info-circle"), id = "icon_count1_clustering", 
+                                                     options = list(template = popoverTempate))
+                                              ),
+                                              accept = c("txt"),
+                                              multiple = TRUE,
+                                              width = "80%"),
+                                    bsPopover("icon_count1_clustering", "count file (txt):", 
+                                              content=paste("The count data from clustering analysis in EpigenomeChef is required.<br>", 
+                                                            "You can skip creating count data from bigwig files and peak call files.<br>",
+                                                            "You have to select the same ", strong("Genomic region"), " that you used when you obtained the count file."), 
+                                              placement = "right",options = list(container = "body")),
+                   ),
+                   conditionalPanel(condition=c("input.data_file_type_clustering=='Row1' || input.data_file_type_clustering=='Row1_count'"),
                                     strong(
                                       span("Select BigWig files"),
                                       span(icon("info-circle"), id = "icon1_clustering", 
@@ -1197,6 +1220,7 @@ shinyUI(
                                               placement = "right",options = list(container = "body"))
                    ),
                    conditionalPanel(condition="input.Genomic_region_clustering=='Genome-wide'",
+                                    conditionalPanel(condition="input.data_file_type_clustering=='Row1'",
                                     strong(
                                       span("Select bed files"),
                                       span(icon("info-circle"), id = "icon2_clustering", 
@@ -1211,7 +1235,8 @@ shinyUI(
                                     radioButtons('pair_filter_cluster','Filter:',
                                                  c('Reproducible peaks'="Reproducible_peaks",
                                                    'ALL peaks'="ALL_peaks"
-                                                 ),selected = "Reproducible_peaks"),    
+                                                 ),selected = "Reproducible_peaks"),
+                                    )
                    ),
                    fluidRow(
                      column(12, selectInput("Species_clustering", "Species", species_list, selected = "not selected"))),
@@ -1339,13 +1364,18 @@ shinyUI(
                               )
                               ),
                               fluidRow(
-                                column(4, 
-                                       htmlOutput("selectFC"),
-                                       textOutput("filtered_region"),
-                                       tags$head(tags$style("#filtered_region{color: red;
+                                column(4, htmlOutput("selectFC")),
+                                column(4, htmlOutput("selectFC2"))
+                              ),
+                              textOutput("filtered_region"),
+                              tags$head(tags$style("#filtered_region{color: red;
                                  font-size: 20px;
                                  font-style: bold;
                                  }")),
+                              fluidRow(
+                                column(4, 
+                                       
+                                       
                                        htmlOutput("clustering_kmeans_num"),
                                        downloadButton("download_clustering_kmeans_heatmap", "Download heatmap"),
                                        downloadButton("download_clustering_all_bed", "Download bed files of all clusters"),
@@ -1358,9 +1388,9 @@ shinyUI(
           body {
             padding: 0 !important;
           }"
-                                                 ))),
-                                column(8, htmlOutput("kmeans_order"),
-                                       plotOutput("clustering_kmeans_heatmap"))
+                                                 )),
+                                       htmlOutput("kmeans_order")),
+                                column(8, plotOutput("clustering_kmeans_heatmap"))
                               ),
                               bsCollapse(id="clustering_kmeans_collapse_panel",open="clustering_kmeans_extract_count",multiple = TRUE,
                                          bsCollapsePanel(title="Custom cluster:",
@@ -1563,7 +1593,7 @@ shinyUI(
                                                          dataTableOutput("denovo_motif_enrich_result")
                                          )
                               )
-                     ),
+                     ),##enrich HOMER end
                      tabPanel("Combined heatmap",
                               textOutput("Spe_rnaseq2_enrich"),
                               tags$head(tags$style("#Spe_rnaseq2_enrich{color: red;
@@ -1630,7 +1660,7 @@ shinyUI(
                                                          value="RNAseqresult_enrich_table",
                                                          
                                                          radioButtons('RNAseq_data_type_enrich','Input:',
-                                                                      c('Raw_count'="pair",
+                                                                      c('Raw_count (2 condition)'="pair",
                                                                         'DEG_Result'="Result",
                                                                         'Gene_list'="List"
                                                                       ),selected = "Result"),

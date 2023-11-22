@@ -2,6 +2,17 @@ popoverTempate <-
   '<div class="popover popover-lg" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'
 shinyServer(function(input, output, session) {
   options(shiny.maxRequestSize=10000000*1024^2)
+  observeEvent(input$close, {
+    session$close()
+    js$closeWindow()
+    stopApp()
+    cat(sprintf("Closing session %s\n", session$token))
+    lapply(paste("package:",names(sessionInfo()$otherPkgs),sep=""),
+           detach,character.only = TRUE,
+           unload = TRUE)
+  })
+  
+  
   output$Spe <- renderText({
     if(input$Species == "not selected" && input$Genomic_region == "Promoter") print("Please select 'Species'")
   })
@@ -11,9 +22,9 @@ shinyServer(function(input, output, session) {
   output$Spe_dist <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
   })
-  output$Spe_dist_enrich <- renderText({
-    if(input$Species_enrich == "not selected") print("Please select 'Species'")
-  })
+  observeEvent(input$goButton,({
+    updateSelectInput(session,inputId = "Species","Species",species_list, selected = "Homo sapiens (hg19)")
+  }))
   output$Spe_dist_promoter <- renderText({
     if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, this function is not available. This function is for 'Genome-wide' mode. ")
   })
@@ -32,46 +43,9 @@ shinyServer(function(input, output, session) {
   output$Spe_rnaseq2 <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
   })
-  output$Spe_rnaseq2_enrich <- renderText({
-    if(input$Species_enrich == "not selected") print("Please select 'Species'")
-  })
-  output$Spe_clustering <- renderText({
-    if(input$Species_clustering == "not selected" && input$Genomic_region_clustering == "Promoter") print("Please select 'Species'")
-  })
-  output$Spe_clustering_track <- renderText({
-    if(input$Species_clustering == "not selected") print("Please select 'Species'")
-  })
-  output$Spe_int_clustering <- renderText({
-    if(input$Species_clustering == "not selected") print("Please select 'Species'")
-  })
-  output$Spe_venn_distribution <- renderText({
-    if(input$Species_venn == "not selected") print("Please select 'Species'")
-  })
-  observeEvent(input$goButton,({
-    updateSelectInput(session,inputId = "Species","Species",species_list, selected = "Homo sapiens (hg19)")
-  }))
   
-  observeEvent(input$goButton_venn,({
-    updateSelectInput(session,inputId = "Species_venn","Species",species_list, selected = "Homo sapiens (hg19)")
-  }))
-  observeEvent(input$goButton_clustering,({
-    updateSelectInput(session,inputId = "Species_clustering","Species_clustering",species_list, selected = "Homo sapiens (hg19)")
-  }))
-  observeEvent(input$goButton_enrich,({
-    updateSelectInput(session,inputId = "Species_enrich","Species_enrich",species_list, selected = "Homo sapiens (hg19)")
-  }))
-  observeEvent(input$goButton_bed,({
-    updateSelectInput(session,inputId = "Species_bed","Species_bed",species_list, selected = "Homo sapiens (hg19)")
-  }))
-  observeEvent(input$close, {
-    session$close()
-    js$closeWindow()
-    stopApp()
-    cat(sprintf("Closing session %s\n", session$token))
-    lapply(paste("package:",names(sessionInfo()$otherPkgs),sep=""),
-           detach,character.only = TRUE,
-           unload = TRUE)
-  })
+  
+  
   
   observeEvent(pre_bw_count(),({
     updateSelectizeInput(session,inputId = "sample_order","Sample order:",
@@ -140,86 +114,8 @@ shinyServer(function(input, output, session) {
                   selected = names(pre_integrated_additional3()),multiple = TRUE)
     }
   })
-  observeEvent(pre_bws_venn(),({
-    updateSelectizeInput(session,inputId = "sample_order_venn","Sample order:",
-                         choices =  names(pre_bws_venn()),
-                         selected = names(pre_bws_venn()))
-  }))
-  observeEvent(pre_bws_enrich(),({
-    updateSelectizeInput(session,inputId = "sample_order_enrich","Sample order:",
-                         choices =  names(pre_bws_enrich()),
-                         selected = names(pre_bws_enrich()))
-  }))
-  output$sample_order_venn_comb2 <- renderUI({
-    if(!is.null(pre_integrated_additional2_venn())){
-      selectInput(inputId = "sample_order_venn_comb2","Sample order (blue):",
-                  choices =  names(pre_integrated_additional2_venn()),
-                  selected = names(pre_integrated_additional2_venn()),multiple = TRUE)
-    }
-  })
-  output$sample_order_venn_comb3 <- renderUI({
-    if(!is.null(pre_integrated_additional3_venn())){
-      selectInput(inputId = "sample_order_venn_comb3","Sample order (green):",
-                  choices =  names(pre_integrated_additional3_venn()),
-                  selected = names(pre_integrated_additional3_venn()),multiple = TRUE)
-    }
-  })
-  output$sample_order_venn_comb4 <- renderUI({
-    if(!is.null(pre_integrated_additional4_venn())){
-      selectInput(inputId = "sample_order_venn_comb4","Sample order (purple):",
-                  choices =  names(pre_integrated_additional4_venn()),
-                  selected = names(pre_integrated_additional4_venn()),multiple = TRUE)
-    }
-  })
-  output$sample_order_kmeans_pattern <- renderUI({
-    if(!is.null(pre_kmeans_additional())){
-      selectInput(inputId = "sample_order_kmeans_pattern","Sample order:",
-                  choices =  names(pre_kmeans_additional()),
-                  selected = names(pre_kmeans_additional()),multiple = TRUE)
-    }
-  })
-  output$sample_order_kmeans_track <- renderUI({
-    if(!is.null(pre_track_additional_files_clustering())){
-      selectInput(inputId = "sample_order_kmeans_track","Sample order:",
-                  choices =  names(pre_track_additional_files_clustering()),
-                  selected = names(pre_track_additional_files_clustering()),multiple = TRUE)
-    }
-  })
-  output$sample_order_kmeans_track_int <- renderUI({
-    if(!is.null(pre_int_track_additional_files_clustering())){
-      selectInput(inputId = "sample_order_kmeans_track_int","Sample order:",
-                  choices =  names(pre_int_track_additional_files_clustering()),
-                  selected = names(pre_int_track_additional_files_clustering()),multiple = TRUE)
-    }
-  })
-  output$sample_order_enrich_comb1 <- renderUI({
-    if(!is.null(pre_integrated_additional1_enrich())){
-      selectInput(inputId = "sample_order_enrich_comb1","Sample order (red):",
-                  choices =  names(pre_integrated_additional1_enrich()),
-                  selected = names(pre_integrated_additional1_enrich()),multiple = TRUE)
-    }
-  })
-  output$sample_order_enrich_comb2 <- renderUI({
-    if(!is.null(pre_integrated_additional2_enrich())){
-      selectInput(inputId = "sample_order_enrich_comb2","Sample order (blue):",
-                  choices =  names(pre_integrated_additional2_enrich()),
-                  selected = names(pre_integrated_additional2_enrich()),multiple = TRUE)
-    }
-  })
-  output$sample_order_enrich_comb3 <- renderUI({
-    if(!is.null(pre_integrated_additional3_enrich())){
-      selectInput(inputId = "sample_order_enrich_comb3","Sample order (green):",
-                  choices =  names(pre_integrated_additional3_enrich()),
-                  selected = names(pre_integrated_additional3_enrich()),multiple = TRUE)
-    }
-  })
-  output$sample_order_enrich_comb4 <- renderUI({
-    if(!is.null(pre_integrated_additional4_enrich())){
-      selectInput(inputId = "sample_order_enrich_comb4","Sample order (purple):",
-                  choices =  names(pre_integrated_additional4_enrich()),
-                  selected = names(pre_integrated_additional4_enrich()),multiple = TRUE)
-    }
-  })
+  
+  
   output$file1 <- renderUI({
     if(length(list.files("./Volume/")) > 0){
       list <- list.files("Volume",full.names = T,recursive=T)
@@ -1237,8 +1133,8 @@ shinyServer(function(input, output, session) {
   data_degcount_down_bed <-reactive({
     if(input$Genomic_region == "Genome-wide"){
       if(input$Species != "not selected"){
-      data <- range_changer(data_degcount_down())
-      data2 <- data.frame(chr = data$chr, start = data$start, end = data$end)
+        data <- range_changer(data_degcount_down())
+        data2 <- data.frame(chr = data$chr, start = data$start, end = data$end)
       }else{
         data <- deg_result() %>% dplyr::filter(log2FoldChange > log2(input$fc) & padj < input$fdr)
         data <- range_changer(data)
@@ -1635,125 +1531,6 @@ shinyServer(function(input, output, session) {
     content = function(file){write.table(region_gene_associate(), file, row.names = F, sep = "\t", quote = F)}
   )
   
-  ##Motif enrichment analysis----------
-  output$homer_bg <- renderUI({
-    if(input$Genomic_region == "Genome-wide"){
-      radioButtons('homer_bg','Background sequence',
-                   c('random'="random",
-                     'peak call files'="peakcalling"
-                   ),selected = "random")
-    }
-  })
-  
-  updateCounter <- reactiveValues(i = 0)
-  
-  observe({
-    input$motifButton
-    isolate({
-      updateCounter$i <- updateCounter$i + 1
-    })
-  })
-  
-  
-  #Restart
-  defaultvalues <- observeEvent(enrich_motif(), {
-    isolate(updateCounter$i == 0)
-    updateCounter <<- reactiveValues(i = 0)
-  }) 
-  
-  output$homer_size2 <- renderUI({
-    if(!is.null(input$homer_size)){
-      if(input$homer_size == "custom"){
-        numericInput('homer_size2','Size of the region for motif finding',value=200, step=100)}}
-  })
-  
-  
-  preMotif_list <- reactive({
-    df <- list()
-    collist <- collist_bw_pair()
-    df[[paste0(unique(collist)[2],"_high")]] <- data_degcount_up()
-    df[[paste0(unique(collist)[1],"_high")]] <- data_degcount_down()
-    return(df)
-  })
-  
-  enrich_motif <- reactive({
-    if(updateCounter$i > 0 && input$motifButton > 0 && !is.null(preMotif_list()) 
-       && input$Species != "not selected" && !is.null(input$homer_unknown)){
-      if(input$homer_size == "given") size <- "given"
-      if(input$homer_size == "custom") size <- input$homer_size2
-      if(input$Genomic_region == "Genome-wide"){
-        return(findMotif(df= preMotif_list(), anno_data = deg_result_anno2(),back = input$homer_bg,motif_length=input$homer_length,
-                         Species = input$Species, motif=input$homer_unknown,size=size,bw_count=bw_count()))
-      }else return(findMotif(df= data_degcount2(), anno_data = promoter_region(),
-                             Species = input$Species,motif_length=input$homer_length,
-                             type = "Promoter", motif=input$homer_unknown,size=size))
-    }else return(NULL)
-  })
-  
-  output$motif_plot <- renderPlot({
-    if(input$motifButton > 0 && !is.null(enrich_motif()) && 
-       !is.null(input$homer_unknown) && input$Species != "not selected"){
-      homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
-    }
-  })
-  output$download_motif_plot = downloadHandler(
-    filename = function() {
-      paste0("motif_enrichment_plot",".pdf")
-    },
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
-        if(input$pair_pdf_height == 0){
-          pdf_height <- 6
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
-          pdf_width <- 7
-        }else pdf_width <- input$pair_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(p1)
-        dev.off()
-        incProgress(1)
-      })
-    }
-  )
-  output$download_homer_report = downloadHandler(
-    filename = function() {
-      paste0("HOMER_report",".zip")
-    },
-    content = function(fname){
-      fs <- c()
-      path_list <- enrich_motif()
-      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
-      for(name in names(path_list)){
-        files <-list.files(path_list[[name]],pattern = "*.*")
-        for(i in 1:length(files)){
-          data <- paste0(path_list[[name]],"/",files[[i]])
-          fs <- c(fs, data)
-        }
-      }
-      zip(zipfile=fname, files=fs)
-    },
-    contentType = "application/zip"
-  )
-  
-  
-  output$download_motif_table = downloadHandler(
-    filename = function() {
-      paste0("known_motif_table",".txt")
-    },
-    content = function(file){write.table(motif_table(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  motif_table <- reactive({
-    if(input$motifButton > 0 && !is.null(enrich_motif())){
-      return(known_motif(enrich_motif()))
-    }
-  })
-  
-  output$motif_result <- DT::renderDT({
-    if(input$motifButton > 0 && !is.null(enrich_motif()) && input$Species != "not selected"){
-      motif_table()
-    }
-  })
   
   ##peak distribution-------
   input_peak_list <- reactive({
@@ -2176,7 +1953,7 @@ shinyServer(function(input, output, session) {
       if(is.null(tmp)) {
         return(NULL)
       }else{
-        if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+        if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
         if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
         if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
         rownames(df) = gsub("\"", "", rownames(df))
@@ -3305,142 +3082,6 @@ shinyServer(function(input, output, session) {
       })
     }
   )
-  # with RNAseq HOMER-----------
-  output$with_homer_bg <- renderUI({
-    if(input$Genomic_region == "Genome-wide"){
-      radioButtons('with_homer_bg','Background sequence',
-                   c('random'="random",
-                     'peak call files'="peakcalling"
-                   ),selected = "peakcalling")
-    }
-  })
-  
-  with_updateCounter <- reactiveValues(i = 0)
-  
-  observe({
-    input$with_motifButton
-    isolate({
-      with_updateCounter$i <- with_updateCounter$i + 1
-    })
-  })
-  
-  
-  #Restart
-  observeEvent(with_enrich_motif(), {
-    isolate(with_updateCounter$i == 0)
-    with_updateCounter <<- reactiveValues(i = 0)
-  }) 
-  
-  output$with_homer_size2 <- renderUI({
-    if(!is.null(input$with_homer_size)){
-      if(input$with_homer_size == "custom"){
-        numericInput('with_homer_size2','Size of the region for motif finding',value=200, step=100)}}
-  })
-  
-  output$Group_homer <- renderUI({
-    if(!is.null(RP_all_table())){
-      selectInput("Group_homer","Group (Epigenome:RNAseq)",unique(RP_all_table()$Group),multiple = T)
-    }
-  })
-  with_preMotif_list <- reactive({
-    group <- input$Group_homer
-    list <- list()
-    if(is.null(group)) validate("Select groups of interest.")
-    for(name in group){
-      table <- RP_all_table() %>% dplyr::filter(Group == name)
-      gene <- table$gene_id
-      if(input$Genomic_region == "Promoter"){
-        tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
-        peak <- subset(tss, gene_id %in% gene)
-      }else{
-        type <- gsub("\\:.+$","", name)
-        if(type == paste0(unique(collist_bw_pair())[2], "_high")) {
-          peak <- subset(mmAnno_up(), gene_id %in% gene)
-        }
-        if(type == paste0(unique(collist_bw_pair())[1], "_high")) {
-          peak <- subset(mmAnno_down(), gene_id %in% gene)
-        }
-      }
-      list[[gsub(":","--",name)]] <- peak
-    } 
-    return(list)
-  })
-  
-  with_enrich_motif <- reactive({
-    if(with_updateCounter$i > 0 && input$with_motifButton > 0 && !is.null(with_preMotif_list()) 
-       && input$Species != "not selected" && !is.null(input$with_homer_unknown)){
-      if(input$with_homer_size == "given") size <- "given"
-      if(input$with_homer_size == "custom") size <- input$with_homer_size2
-      return(findMotif(df= with_preMotif_list(), other_data = promoter_region(),back = input$with_homer_bg,
-                       motif_length=input$with_homer_length,type="Other",
-                       Species = input$Species, motif=input$with_homer_unknown,size=size,bw_count=bw_count()))
-    }else return(NULL)
-  })
-  
-  output$with_motif_plot <- renderPlot({
-    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
-       !is.null(input$with_homer_unknown) && input$Species != "not selected"){
-      homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory,section = "withRNAseq")
-    }
-  })
-  output$download_with_motif_plot = downloadHandler(
-    filename = function() {
-      paste0("withRNAseq_motif_enrichment_plot",".pdf")
-    },
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
-        if(input$pair_pdf_height == 0){
-          pdf_height <- 6
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
-          pdf_width <- 7
-        }else pdf_width <- input$pair_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(p1)
-        dev.off()
-        incProgress(1)
-      })
-    }
-  )
-  output$download_with_homer_report = downloadHandler(
-    filename = function() {
-      paste0("withRNAseq_HOMER_report",".zip")
-    },
-    content = function(fname){
-      fs <- c()
-      path_list <- with_enrich_motif()
-      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
-      for(name in names(path_list)){
-        files <-list.files(path_list[[name]],pattern = "*.*")
-        for(i in 1:length(files)){
-          data <- paste0(path_list[[name]],"/",files[[i]])
-          fs <- c(fs, data)
-        }
-      }
-      zip(zipfile=fname, files=fs)
-    },
-    contentType = "application/zip"
-  )
-  
-  
-  output$download_with_motif_table = downloadHandler(
-    filename = function() {
-      paste0("withRNAseq_known_motif_table",".txt")
-    },
-    content = function(file){write.table(with_motif_table(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  with_motif_table <- reactive({
-    if(input$with_motifButton > 0 && !is.null(with_enrich_motif())){
-      return(known_motif(with_enrich_motif()))
-    }
-  })
-  
-  output$with_motif_result <- DT::renderDT({
-    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && input$Species != "not selected"){
-      with_motif_table()
-    }
-  })
   
   #combined heatmap--------------
   uniqueID_DAR<- reactive({
@@ -4032,11 +3673,13 @@ shinyServer(function(input, output, session) {
               gridExtra::grid.arrange(RNAseq_popu(), ChIPseq_popu(), ncol = 1)
               dev.off()
               write.table(RP_all_table(), RP_all, row.names = F, sep = "\t", quote = F)
-              dir.create(paste0(dirname_withRNA,"selected_bed(epigenome:RNA)/"),showWarnings = FALSE)
-              dir.create(paste0(dirname_withRNA,"selected_table(epigenome:RNA)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname_withRNA,"selected_bed(epigenome--RNA)/"),showWarnings = FALSE)
+              dir.create(paste0(dirname_withRNA,"selected_table(epigenome--RNA)/"),showWarnings = FALSE)
               for(name in unique(RP_all_table()$Group)){
-                RP_selected <- paste0(dirname_withRNA,"selected_table(epigenome:RNA)/",name,".txt")
-                RP_selected_bed <- paste0(dirname_withRNA,"selected_bed(epigenome:RNA)/",name,".bed")
+                RP_selected <- paste0(dirname_withRNA,"selected_table(epigenome--RNA)/",name,".txt")
+                RP_selected_bed <- paste0(dirname_withRNA,"selected_bed(epigenome--RNA)/",name,".bed")
+                RP_selected <- gsub(":","--",RP_selected)
+                RP_selected_bed <- gsub(":","--",RP_selected_bed)
                 fs <- c(fs, RP_selected,RP_selected_bed)
                 table <- RP_all_table() %>% dplyr::filter(Group == name)
                 write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
@@ -4178,7 +3821,40 @@ shinyServer(function(input, output, session) {
     contentType = "application/zip"
   )
   
-  ##Venn diagram -----------
+  #Venn diagram -----------
+  output$Spe_venn_distribution <- renderText({
+    if(input$Species_venn == "not selected") print("Please select 'Species'")
+  })
+  observeEvent(input$goButton_venn,({
+    updateSelectInput(session,inputId = "Species_venn","Species",species_list, selected = "Homo sapiens (hg19)")
+  }))
+  observeEvent(pre_bws_venn(),({
+    updateSelectizeInput(session,inputId = "sample_order_venn","Sample order:",
+                         choices =  names(pre_bws_venn()),
+                         selected = names(pre_bws_venn()))
+  }))
+  output$sample_order_venn_comb2 <- renderUI({
+    if(!is.null(pre_integrated_additional2_venn())){
+      selectInput(inputId = "sample_order_venn_comb2","Sample order (blue):",
+                  choices =  names(pre_integrated_additional2_venn()),
+                  selected = names(pre_integrated_additional2_venn()),multiple = TRUE)
+    }
+  })
+  output$sample_order_venn_comb3 <- renderUI({
+    if(!is.null(pre_integrated_additional3_venn())){
+      selectInput(inputId = "sample_order_venn_comb3","Sample order (green):",
+                  choices =  names(pre_integrated_additional3_venn()),
+                  selected = names(pre_integrated_additional3_venn()),multiple = TRUE)
+    }
+  })
+  output$sample_order_venn_comb4 <- renderUI({
+    if(!is.null(pre_integrated_additional4_venn())){
+      selectInput(inputId = "sample_order_venn_comb4","Sample order (purple):",
+                  choices =  names(pre_integrated_additional4_venn()),
+                  selected = names(pre_integrated_additional4_venn()),multiple = TRUE)
+    }
+  })
+  ##-----------
   output$peak_call_file_venn1 <- renderUI({
     if(length(list.files("./Volume/")) > 0){
       list <- list.files("Volume",full.names = T,recursive=T)
@@ -4997,192 +4673,6 @@ shinyServer(function(input, output, session) {
     }
   )
   
-  ##Venn motif -----------
-  output$homer_showCategory_venn <- renderUI({
-    sliderInput("homer_showCategory_venn","Most significant motifs", value=5, min=1,max=20)
-  })
-  output$homer_size_venn <- renderUI({
-    radioButtons('homer_size_venn','Type of the region for motif finding',
-                 c('given (exact size)'="given",
-                   'custom size'="custom"
-                 ),selected = "custom")
-  })
-  output$homer_bg_venn <- renderUI({
-    radioButtons('homer_bg_venn','Background sequence',
-                 c('random'="random",
-                   'bed files'="peakcalling"
-                 ),selected = "random")
-  })
-  output$homer_bg2_venn <- renderUI({
-    if(!is.null(input$homer_bg_venn)){
-      if(input$homer_bg_venn == "peakcalling"){
-        fileInput('homer_bg2_venn',
-                  'Select bed files',
-                  accept = c("bed","narrowPeak"),
-                  multiple = TRUE,
-                  width = "80%")
-      }}
-  })
-  updateCounter_venn <- reactiveValues(i = 0)
-  
-  observe({
-    input$motifButton_venn
-    isolate({
-      updateCounter_venn$i <- updateCounter_venn$i + 1
-    })
-  })
-  
-  
-  #Restart
-  defaultvalues_venn <- observeEvent(enrich_motif_venn(), {
-    isolate(updateCounter_venn$i == 0)
-    updateCounter_venn <<- reactiveValues(i = 0)
-  }) 
-  Venn_peak_call_files_homer <- reactive({
-    if(is.null(input$homer_bg2_venn)){
-      return(NULL)
-    }else{
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$homer_bg2_venn[, 1])){
-        file <- input$homer_bg2_venn[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$homer_bg2_venn[nr,]$name))
-        files <- c(files,file)
-      }
-      files2 <- lapply(files, GetGRanges, simple = TRUE)
-      names(files2)<-name
-      if(length(names(files2)) > 1){
-        files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
-      }
-      return(files2)
-    }
-  })
-  
-  output$homer_size2_venn <- renderUI({
-    if(!is.null(input$homer_size_venn)){
-      if(input$homer_size_venn == "custom"){
-        numericInput('homer_size2_venn','Size of the region for motif finding',value=200, step=100)}}
-  })
-  output$homer_unknown_venn <- renderUI({
-    selectInput("homer_unknown_venn","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
-  })
-  observeEvent(input$homer_unknown_venn,({
-    updateActionButton(session,"motifButton_venn", "Start")
-  }))
-  
-  
-  output$venn_whichGroup1 <- renderUI({
-    if(!is.null(Venn_peak_call_files())){
-      selectInput("venn_whichGroup1", "Select intersects", choices = c(names(venn_overlap()$peaklist)),multiple = TRUE)
-    }
-  })
-  preMotif_list_venn <- reactive({
-    df <- list()
-    for(name in input$venn_whichGroup1){
-      df[[name]] <- venn_overlap()$peaklist[[name]]
-    }
-    return(df)
-  })
-  
-  enrich_motif_venn <- reactive({
-    if(updateCounter_venn$i > 0 && input$motifButton_venn > 0 && !is.null(preMotif_list_venn()) 
-       && input$Species_venn != "not selected" && !is.null(input$homer_unknown_venn)){
-      if(input$homer_size_venn == "given") size <- "given"
-      if(input$homer_size_venn == "custom") size <- input$homer_size2_venn
-      if(input$homer_bg_venn == "peakcalling" && is.null(input$homer_bg2_venn)){
-        return(NULL)
-      }else return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,motif_length=input$homer_length_venn,
-                             motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other"))
-    }
-  })
-  venn_motif_plot <- reactive({
-    return(homer_Motifplot(df = enrich_motif_venn(),showCategory = input$homer_showCategory_venn,section="venn"))
-  })
-  
-  output$motif_venn_plot <- renderPlot({
-    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
-       !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
-      venn_motif_plot()
-    }
-  })
-  
-  output$download_motif_venn_plot = downloadHandler(
-    filename = function() {
-      paste0("motif_enrichment_plot",".pdf")
-    },
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        if(input$venn_pdf_height == 0){
-          pdf_height <- 6
-        }else pdf_height <- input$venn_pdf_height
-        if(input$venn_pdf_width == 0){
-          pdf_width <- 8
-        }else pdf_width <- input$venn_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(venn_motif_plot())
-        dev.off()
-        incProgress(1)
-      })
-    }
-  )
-  
-  output$download_motif_venn_table = downloadHandler(
-    filename = function() {
-      paste0("known_motif_table",".txt")
-    },
-    content = function(file){write.table(motif_table_venn(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  
-  motif_table_venn <- reactive({
-    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn())){
-      return(known_motif(enrich_motif_venn()))
-    }
-  })
-  denovo_motif_table_venn <- reactive({
-    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn())){
-      return(denovo_motif(enrich_motif_venn()))
-    }
-  })
-  
-  output$denovo_motif_venn_result <- DT::renderDT({
-    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && input$Species_venn != "not selected"){
-      denovo_motif_table_venn()
-    }
-  })
-  
-  output$motif_venn_result <- DT::renderDT({
-    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && input$Species_venn != "not selected"){
-      motif_table_venn()
-    }
-  })
-  
-  
-  output$download_denovo_motif_venn_table = downloadHandler(
-    filename = function() {
-      paste0("denovo_motif_table",".txt")
-    },
-    content = function(file){write.table(denovo_motif_table_venn(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  
-  output$download_homer_report_venn = downloadHandler(
-    filename = function() {
-      paste0("HOMER_report",".zip")
-    },
-    content = function(fname){
-      fs <- c()
-      path_list <- enrich_motif_venn()
-      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
-      for(name in names(path_list)){
-        files <-list.files(path_list[[name]],pattern = "*.*")
-        for(i in 1:length(files)){
-          data <- paste0(path_list[[name]],"/",files[[i]])
-          fs <- c(fs, data)
-        }
-      }
-      zip(zipfile=fname, files=fs)
-    },
-    contentType = "application/zip"
-  )
   
   #Venn functional analysis------
   output$Gene_set_venn <- renderUI({
@@ -5559,9 +5049,10 @@ shinyServer(function(input, output, session) {
             }
             tmp <- df2
           }
+          tmp$Group <- gsub(":","-",tmp$Group)
           return(tmp)
         }else{
-          if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+          if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
           if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
           if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
           rownames(df) = gsub("\"", "", rownames(df))
@@ -5835,41 +5326,41 @@ shinyServer(function(input, output, session) {
     RNA <- RNAseqDEG_anno_venn()
     if(input$RNAseq_data_type_venn == "List") validate("Boxplot is not available for this input type. Please use 'DEG_result' or 'Raw_count' data.")
     withProgress(message = "Preparing boxplot",{
-    RNA <- dplyr::filter(RNA, !is.na(gene_id))
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    for(name in venn_select_RNA_debounce()){
-      data <- merge(RNA,RP_venn()[[name]], by="gene_id",all=T)
-      data$group <- "Others"
-      data$group[data$sumRP > 1] <- "RP > 1"
-      data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
-      data$intersection <- as.factor(name)
-      df <- rbind(df,data)
-    }
-    data <- df 
-    data$log10FoldChange <- log10(2^data$log2FoldChange)
-    data$log10FoldChange <- as.numeric(data$log10FoldChange)
-    for(name in venn_select_RNA_debounce()){
-      check <- data %>% dplyr::filter(intersection == name) %>% 
-        dplyr::filter(group != "Others") %>% summarise(n())
-      if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
-    }
-    if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
-    
-    data$intersection <- gsub("-","-\n",data$intersection)
-    stat.test <- data %>% dplyr::group_by(intersection)  %>% 
-      t_test(log10FoldChange ~ group)  %>% 
-      add_significance() %>% 
-      add_xy_position(scales = "free", step.increase = 0.2)
-    col <-c("gray","#F8766D")
-    
-    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
-                               fill = "group", scales = "free", 
-                               xlab = FALSE, ylab = "RNAseq log10FoldChange")+theme_bw(base_size = 15)+
-               xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
-    p <- facet(p, facet.by = "intersection",
-               panel.labs.background = list(fill = "transparent", color = "transparent"),
-               scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
-    incProgress(1)
+      RNA <- dplyr::filter(RNA, !is.na(gene_id))
+      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+      for(name in venn_select_RNA_debounce()){
+        data <- merge(RNA,RP_venn()[[name]], by="gene_id",all=T)
+        data$group <- "Others"
+        data$group[data$sumRP > 1] <- "RP > 1"
+        data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
+        data$intersection <- as.factor(name)
+        df <- rbind(df,data)
+      }
+      data <- df 
+      data$log10FoldChange <- log10(2^data$log2FoldChange)
+      data$log10FoldChange <- as.numeric(data$log10FoldChange)
+      for(name in venn_select_RNA_debounce()){
+        check <- data %>% dplyr::filter(intersection == name) %>% 
+          dplyr::filter(group != "Others") %>% summarise(n())
+        if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
+      }
+      if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
+      
+      data$intersection <- gsub("-","-\n",data$intersection)
+      stat.test <- data %>% dplyr::group_by(intersection)  %>% 
+        t_test(log10FoldChange ~ group)  %>% 
+        add_significance() %>% 
+        add_xy_position(scales = "free", step.increase = 0.2)
+      col <-c("gray","#F8766D")
+      
+      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
+                                 fill = "group", scales = "free", 
+                                 xlab = FALSE, ylab = "RNAseq log10FoldChange")+theme_bw(base_size = 15)+
+                 xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
+      p <- facet(p, facet.by = "intersection",
+                 panel.labs.background = list(fill = "transparent", color = "transparent"),
+                 scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
+      incProgress(1)
     })
     return(p)
   })
@@ -5878,29 +5369,29 @@ shinyServer(function(input, output, session) {
   RNAseq_popu_venn <- reactive({
     if(!is.null(pre_RP_all_table_venn()) && !is.null(RNAseq_name_venn())){
       withProgress(message = "Preparing barplot",{
-      up_name <- RNAseq_name_venn()[2]
-      down_name <- RNAseq_name_venn()[1]
-      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-      for(name in venn_select_RNA_debounce()){
-        epi_name <- paste0(name, "_associated")
-        table <- pre_RP_all_table_venn()[[name]] %>% dplyr::mutate(
-          type =if_else(withPeakN > 0, epi_name, "not_associated")
-        )
-        table$Group <- gsub(".+\\:","",table$Group)
-        table$Group <- paste0(table$Group," genes")
-        table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
-        table$intersection <- name
-        df <- rbind(df, table)
-      }
-      table <- df
-      table$intersection <- gsub("-","-\n",table$intersection)
-      table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
-        summarise(count = n(), .groups = "drop")
-      p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
-        geom_col(position=position_dodge2(preserve = "single")) +
-        theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
-        xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
-      incProgress(1)
+        up_name <- RNAseq_name_venn()[2]
+        down_name <- RNAseq_name_venn()[1]
+        df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+        for(name in venn_select_RNA_debounce()){
+          epi_name <- paste0(name, "_associated")
+          table <- pre_RP_all_table_venn()[[name]] %>% dplyr::mutate(
+            type =if_else(withPeakN > 0, epi_name, "not_associated")
+          )
+          table$Group <- gsub(".+\\:","",table$Group)
+          table$Group <- paste0(table$Group," genes")
+          table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
+          table$intersection <- name
+          df <- rbind(df, table)
+        }
+        table <- df
+        table$intersection <- gsub("-","-\n",table$intersection)
+        table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
+          summarise(count = n(), .groups = "drop")
+        p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
+          geom_col(position=position_dodge2(preserve = "single")) +
+          theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
+          xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
+        incProgress(1)
       })
       return(p)
     }
@@ -6752,7 +6243,42 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  ##Clustering--------
+  #Clustering--------
+  output$Spe_clustering <- renderText({
+    if(input$Species_clustering == "not selected" && input$Genomic_region_clustering == "Promoter") print("Please select 'Species'")
+  })
+  output$Spe_clustering_track <- renderText({
+    if(input$Species_clustering == "not selected") print("Please select 'Species'")
+  })
+  output$Spe_int_clustering <- renderText({
+    if(input$Species_clustering == "not selected") print("Please select 'Species'")
+  })
+  observeEvent(input$goButton_clustering,({
+    updateSelectInput(session,inputId = "Species_clustering","Species_clustering",species_list, selected = "Homo sapiens (hg19)")
+  }))
+  output$sample_order_kmeans_pattern <- renderUI({
+    if(!is.null(pre_kmeans_additional())){
+      selectInput(inputId = "sample_order_kmeans_pattern","Sample order:",
+                  choices =  names(pre_kmeans_additional()),
+                  selected = names(pre_kmeans_additional()),multiple = TRUE)
+    }
+  })
+  output$sample_order_kmeans_track <- renderUI({
+    if(!is.null(pre_track_additional_files_clustering())){
+      selectInput(inputId = "sample_order_kmeans_track","Sample order:",
+                  choices =  names(pre_track_additional_files_clustering()),
+                  selected = names(pre_track_additional_files_clustering()),multiple = TRUE)
+    }
+  })
+  output$sample_order_kmeans_track_int <- renderUI({
+    if(!is.null(pre_int_track_additional_files_clustering())){
+      selectInput(inputId = "sample_order_kmeans_track_int","Sample order:",
+                  choices =  names(pre_int_track_additional_files_clustering()),
+                  selected = names(pre_int_track_additional_files_clustering()),multiple = TRUE)
+    }
+  })
+  
+  ##------
   output$file1_clustering <- renderUI({
     if(length(list.files("./Volume/")) > 0){
       list <- list.files("Volume",full.names = T,recursive=T)
@@ -6823,7 +6349,7 @@ shinyServer(function(input, output, session) {
   })
   
   bws_clustering <- reactive({
-    if(input$data_file_type_clustering == "Row1"){
+    if(input$data_file_type_clustering == "Row1" || input$data_file_type_clustering == "Row1_count"){
       if(is.null(input$file1_clustering)){
         if(input$goButton_clustering > 0 ){
           df<-list()
@@ -6853,11 +6379,22 @@ shinyServer(function(input, output, session) {
       }
     }
   })
+  bws_count_clustering <- reactive({
+    tmp <- input$file1_count_clustering$datapath
+    if(is.null(input$file1_count_clustering) && input$goButton_clustering > 0 )  tmp = "data/bws_count.txt"
+    if(!is.null(tmp)) return(read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = ""))
+  })
   bws_order_clustering<-reactive({
-    if(!is.null(bws_clustering())){
-      order <- input$sample_order_clustering
-      bws <- bws_clustering()[order]
-      return(bws)
+    if(input$data_file_type_clustering == "Row1" || input$data_file_type_clustering == "Row1_count"){
+      if(!is.null(bws_clustering())){
+        order <- input$sample_order_clustering
+        bws <- bws_clustering()
+        print(bws)
+        print(order)
+        order <- gsub("\\.","-",order)
+        bws <- bws[order]
+        return(bws)
+      }else validate("Bigwig files are required.")
     }
   })
   bam_clustering <- reactive({
@@ -6928,7 +6465,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$input_bw_files_clustering <- DT::renderDT({
-    if(input$data_file_type_clustering == "Row1"){
+    if(input$data_file_type_clustering == "Row1" || input$data_file_type_clustering == "Row1_count"){
       uploaded_files = names(bws_clustering())
       data.frame(uploaded_files = uploaded_files)
     }else{
@@ -6950,7 +6487,7 @@ shinyServer(function(input, output, session) {
       if(is.null(tmp)) {
         return(NULL)
       }else{
-        if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+        if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
         if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
         if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
         rownames(df) = gsub("\"", "", rownames(df))
@@ -7030,12 +6567,15 @@ shinyServer(function(input, output, session) {
        !is.null(bam_clustering())){
       return(bw_count_clustering2())
     }
+    if(input$data_file_type_clustering == "Row1_count"){
+      if(!is.null(bws_count_clustering())) return(bws_count_clustering())
+    }
   })
   bw_count_clustering <- reactive({
     count <- pre_bw_count_clustering()
     order <- input$sample_order_clustering
     if(!is.null(count)){
-      if(dim(count)[2] == length(order)){
+      if(dim(count)[2] != 0){
         data <- count[,order]
         return(data)
       }
@@ -7065,13 +6605,21 @@ shinyServer(function(input, output, session) {
     updateCollapse(session,id =  "input_collapse_panel_clustering", open="raw_count_panel")
   }))
   observeEvent(peak_call_files_clustering(), ({
-    updateCollapse(session,id =  "input_collapse_panel_clustering", open="peak_call_files_panel")
+    if(input$data_file_type_clustering != "Row1_count"){
+      updateCollapse(session,id =  "input_collapse_panel_clustering", open="peak_call_files_panel")
+    }
+  }))
+  observeEvent(bw_count_clustering(), ({
+    if(input$data_file_type_clustering == "Row1_count"){
+      updateCollapse(session,id =  "input_collapse_panel_clustering", open="raw_count_panel")
+    }
   }))
   
   # clustering limma--------
   limma_clustering <- reactive({
     if(!is.null(input$regression_mode_clustering)){
       count <- bw_count_clustering()
+      colnames(count) <- gsub("\\-","\\_",colnames(count))
       count <- log(count + 1,2)
       collist <- gsub("\\_.+$", "", colnames(count))
       if(is.element(TRUE, duplicated(collist)) == TRUE){
@@ -7313,13 +6861,28 @@ shinyServer(function(input, output, session) {
     isolate(updateCounter_kmeans$i == 0)
     updateCounter_kmeans <<- reactiveValues(i = 0)
   }) 
+  observeEvent(input$selectFC2, {
+    isolate(updateCounter_kmeans$i == 0)
+    updateCounter_kmeans <<- reactiveValues(i = 0)
+  }) 
   output$selectFC <- renderUI({
     if(is.null(bw_count_clustering())){
       return(NULL)
     }else{
-      selectizeInput("selectFC", "Select a pair for fold change cut-off", c(unique(unique(gsub("\\_.*","", colnames(bw_count_clustering()))))),
+      selectizeInput("selectFC", "Option: a pair for fold change cut-off", c(unique(unique(gsub("\\_.*","", colnames(bw_count_clustering()))))),
                      selected = "", multiple = TRUE, 
                      options = list(maxItems = 2))
+    }
+  })
+  output$selectFC2 <- renderUI({
+    if(is.null(bw_count_clustering())){
+      return(NULL)
+    }else{
+      if(length(unique(unique(gsub("\\_.*","", colnames(bw_count_clustering()))))) > 2){
+        selectizeInput("selectFC2", "Option: a pair for fold change cut-off", c(unique(unique(gsub("\\_.*","", colnames(bw_count_clustering()))))),
+                       selected = "", multiple = TRUE, 
+                       options = list(maxItems = 2))
+      }
     }
   })
   output$kmeans_order <- renderUI({
@@ -7378,43 +6941,101 @@ shinyServer(function(input, output, session) {
   })
   
   bw_count_clustering_fc_basemean_cutoff <- reactive({
-    data <- as.data.frame(bw_count_clustering())
-    if(is.null(data) || length(input$selectFC) != 2){
+    data <- as.data.frame(bw_count_clustering_fc_basemean_cutoff2())
+    if(is.null(data)){
       return(NULL)
     }else{
-      print(input$basemean_clustering)
+      if(is.null(input$selectFC2)) return(data)
+      if(length(input$selectFC2) != 2) return(data)
+      result <- limma_clustering()
+      if(!is.null(result)){
+        result_padj_cutoff <- result %>% dplyr::filter(padj < input$fdr_clustering)
+        result2 <- merge(result_padj_cutoff,data,by=0)
+        if(dim(data)[1] != 0){
+          cond1 <- input$selectFC2[1]
+          cond2 <- input$selectFC2[2]
+          log2fc_1 <- paste0("log2(",cond1,"/",cond2,")")
+          log2fc_2 <- paste0("log2(",cond2,"/",cond1,")")
+          Log2FoldChange <- try(dplyr::select(result2, .data[[log2fc_1]]))
+          if(class(Log2FoldChange) == "try-error") Log2FoldChange <- try(dplyr::select(data, .data[[log2fc_2]]))
+          data$Log2FoldChange <- Log2FoldChange
+          data3 <- data %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
+          data3 <- data3[, - which(colnames(data3) == "Log2FoldChange")]
+        }else data3 <- NULL
+        return(data3)
+      }else{
+        if(dim(data)[1] != 0){
+          cond1 <- input$selectFC[1]
+          cond2 <- input$selectFC[2]
+          cond1_ave <- data %>% dplyr::select(starts_with(cond1))
+          cond2_ave <- data %>% dplyr::select(starts_with(cond2))
+          Log2FoldChange <- log((cond1_ave + 0.01)/(cond2_ave + 0.01),2)
+          data$Log2FoldChange <- Log2FoldChange
+          data2 <- data %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
+          data2 <- data2[, - which(colnames(data2) == "Log2FoldChange")]
+        }else data2 <- NULL
+        return(data2)
+      }
+    }
+  })
+  bw_count_clustering_fc_basemean_cutoff2 <- reactive({
+    data <- as.data.frame(bw_count_clustering())
+    if(is.null(data)){
+      return(NULL)
+    }else{
       result <- limma_clustering()
       if(!is.null(result)){
         result_padj_cutoff <- result %>% dplyr::filter(padj < input$fdr_clustering)
         data <- merge(result_padj_cutoff,data,by=0)
         rownames(data) <- data$Row.names
-        data <- data[,-1:-(length(colnames(result))+1)]
+        data2 <- data[,-1:-(length(colnames(result))+1)]
+        if(length(input$selectFC) != 2) return(data2)
+        data2 <- data2 %>% dplyr::filter(apply(.,1,mean) > input$basemean_clustering)
+        if(dim(data2)[1] != 0){
+          cond1 <- input$selectFC[1]
+          cond2 <- input$selectFC[2]
+          log2fc_1 <- paste0("log2(",cond1,"/",cond2,")")
+          log2fc_2 <- paste0("log2(",cond2,"/",cond1,")")
+          Log2FoldChange <- try(dplyr::select(data, .data[[log2fc_1]]))
+          if(class(Log2FoldChange) == "try-error") Log2FoldChange <- try(dplyr::select(data, .data[[log2fc_2]]))
+          data2$Log2FoldChange <- Log2FoldChange
+          data3 <- data2 %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
+          data3 <- data3[, - which(colnames(data3) == "Log2FoldChange")]
+        }else data3 <- NULL
+        return(data3)
+      }else{
+        if(length(input$selectFC) != 2) return(data)
+        if(dim(data)[1] != 0){
+          cond1 <- input$selectFC[1]
+          cond2 <- input$selectFC[2]
+          cond1_ave <- data %>% dplyr::select(starts_with(cond1))
+          cond2_ave <- data %>% dplyr::select(starts_with(cond2))
+          Log2FoldChange <- log((cond1_ave + 0.01)/(cond2_ave + 0.01),2)
+          data$Log2FoldChange <- Log2FoldChange
+          data2 <- data %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
+          data2 <- data2[, - which(colnames(data2) == "Log2FoldChange")]
+        }else data2 <- NULL
+        return(data2)
       }
-      data2 <- data %>% dplyr::filter(apply(.,1,mean) > input$basemean_clustering)
-      if(dim(data2)[1] != 0){
-        cond1 <- input$selectFC[1]
-        cond2 <- input$selectFC[2]
-        CPM <- log(data2 + 1, 2)
-        cond1_num <- CPM %>% dplyr::select(.,starts_with(cond1)) %>% colnames() %>% length()
-        cond2_num <- CPM %>% dplyr::select(.,starts_with(cond2)) %>% colnames() %>% length()
-        cond1_ave <- CPM %>% dplyr::select(starts_with(cond1)) %>% rowSums(na.rm=TRUE)/cond1_num
-        cond2_ave <- CPM %>% dplyr::select(starts_with(cond2)) %>% rowSums(na.rm=TRUE)/cond2_num
-        Log2FoldChange <- cond1_ave - cond2_ave
-        data2$Log2FoldChange <- Log2FoldChange
-        data3 <- data2 %>% dplyr::filter(abs(Log2FoldChange) > log2(input$fc_clustering))
-        data3 <- data3[, - which(colnames(data3) == "Log2FoldChange")]
-      }else data3 <- NULL
-      return(data3)
     }
   })
   output$filtered_region <- renderText({
-    if(is.null(bw_count_clustering_fc_basemean_cutoff())){
+    if(is.null(bw_count_clustering_fc_basemean_cutoff2())){
       return(NULL)
     }else{ 
-      print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering ,
-                   ", |log2(", input$selectFC[1],"/", input$selectFC[2],")| > ", input$fc_clustering,"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+      if(length(input$selectFC2) != 2){
+        if(length(input$selectFC) != 2){
+          
+        }else print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering,", |log2(", input$selectFC[1],"/", input$selectFC[2],")| > ", input$fc_clustering,"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+      }else{
+        if(length(input$selectFC) != 2){
+          print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering,", |log2(", input$selectFC2[1],"/", input$selectFC2[2],")| > ", input$fc_clustering,"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+        }else print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering ,
+                           ", |log2(", input$selectFC[1],"/", input$selectFC[2],")| > ", input$fc_clustering,", |log2(", input$selectFC2[1],"/", input$selectFC2[2],")| > ", input$fc_clustering,"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+      }
     }
   })
+  
   
   bw_count_clustering_cutoff <- reactive({
     data <- bw_count_clustering_fc_basemean_cutoff()
@@ -7477,7 +7098,7 @@ shinyServer(function(input, output, session) {
   })
   clustering_kmeans <- reactive({
     data.z <- clustering_data_z()
-    if(is.null(data.z) || length(input$selectFC) != 2 || is.null(pre_clustering_kmeans()) || is.null(input$kmeans_order) ||
+    if(is.null(data.z) || is.null(pre_clustering_kmeans()) || is.null(input$kmeans_order) ||
        input$kmeans_start == 0 || updateCounter_kmeans$i == 0){
       return(NULL)
     }else{
@@ -7508,13 +7129,13 @@ shinyServer(function(input, output, session) {
         if(length(lapply(rcl.list, function(x) length(x))) != input$clustering_kmeans_number){
           return(NULL)
         }else{
-          for (i in 1:length(row_order(ht))){ if (i == 1) {
-            clu <- t(t(row.names(data.z[row_order(ht)[[i]],])))
-            out <- cbind(clu, paste("cluster", i, sep=""))
-            colnames(out) <- c("GeneID", "Cluster")} else {
-              clu <- t(t(row.names(data.z[row_order(ht)[[i]],])))
-              clu <- cbind(clu, paste("cluster", i, sep=""))
-              out <- rbind(out, clu)}}
+          out <- data.frame(matrix(rep(NA, 2), nrow=1))[numeric(0), ]
+          for (i in input$kmeans_order){ 
+            clu <- t(t(row.names(data.z[suppressWarnings(row_order(ht)[[i]]),])))
+            clu <- cbind(clu, paste("cluster", i, sep=""))
+            out <- rbind(out, clu)
+          }
+          colnames(out) <- c("GeneID", "Cluster")
           out <- as.data.frame(out)
           rownames(out) <- out$GeneID
           clusterCount <- merge(out, data, by=0)
@@ -7528,7 +7149,7 @@ shinyServer(function(input, output, session) {
   output$clustering_select_kmean <- renderUI({
     withProgress(message = "preparing kmeans clustering",{
       clusters <- clustering_kmeans_cluster()
-      if(is.null(clusters) || length(input$selectFC) != 2 || input$kmeans_start == 0){
+      if(is.null(clusters) || input$kmeans_start == 0){
         return(NULL)
       }else{
         selectInput("clustering_select_kmean", "Create custom cluster (combine multiple clusters)", choices = c(unique(clusters$Cluster)),multiple = T)
@@ -7579,7 +7200,7 @@ shinyServer(function(input, output, session) {
   )
   
   output$clustering_kmeans_extract_table <- renderDT({
-    if(!is.null(input$clustering_select_kmean) && length(input$selectFC) == 2 && input$kmeans_start > 0){
+    if(!is.null(input$clustering_select_kmean)  && input$kmeans_start > 0){
       if(input$Genomic_region_clustering == "Genome-wide"){
         if(input$Species_clustering == "not selected"){
           clustering_kmeans_pattern_extract() %>%
@@ -7671,7 +7292,9 @@ shinyServer(function(input, output, session) {
     }
   })
   kmeans_additional <- reactive({
-    if(!is.null(input$sample_order_kmeans_pattern)) return(pre_kmeans_additional()[input$sample_order_kmeans_pattern])  
+    if(!is.null(input$peak_pattern_kmeans_add)){
+      if(!is.null(input$sample_order_kmeans_pattern)) return(pre_kmeans_additional()[input$sample_order_kmeans_pattern]) 
+    }
   })
   output$peak_pattern_kmeans_heat_range <- renderUI({
     if(!is.null(peak_kmeans_grange())){
@@ -7683,6 +7306,7 @@ shinyServer(function(input, output, session) {
   })
   kmeans_pattern_range <- reactive({
     rg <- c()
+    print(bws_order_clustering())
     sig <- peak_pattern_function(grange=peak_kmeans_grange(), files=bws_order_clustering(),
                                  additional=kmeans_additional(),plot = FALSE)
     for(name in names(sig)){
@@ -7721,7 +7345,7 @@ shinyServer(function(input, output, session) {
   })
   output$peak_pattern_kmeans_line <- renderPlot({
     withProgress(message = "feature aligned distribution",{
-      if(!is.null(clustering_kmeans_pattern_extract())){
+      if(!is.null(clustering_kmeans_pattern_extract()) && !is.null(peak_kmeans_alinedHeatmap())){
         matplot(peak_kmeans_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
                 type="l",ylab="density",lty=1,xaxt="n")
         axis(1,at = c(0,25,50,75,100),labels = c(-2000,-1000,0,1000,2000))
@@ -7884,7 +7508,9 @@ shinyServer(function(input, output, session) {
     }
   })
   track_additional_files_clustering <- reactive({
-    if(input$sample_order_kmeans_track) return(pre_track_additional_files_clustering()[input$sample_order_kmeans_track])
+    if(!is.null(input$trackplot_additional1_clustering)){
+      if(input$sample_order_kmeans_track) return(pre_track_additional_files_clustering()[input$sample_order_kmeans_track])
+    }
   })
   data_track_clustering <- reactive({
     if(!is.null(input$clustering_kmeans_extract_table_rows_selected)){
@@ -7976,6 +7602,50 @@ shinyServer(function(input, output, session) {
   
   
   ## Enrichment viewer------
+  output$Spe_rnaseq2_enrich <- renderText({
+    if(input$Species_enrich == "not selected") print("Please select 'Species'")
+  })
+  observeEvent(input$goButton_enrich,({
+    updateSelectInput(session,inputId = "Species_enrich","Species_enrich",species_list, selected = "Homo sapiens (hg19)")
+  }))
+  output$Spe_dist_enrich <- renderText({
+    if(input$Species_enrich == "not selected") print("Please select 'Species'")
+  })
+  observeEvent(pre_bws_enrich(),({
+    updateSelectizeInput(session,inputId = "sample_order_enrich","Sample order:",
+                         choices =  names(pre_bws_enrich()),
+                         selected = names(pre_bws_enrich()))
+  }))
+  output$sample_order_enrich_comb1 <- renderUI({
+    if(!is.null(pre_integrated_additional1_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb1","Sample order (red):",
+                  choices =  names(pre_integrated_additional1_enrich()),
+                  selected = names(pre_integrated_additional1_enrich()),multiple = TRUE)
+    }
+  })
+  output$sample_order_enrich_comb2 <- renderUI({
+    if(!is.null(pre_integrated_additional2_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb2","Sample order (blue):",
+                  choices =  names(pre_integrated_additional2_enrich()),
+                  selected = names(pre_integrated_additional2_enrich()),multiple = TRUE)
+    }
+  })
+  output$sample_order_enrich_comb3 <- renderUI({
+    if(!is.null(pre_integrated_additional3_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb3","Sample order (green):",
+                  choices =  names(pre_integrated_additional3_enrich()),
+                  selected = names(pre_integrated_additional3_enrich()),multiple = TRUE)
+    }
+  })
+  output$sample_order_enrich_comb4 <- renderUI({
+    if(!is.null(pre_integrated_additional4_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb4","Sample order (purple):",
+                  choices =  names(pre_integrated_additional4_enrich()),
+                  selected = names(pre_integrated_additional4_enrich()),multiple = TRUE)
+    }
+  })
+  
+  #--------
   output$Spe_motif_enrich <- renderText({
     if(input$Species_enrich == "not selected") print("Please select 'Species'")
   })
@@ -8032,14 +7702,13 @@ shinyServer(function(input, output, session) {
   output$input_peak_distribution_enrich <- renderPlot({
     if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich())){
       withProgress(message = "Preparing peak distribution",{
-        enrichdistribution()
+        enrichdistribution()$plot
       })
     }
   })
   output$selected_enrich_peak_distribution <- renderPlot({
-    if(!is.null(input$annotation_select_enrich) &&
-       input$Species_venn != "not selected" ){
-      print(donut_replot(dplyr::filter(enrichdistribution()$plot[[1]], source == input$annotation_select_enrich)))
+    if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich()) && !is.null(input$annotation_select_enrich)){
+      donut_replot(dplyr::filter(enrichdistribution()$plot[[1]], source == input$annotation_select_enrich))
     }
   })
   output$download_selected_enrich_annotation_table <- downloadHandler(
@@ -8351,173 +8020,6 @@ shinyServer(function(input, output, session) {
       paste0("region_gene_associations-",input$intersection_enrich_fun,"-",input$Pathway_list_enrich,".txt")
     },
     content = function(file){write.table(region_gene_associate_enrich(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  
-  ##Enrich motif -----------
-  output$homer_size_enrich <- renderUI({
-    radioButtons('homer_size_enrich','Type of the region for motif finding',
-                 c('given (exact size)'="given",
-                   'custom size'="custom"
-                 ),selected = "custom")
-  })
-  output$homer_size2_enrich <- renderUI({
-    if(!is.null(input$homer_size_enrich)){
-      if(input$homer_size_enrich == "custom"){
-        numericInput('homer_size2_enrich','Size of the region for motif finding',value=200, step=100)
-      }}
-  })
-  output$homer_bg_enrich <- renderUI({
-    radioButtons('homer_bg_enrich','Background sequence',
-                 c('random'="random",
-                   'bed files'="peakcalling"
-                 ),selected = "random")
-  })
-  output$homer_bg2_enrich <- renderUI({
-    if(!is.null(input$homer_bg_enrich)){
-      if(input$homer_bg_enrich == "peakcalling"){
-        fileInput('homer_bg2_enrich',
-                  'Select bed files',
-                  accept = c("bed","narrowPeak"),
-                  multiple = TRUE,
-                  width = "80%")
-      }}
-  })
-  updateCounter_enrich <- reactiveValues(i = 0)
-  
-  observe({
-    input$motifButton_enrich
-    isolate({
-      updateCounter_enrich$i <- updateCounter_enrich$i + 1
-    })
-  })
-  
-  
-  #Restart
-  defaultvalues_enrich <- observeEvent(enrich_motif_enrich(), {
-    isolate(updateCounter_enrich$i == 0)
-    updateCounter_enrich <<- reactiveValues(i = 0)
-  }) 
-  Enrich_peak_call_files_homer <- reactive({
-    if(is.null(input$homer_bg2_enrich)){
-      return(NULL)
-    }else{
-      files<-c()
-      name<-c()
-      for(nr in 1:length(input$homer_bg2_enrich[, 1])){
-        file <- input$homer_bg2_enrich[[nr, 'datapath']]
-        name <- c(name, gsub("\\..+$", "", input$homer_bg2_enrich[nr,]$name))
-        files <- c(files,file)
-      }
-      files2 <- lapply(files, GetGRanges, simple = TRUE)
-      names(files2)<-name
-      if(length(names(files2)) > 1){
-        files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
-      }
-      return(files2)
-    }
-  })
-  output$homer_unknown_enrich <- renderUI({
-    selectInput("homer_unknown_enrich","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
-  })
-  
-  enrich_motif_enrich <- reactive({
-    if(updateCounter_enrich$i > 0 && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
-       && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
-      if(input$homer_size_enrich == "given") size <- "given"
-      if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich
-      if(input$homer_bg_enrich == "peakcalling" && is.null(input$homer_bg2_enrich)){
-        return(NULL)
-      }else return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,motif_length=input$homer_length_enrich,
-                             motif=input$homer_unknown_enrich, other_data = Enrich_peak_call_files_homer(),type="Other"))
-    }
-  })
-  
-  output$motif_enrich_plot <- renderPlot({
-    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && 
-       !is.null(input$homer_unknown_enrich) && input$Species_enrich != "not selected"){
-      homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich")
-    }
-  })
-  
-  output$download_motif_enrich_plot = downloadHandler(
-    filename = function() {
-      paste0("motif_enrichment_plot",".pdf")
-    },
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich")
-        if(input$enrich_pdf_height == 0){
-          pdf_height <- 6
-        }else pdf_height <- input$enrich_pdf_height
-        if(input$enrich_pdf_width == 0){
-          pdf_width <- 7
-        }else pdf_width <- input$enrich_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(p1)
-        dev.off()
-        incProgress(1)
-      })
-    }
-  )
-  
-  
-  output$download_motif_enrich_table = downloadHandler(
-    filename = function() {
-      paste0("known_motif_table",".txt")
-    },
-    content = function(file){write.table(motif_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  
-  
-  denovo_motif_table_enrich <- reactive({
-    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich())){
-      return(denovo_motif(enrich_motif_enrich()))
-    }
-  })
-  
-  output$denovo_motif_enrich_result <- DT::renderDT({
-    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && input$Species_enrich != "not selected"){
-      denovo_motif_table_enrich()
-    }
-  })
-  
-  motif_table_enrich <- reactive({
-    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich())){
-      return(known_motif(enrich_motif_enrich()))
-    }
-  })
-  
-  output$motif_enrich_result <- DT::renderDT({
-    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && input$Species_enrich != "not selected"){
-      motif_table_enrich()
-    }
-  })
-  
-  output$download_denovo_motif_enrich_table = downloadHandler(
-    filename = function() {
-      paste0("denovo_motif_table",".txt")
-    },
-    content = function(file){write.table(denovo_motif_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  
-  output$download_homer_report_enrich = downloadHandler(
-    filename = function() {
-      paste0("HOMER_report",".zip")
-    },
-    content = function(fname){
-      fs <- c()
-      path_list <- enrich_motif_enrich()
-      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
-      for(name in names(path_list)){
-        files <-list.files(path_list[[name]],pattern = "*.*")
-        for(i in 1:length(files)){
-          data <- paste0(path_list[[name]],"/",files[[i]])
-          fs <- c(fs, data)
-        }
-      }
-      zip(zipfile=fname, files=fs)
-    },
-    contentType = "application/zip"
   )
   
   ##heatmap----------
@@ -9009,9 +8511,10 @@ shinyServer(function(input, output, session) {
             }
             tmp <- df2
           }
+          tmp$Group <- gsub(":","-",tmp$Group)
           return(tmp)
         }else{
-          if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+          if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
           if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
           if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
           rownames(df) = gsub("\"", "", rownames(df))
@@ -9283,41 +8786,41 @@ shinyServer(function(input, output, session) {
     RNA <- RNAseqDEG_anno_enrich()
     if(input$RNAseq_data_type_enrich == "List") validate("Boxplot is not available for this input type. Please use 'DEG_result' or 'Raw_count' data.")
     withProgress(message = "Preparing boxplot",{
-    RNA <- dplyr::filter(RNA, !is.na(gene_id))
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    for(name in enrich_select_RNA_debounce()){
-      data <- merge(RNA,RP_enrich()[[name]], by="gene_id",all=T)
-      data$group <- "Others"
-      data$group[data$sumRP > 1] <- "RP > 1"
-      data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
-      data$intersection <- as.factor(name)
-      df <- rbind(df,data)
-    }
-    data <- df 
-    data$log10FoldChange <- log10(2^data$log2FoldChange)
-    data$log10FoldChange <- as.numeric(data$log10FoldChange)
-    for(name in enrich_select_RNA_debounce()){
-      check <- data %>% dplyr::filter(intersection == name) %>% 
-        dplyr::filter(group != "Others") %>% summarise(n())
-      if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
-    }
-    if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
-    
-    data$intersection <- gsub("-","-\n",data$intersection)
-    stat.test <- data %>% dplyr::group_by(intersection)  %>% 
-      t_test(log10FoldChange ~ group)  %>% 
-      add_significance() %>% 
-      add_xy_position(scales = "free", step.increase = 0.2)
-    col <-c("gray","#F8766D")
-    
-    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
-                               fill = "group", scales = "free", 
-                               xlab = FALSE, ylab = "RNAseq log10FoldChange")+theme_bw(base_size = 15)+
-               xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
-    p <- facet(p, facet.by = "intersection",
-               panel.labs.background = list(fill = "transparent", color = "transparent"),
-               scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
-    incProgress(1)
+      RNA <- dplyr::filter(RNA, !is.na(gene_id))
+      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+      for(name in enrich_select_RNA_debounce()){
+        data <- merge(RNA,RP_enrich()[[name]], by="gene_id",all=T)
+        data$group <- "Others"
+        data$group[data$sumRP > 1] <- "RP > 1"
+        data$group <- factor(data$group,levels=c("Others","RP > 1"),ordered=TRUE)
+        data$intersection <- as.factor(name)
+        df <- rbind(df,data)
+      }
+      data <- df 
+      data$log10FoldChange <- log10(2^data$log2FoldChange)
+      data$log10FoldChange <- as.numeric(data$log10FoldChange)
+      for(name in enrich_select_RNA_debounce()){
+        check <- data %>% dplyr::filter(intersection == name) %>% 
+          dplyr::filter(group != "Others") %>% summarise(n())
+        if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
+      }
+      if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
+      
+      data$intersection <- gsub("-","-\n",data$intersection)
+      stat.test <- data %>% dplyr::group_by(intersection)  %>% 
+        t_test(log10FoldChange ~ group)  %>% 
+        add_significance() %>% 
+        add_xy_position(scales = "free", step.increase = 0.2)
+      col <-c("gray","#F8766D")
+      
+      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
+                                 fill = "group", scales = "free", 
+                                 xlab = FALSE, ylab = "RNAseq log10FoldChange")+theme_bw(base_size = 15)+
+                 xlab(NULL)+scale_fill_manual(values = col) + stat_pvalue_manual(stat.test,hide.ns = T, size = 5))
+      p <- facet(p, facet.by = "intersection",
+                 panel.labs.background = list(fill = "transparent", color = "transparent"),
+                 scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
+      incProgress(1)
     })
     return(p)
   })
@@ -9326,29 +8829,29 @@ shinyServer(function(input, output, session) {
   RNAseq_popu_enrich <- reactive({
     if(!is.null(pre_RP_all_table_enrich()) && !is.null(RNAseq_name_enrich())){
       withProgress(message = "Preparing barplot",{
-      up_name <- RNAseq_name_enrich()[2]
-      down_name <- RNAseq_name_enrich()[1]
-      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-      for(name in enrich_select_RNA_debounce()){
-        epi_name <- paste0(name, "_associated")
-        table <- pre_RP_all_table_enrich()[[name]] %>% dplyr::mutate(
-          type =if_else(withPeakN > 0, epi_name, "not_associated")
-        )
-        table$Group <- gsub(".+\\:","",table$Group)
-        table$Group <- paste0(table$Group," genes")
-        table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
-        table$intersection <- name
-        df <- rbind(df, table)
-      }
-      table <- df
-      table$intersection <- gsub("-","-\n",table$intersection)
-      table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
-        summarise(count = n(), .groups = "drop")
-      p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
-        geom_col(position=position_dodge2(preserve = "single")) +
-        theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
-        xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
-      incProgress(1)
+        up_name <- RNAseq_name_enrich()[2]
+        down_name <- RNAseq_name_enrich()[1]
+        df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+        for(name in enrich_select_RNA_debounce()){
+          epi_name <- paste0(name, "_associated")
+          table <- pre_RP_all_table_enrich()[[name]] %>% dplyr::mutate(
+            type =if_else(withPeakN > 0, epi_name, "not_associated")
+          )
+          table$Group <- gsub(".+\\:","",table$Group)
+          table$Group <- paste0(table$Group," genes")
+          table$type <- factor(table$type,levels = c(epi_name,"not_associated"))
+          table$intersection <- name
+          df <- rbind(df, table)
+        }
+        table <- df
+        table$intersection <- gsub("-","-\n",table$intersection)
+        table2 <- table %>% group_by(Group, intersection, withPeakN) %>%
+          summarise(count = n(), .groups = "drop")
+        p <- ggplot(table2,aes(x = withPeakN,y= count,fill = intersection)) +
+          geom_col(position=position_dodge2(preserve = "single")) +
+          theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free",ncol = 3) +
+          xlab("Number of associated peaks")+guides(fill=guide_legend(title="associated_\npeak_type"))
+        incProgress(1)
       })
       return(p)
     }
@@ -9908,6 +9411,617 @@ shinyServer(function(input, output, session) {
     content = function(file){write.table(int_enrich_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
   )
   
+  
+  #Docker only---------
+  ##Motif enrichment analysis----------
+  output$homer_bg <- renderUI({
+    if(input$Genomic_region == "Genome-wide"){
+      radioButtons('homer_bg','Background sequence',
+                   c('random'="random",
+                     'peak call files'="peakcalling"
+                   ),selected = "random")
+    }
+  })
+  
+  updateCounter <- reactiveValues(i = 0)
+  
+  observe({
+    input$motifButton
+    isolate({
+      updateCounter$i <- updateCounter$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues <- observeEvent(enrich_motif(), {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+  
+  output$homer_size2 <- renderUI({
+    if(!is.null(input$homer_size)){
+      if(input$homer_size == "custom"){
+        numericInput('homer_size2','Size of the region for motif finding',value=200, step=100)}}
+  })
+  
+  
+  preMotif_list <- reactive({
+    df <- list()
+    collist <- collist_bw_pair()
+    df[[paste0(unique(collist)[2],"_high")]] <- data_degcount_up()
+    df[[paste0(unique(collist)[1],"_high")]] <- data_degcount_down()
+    return(df)
+  })
+  
+  enrich_motif <- reactive({
+    if(updateCounter$i > 0 && input$motifButton > 0 && !is.null(preMotif_list()) 
+       && input$Species != "not selected" && !is.null(input$homer_unknown)){
+      if(input$homer_size == "given") size <- "given"
+      if(input$homer_size == "custom") size <- input$homer_size2
+      if(input$Genomic_region == "Genome-wide"){
+        return(findMotif(df= preMotif_list(), anno_data = deg_result_anno2(),back = input$homer_bg,motif_length=input$homer_length,
+                         Species = input$Species, motif=input$homer_unknown,size=size,bw_count=bw_count()))
+      }else return(findMotif(df= data_degcount2(), anno_data = promoter_region(),
+                             Species = input$Species,motif_length=input$homer_length,
+                             type = "Promoter", motif=input$homer_unknown,size=size))
+    }else return(NULL)
+  })
+  
+  output$motif_plot <- renderPlot({
+    if(input$motifButton > 0 && !is.null(enrich_motif()) && 
+       !is.null(input$homer_unknown) && input$Species != "not selected"){
+      homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
+    }
+  })
+  output$download_motif_plot = downloadHandler(
+    filename = function() {
+      paste0("motif_enrichment_plot",".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(p1)
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$download_homer_report = downloadHandler(
+    filename = function() {
+      paste0("HOMER_report",".zip")
+    },
+    content = function(fname){
+      fs <- c()
+      path_list <- enrich_motif()
+      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+      for(name in names(path_list)){
+        files <-list.files(path_list[[name]],pattern = "*.*")
+        for(i in 1:length(files)){
+          data <- paste0(path_list[[name]],"/",files[[i]])
+          fs <- c(fs, data)
+        }
+      }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  
+  
+  output$download_motif_table = downloadHandler(
+    filename = function() {
+      paste0("known_motif_table",".txt")
+    },
+    content = function(file){write.table(motif_table(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  motif_table <- reactive({
+    if(input$motifButton > 0 && !is.null(enrich_motif())){
+      return(known_motif(enrich_motif()))
+    }
+  })
+  
+  output$motif_result <- DT::renderDT({
+    if(input$motifButton > 0 && !is.null(enrich_motif()) && input$Species != "not selected"){
+      motif_table()
+    }
+  })
+  # with RNAseq HOMER-----------
+  output$with_homer_bg <- renderUI({
+    if(input$Genomic_region == "Genome-wide"){
+      radioButtons('with_homer_bg','Background sequence',
+                   c('random'="random",
+                     'peak call files'="peakcalling"
+                   ),selected = "peakcalling")
+    }
+  })
+  
+  with_updateCounter <- reactiveValues(i = 0)
+  
+  observe({
+    input$with_motifButton
+    isolate({
+      with_updateCounter$i <- with_updateCounter$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(with_enrich_motif(), {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  
+  output$with_homer_size2 <- renderUI({
+    if(!is.null(input$with_homer_size)){
+      if(input$with_homer_size == "custom"){
+        numericInput('with_homer_size2','Size of the region for motif finding',value=200, step=100)}}
+  })
+  
+  output$Group_homer <- renderUI({
+    if(!is.null(RP_all_table())){
+      selectInput("Group_homer","Group (Epigenome:RNAseq)",unique(RP_all_table()$Group),multiple = T)
+    }
+  })
+  with_preMotif_list <- reactive({
+    group <- input$Group_homer
+    list <- list()
+    if(is.null(group)) validate("Select groups of interest.")
+    for(name in group){
+      table <- RP_all_table() %>% dplyr::filter(Group == name)
+      gene <- table$gene_id
+      if(input$Genomic_region == "Promoter"){
+        tss <- promoters(genes(txdb()),upstream = 0,downstream = 1)
+        peak <- subset(tss, gene_id %in% gene)
+      }else{
+        type <- gsub("\\:.+$","", name)
+        if(type == paste0(unique(collist_bw_pair())[2], "_high")) {
+          peak <- subset(mmAnno_up(), gene_id %in% gene)
+        }
+        if(type == paste0(unique(collist_bw_pair())[1], "_high")) {
+          peak <- subset(mmAnno_down(), gene_id %in% gene)
+        }
+      }
+      list[[gsub(":","--",name)]] <- peak
+    } 
+    return(list)
+  })
+  
+  with_enrich_motif <- reactive({
+    if(with_updateCounter$i > 0 && input$with_motifButton > 0 && !is.null(with_preMotif_list()) 
+       && input$Species != "not selected" && !is.null(input$with_homer_unknown)){
+      if(input$with_homer_size == "given") size <- "given"
+      if(input$with_homer_size == "custom") size <- input$with_homer_size2
+      return(findMotif(df= with_preMotif_list(), other_data = promoter_region(),back = input$with_homer_bg,
+                       motif_length=input$with_homer_length,type="Other",
+                       Species = input$Species, motif=input$with_homer_unknown,size=size,bw_count=bw_count()))
+    }else return(NULL)
+  })
+  
+  output$with_motif_plot <- renderPlot({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
+       !is.null(input$with_homer_unknown) && input$Species != "not selected"){
+      homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory,section = "withRNAseq")
+    }
+  })
+  output$download_with_motif_plot = downloadHandler(
+    filename = function() {
+      paste0("withRNAseq_motif_enrichment_plot",".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        p1 <- homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(p1)
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  output$download_with_homer_report = downloadHandler(
+    filename = function() {
+      paste0("withRNAseq_HOMER_report",".zip")
+    },
+    content = function(fname){
+      fs <- c()
+      path_list <- with_enrich_motif()
+      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+      for(name in names(path_list)){
+        files <-list.files(path_list[[name]],pattern = "*.*")
+        for(i in 1:length(files)){
+          data <- paste0(path_list[[name]],"/",files[[i]])
+          fs <- c(fs, data)
+        }
+      }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  
+  
+  output$download_with_motif_table = downloadHandler(
+    filename = function() {
+      paste0("withRNAseq_known_motif_table",".txt")
+    },
+    content = function(file){write.table(with_motif_table(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  with_motif_table <- reactive({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif())){
+      return(known_motif(with_enrich_motif()))
+    }
+  })
+  
+  output$with_motif_result <- DT::renderDT({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && input$Species != "not selected"){
+      with_motif_table()
+    }
+  })
+  ##Venn motif -----------
+  output$homer_showCategory_venn <- renderUI({
+    sliderInput("homer_showCategory_venn","Most significant motifs", value=5, min=1,max=20)
+  })
+  output$homer_size_venn <- renderUI({
+    radioButtons('homer_size_venn','Type of the region for motif finding',
+                 c('given (exact size)'="given",
+                   'custom size'="custom"
+                 ),selected = "custom")
+  })
+  output$homer_bg_venn <- renderUI({
+    radioButtons('homer_bg_venn','Background sequence',
+                 c('random'="random",
+                   'bed files'="peakcalling"
+                 ),selected = "random")
+  })
+  output$homer_bg2_venn <- renderUI({
+    if(!is.null(input$homer_bg_venn)){
+      if(input$homer_bg_venn == "peakcalling"){
+        fileInput('homer_bg2_venn',
+                  'Select bed files',
+                  accept = c("bed","narrowPeak"),
+                  multiple = TRUE,
+                  width = "80%")
+      }}
+  })
+  updateCounter_venn <- reactiveValues(i = 0)
+  
+  observe({
+    input$motifButton_venn
+    isolate({
+      updateCounter_venn$i <- updateCounter_venn$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_venn <- observeEvent(enrich_motif_venn(), {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  Venn_peak_call_files_homer <- reactive({
+    if(is.null(input$homer_bg2_venn)){
+      return(NULL)
+    }else{
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$homer_bg2_venn[, 1])){
+        file <- input$homer_bg2_venn[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$homer_bg2_venn[nr,]$name))
+        files <- c(files,file)
+      }
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
+      names(files2)<-name
+      if(length(names(files2)) > 1){
+        files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+      }
+      return(files2)
+    }
+  })
+  
+  output$homer_size2_venn <- renderUI({
+    if(!is.null(input$homer_size_venn)){
+      if(input$homer_size_venn == "custom"){
+        numericInput('homer_size2_venn','Size of the region for motif finding',value=200, step=100)}}
+  })
+  output$homer_unknown_venn <- renderUI({
+    selectInput("homer_unknown_venn","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
+  })
+  observeEvent(input$homer_unknown_venn,({
+    updateActionButton(session,"motifButton_venn", "Start")
+  }))
+  
+  
+  output$venn_whichGroup1 <- renderUI({
+    if(!is.null(Venn_peak_call_files())){
+      selectInput("venn_whichGroup1", "Select intersects", choices = c(names(venn_overlap()$peaklist)),multiple = TRUE)
+    }
+  })
+  preMotif_list_venn <- reactive({
+    df <- list()
+    for(name in input$venn_whichGroup1){
+      df[[name]] <- venn_overlap()$peaklist[[name]]
+    }
+    return(df)
+  })
+  
+  enrich_motif_venn <- reactive({
+    if(updateCounter_venn$i > 0 && input$motifButton_venn > 0 && !is.null(preMotif_list_venn()) 
+       && input$Species_venn != "not selected" && !is.null(input$homer_unknown_venn)){
+      if(input$homer_size_venn == "given") size <- "given"
+      if(input$homer_size_venn == "custom") size <- input$homer_size2_venn
+      if(input$homer_bg_venn == "peakcalling" && is.null(input$homer_bg2_venn)){
+        return(NULL)
+      }else return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,motif_length=input$homer_length_venn,
+                             motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other"))
+    }
+  })
+  venn_motif_plot <- reactive({
+    return(homer_Motifplot(df = enrich_motif_venn(),showCategory = input$homer_showCategory_venn,section="venn"))
+  })
+  
+  output$motif_venn_plot <- renderPlot({
+    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
+       !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
+      venn_motif_plot()
+    }
+  })
+  
+  output$download_motif_venn_plot = downloadHandler(
+    filename = function() {
+      paste0("motif_enrichment_plot",".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        if(input$venn_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$venn_pdf_height
+        if(input$venn_pdf_width == 0){
+          pdf_width <- 8
+        }else pdf_width <- input$venn_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(venn_motif_plot())
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  
+  output$download_motif_venn_table = downloadHandler(
+    filename = function() {
+      paste0("known_motif_table",".txt")
+    },
+    content = function(file){write.table(motif_table_venn(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  
+  motif_table_venn <- reactive({
+    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn())){
+      return(known_motif(enrich_motif_venn()))
+    }
+  })
+  denovo_motif_table_venn <- reactive({
+    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn())){
+      return(denovo_motif(enrich_motif_venn()))
+    }
+  })
+  
+  output$denovo_motif_venn_result <- DT::renderDT({
+    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && input$Species_venn != "not selected"){
+      denovo_motif_table_venn()
+    }
+  })
+  
+  output$motif_venn_result <- DT::renderDT({
+    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && input$Species_venn != "not selected"){
+      motif_table_venn()
+    }
+  })
+  
+  
+  output$download_denovo_motif_venn_table = downloadHandler(
+    filename = function() {
+      paste0("denovo_motif_table",".txt")
+    },
+    content = function(file){write.table(denovo_motif_table_venn(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  
+  output$download_homer_report_venn = downloadHandler(
+    filename = function() {
+      paste0("HOMER_report",".zip")
+    },
+    content = function(fname){
+      fs <- c()
+      path_list <- enrich_motif_venn()
+      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+      for(name in names(path_list)){
+        files <-list.files(path_list[[name]],pattern = "*.*")
+        for(i in 1:length(files)){
+          data <- paste0(path_list[[name]],"/",files[[i]])
+          fs <- c(fs, data)
+        }
+      }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  ##Enrich motif -----------
+  output$homer_size_enrich <- renderUI({
+    radioButtons('homer_size_enrich','Type of the region for motif finding',
+                 c('given (exact size)'="given",
+                   'custom size'="custom"
+                 ),selected = "custom")
+  })
+  output$homer_size2_enrich <- renderUI({
+    if(!is.null(input$homer_size_enrich)){
+      if(input$homer_size_enrich == "custom"){
+        numericInput('homer_size2_enrich','Size of the region for motif finding',value=200, step=100)
+      }}
+  })
+  output$homer_bg_enrich <- renderUI({
+    radioButtons('homer_bg_enrich','Background sequence',
+                 c('random'="random",
+                   'bed files'="peakcalling"
+                 ),selected = "random")
+  })
+  output$homer_bg2_enrich <- renderUI({
+    if(!is.null(input$homer_bg_enrich)){
+      if(input$homer_bg_enrich == "peakcalling"){
+        fileInput('homer_bg2_enrich',
+                  'Select bed files',
+                  accept = c("bed","narrowPeak"),
+                  multiple = TRUE,
+                  width = "80%")
+      }}
+  })
+  updateCounter_enrich <- reactiveValues(i = 0)
+  
+  observe({
+    input$motifButton_enrich
+    isolate({
+      updateCounter_enrich$i <- updateCounter_enrich$i + 1
+    })
+  })
+  
+  
+  #Restart
+  defaultvalues_enrich <- observeEvent(enrich_motif_enrich(), {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  Enrich_peak_call_files_homer <- reactive({
+    if(is.null(input$homer_bg2_enrich)){
+      return(NULL)
+    }else{
+      files<-c()
+      name<-c()
+      for(nr in 1:length(input$homer_bg2_enrich[, 1])){
+        file <- input$homer_bg2_enrich[[nr, 'datapath']]
+        name <- c(name, gsub("\\..+$", "", input$homer_bg2_enrich[nr,]$name))
+        files <- c(files,file)
+      }
+      files2 <- lapply(files, GetGRanges, simple = TRUE)
+      names(files2)<-name
+      if(length(names(files2)) > 1){
+        files2 <- soGGi:::runConsensusRegions(GRangesList(files2), "none")
+      }
+      return(files2)
+    }
+  })
+  output$homer_unknown_enrich <- renderUI({
+    selectInput("homer_unknown_enrich","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif")
+  })
+  
+  enrich_motif_enrich <- reactive({
+    if(updateCounter_enrich$i > 0 && input$motifButton_enrich > 0 && !is.null(Enrich_peak_call_files()) 
+       && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
+      if(input$homer_size_enrich == "given") size <- "given"
+      if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich
+      if(input$homer_bg_enrich == "peakcalling" && is.null(input$homer_bg2_enrich)){
+        return(NULL)
+      }else return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,motif_length=input$homer_length_enrich,
+                             motif=input$homer_unknown_enrich, other_data = Enrich_peak_call_files_homer(),type="Other"))
+    }
+  })
+  
+  output$motif_enrich_plot <- renderPlot({
+    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && 
+       !is.null(input$homer_unknown_enrich) && input$Species_enrich != "not selected"){
+      homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich")
+    }
+  })
+  
+  output$download_motif_enrich_plot = downloadHandler(
+    filename = function() {
+      paste0("motif_enrichment_plot",".pdf")
+    },
+    content = function(file) {
+      withProgress(message = "Preparing download",{
+        p1 <- homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich")
+        if(input$enrich_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$enrich_pdf_height
+        if(input$enrich_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$enrich_pdf_width
+        pdf(file, height = pdf_height, width = pdf_width)
+        print(p1)
+        dev.off()
+        incProgress(1)
+      })
+    }
+  )
+  
+  
+  output$download_motif_enrich_table = downloadHandler(
+    filename = function() {
+      paste0("known_motif_table",".txt")
+    },
+    content = function(file){write.table(motif_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  
+  
+  denovo_motif_table_enrich <- reactive({
+    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich())){
+      return(denovo_motif(enrich_motif_enrich()))
+    }
+  })
+  
+  output$denovo_motif_enrich_result <- DT::renderDT({
+    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && input$Species_enrich != "not selected"){
+      denovo_motif_table_enrich()
+    }
+  })
+  
+  motif_table_enrich <- reactive({
+    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich())){
+      return(known_motif(enrich_motif_enrich()))
+    }
+  })
+  
+  output$motif_enrich_result <- DT::renderDT({
+    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && input$Species_enrich != "not selected"){
+      motif_table_enrich()
+    }
+  })
+  
+  output$download_denovo_motif_enrich_table = downloadHandler(
+    filename = function() {
+      paste0("denovo_motif_table",".txt")
+    },
+    content = function(file){write.table(denovo_motif_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
+  )
+  
+  output$download_homer_report_enrich = downloadHandler(
+    filename = function() {
+      paste0("HOMER_report",".zip")
+    },
+    content = function(fname){
+      fs <- c()
+      path_list <- enrich_motif_enrich()
+      base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
+      for(name in names(path_list)){
+        files <-list.files(path_list[[name]],pattern = "*.*")
+        for(i in 1:length(files)){
+          data <- paste0(path_list[[name]],"/",files[[i]])
+          fs <- c(fs, data)
+        }
+      }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  
+  
   ##More-------------
   #Bed tool----------
   output$bed_file1_warning <- renderText({
@@ -10049,6 +10163,8 @@ shinyServer(function(input, output, session) {
     },
     contentType = "application/zip"
   )
-  
+  observeEvent(input$goButton_bed,({
+    updateSelectInput(session,inputId = "Species_bed","Species_bed",species_list, selected = "Homo sapiens (hg19)")
+  }))
   
 })

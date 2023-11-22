@@ -23,7 +23,7 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "devtools::install_github('YuLab-SMU/clusterProfiler.dplyr')" && \
     R -e "BiocManager::install('shiny', update = F)" && \
     R -e "BiocManager::install('DT', update = F)" && \
-    R -e "BiocManager::install('gdata', update = F)" && \
+    R -e "BiocManager::install('readxl', update = F)" && \
     R -e "BiocManager::install('rstatix', update = F)" && \
     R -e "BiocManager::install('multcomp', update = F)" && \
     R -e "BiocManager::install('ggrepel', update = F)" && \

@@ -1,3 +1,5 @@
+##information mark
+
 library(rtracklayer) 
 library(Rsubread)
 library(Rsamtools)
@@ -28,7 +30,6 @@ library(org.Pt.eg.db)
 library(biomaRt)
 library(shiny)
 library(DT)
-library(gdata)
 library(rstatix)
 library(multcomp)
 library(tidyverse)
@@ -55,7 +56,6 @@ library(rGREAT)
 library(FindIT2)
 library(limma)
 library(ggseqlogo)
-library(marge)
 library(plotmics)
 library(colorspace)
 library(ggcorrplot)
@@ -72,9 +72,8 @@ library(webshot)
 library(clue)
 library(TxDb.Mmusculus.UCSC.mm39.refGene)
 library(stringr)
+library(readxl)
 Sys.setenv(OPENSSL_CONF="/dev/null")
-options('homer_path' = "/usr/local/homer")
-check_homer()
 jscode <- "shinyjs.closeWindow = function() { window.close(); }"
 options(rsconnect.max.bundle.size=31457280000000000000)
 species_list <- c("not selected", "Homo sapiens (hg19)","Homo sapiens (hg38)","Mus musculus (mm10)","Mus musculus (mm39)",
@@ -117,7 +116,7 @@ read_df <- function(tmp, Species=NULL){
   if(is.null(tmp)) {
     return(NULL)
   }else{
-    if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+    if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
     if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
     if(tools::file_ext(tmp) == "txt" || tools::file_ext(tmp) == "tsv") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
     rownames(df) = gsub("\"", "", rownames(df))
@@ -685,270 +684,6 @@ enrich_for_table <- function(data, H_t2g, Gene_set){
   }
 }
 
-read_known_results<-function (path, homer_dir = TRUE) {
-  if (homer_dir == TRUE) {
-    path <- paste0(path, "/knownResults.txt")
-  }
-  if (!file.exists(path)) {
-    warning(paste("File", path, "does not exist"))
-    return(NULL)
-  }
-  col_spec <- readr::cols("c", "c", "d", "-", "d", "d", "c", 
-                          "d", "c")
-  raw <- readr::read_tsv(path, col_types = col_spec)
-  colnames(raw) <- c("motif_name", "consensus", "log_p_value", 
-                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct")
-  tmp <- raw %>% tidyr::separate_("motif_name", c("motif_name", 
-                                                  "experiment", "database"), "/", extra = "drop")
-  parsed <- .parse_homer_subfields(tmp) %>% dplyr::mutate_at(vars(contains("pct")), 
-                                                             .parse_pcts)
-  known <- .append_known_pwm(parsed)
-  names(known$motif_pwm) <- known$motif_name
-  return(known)
-}
-.parse_homer_subfields <- function(motif_tbl) {
-  cond <- stringr::str_detect(motif_tbl$motif_name, "/") %>%
-    sum(., na.rm = TRUE) > 0
-  if (cond == TRUE) {
-    motif_tbl <- motif_tbl %>%
-      tidyr::separate_('motif_name',
-                       c('motif_name', 'experiment', 'database'),
-                       '/', extra = "drop", fill = "right")
-  }
-  
-  ## Detect if parentheses are present in motif_name
-  ## to break apart into motif_name vs. motif_family
-  cond <- stringr::str_detect(motif_tbl$motif_name, '\\(') %>%
-    sum(., na.rm = TRUE) > 0
-  if (cond == TRUE) {
-    motif_tbl <- motif_tbl %>%
-      tidyr::separate_('motif_name',
-                       c('motif_name', 'motif_family'),
-                       '\\(', extra = "drop", fill = "right")
-    motif_tbl$motif_family <- stringr::str_replace(motif_tbl$motif_family, '\\)', '')
-  }
-  
-  ## Detect If parentheses are present in experiment
-  ## to break apart into experiment vs. accession
-  if ("experiment" %in% colnames(motif_tbl)) {
-    cond <- stringr::str_detect(motif_tbl$experiment, '\\(') %>%
-      sum(., na.rm = TRUE) > 0
-    if (cond == TRUE) {
-      motif_tbl <- motif_tbl %>%
-        tidyr::separate_('experiment',
-                         c('experiment', 'accession'),
-                         '\\(', extra = "drop", fill = "right")
-      motif_tbl$accession <- stringr::str_replace(motif_tbl$accession, '\\)', '')
-    }
-  }
-  
-  return(motif_tbl)
-}
-.parse_pcts <- function(x) {
-  stringr::str_replace(x, "%", "") %>%
-    as.numeric() * 0.01
-}
-.append_known_pwm <- function(known_results) {
-  data(HOMER_motifs, envir = environment())
-  hm <- HOMER_motifs %>%
-    ##        dplyr::filter(rlang::UQ(rlang::sym('log_odds_detection')) > 0) %>%
-    dplyr::select("motif_name", "motif_family", "experiment", "accession",
-                  "motif_pwm", "log_odds_detection")
-  dplyr::inner_join(known_results, hm, 
-                    by = c("motif_name", "motif_family", "experiment", "accession"))
-}   
-findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
-                      motif,size,back="random",bw_count=NULL,other_data=NULL,motif_length){
-  ref <- gsub(".+\\(","",gsub(")", "", Species))
-    switch(motif,
-           "known motif" = time <- "10 ~ 20",
-           "known and de novo motifs" = time <- "20 ~ 30")
-  withProgress(message = paste0("Motif analysis takes about ",time," min per group"),{
-    if(type == "Genome-wide" || type == "Other") {
-      group_name <- names(df)
-      group_file <- length(names(df))
-    }else{
-      group_name <- unique(df$group)
-      group_file <- length(unique(df$group))
-    }
-    perc <- 0
-    df2 <- list()
-    path <- paste0(format(Sys.time(), "%Y%m%d_%H%M_homer_"),back,"_size-",size)
-    dir.create(path = path)
-    for(name in group_name){
-      group_dir <- paste0(path, "/",name)
-      dir.create(path = group_dir)
-      perc <- perc + 1
-      if(!is.null(anno_data)){
-        if(type == "Genome-wide"){
-          data <- df[[name]]
-          data2 <- anno_data %>% dplyr::filter(locus %in% rownames(data))
-          y <- with(data2, GRanges(seqnames = seqnames, 
-                                   ranges = IRanges(start,end)))
-        }else{
-          data <- dplyr::filter(df, group == name)
-          y <- subset(anno_data, gene_id %in% data$ENTREZID)
-          y <- as.data.frame(y)
-          y <- with(y, GRanges(seqnames = seqnames, 
-                                   ranges = IRanges(start,end)))
-        }
-      }else y<- df[[name]]
-      y <- as.data.frame(y)
-      print(head(y))
-      if(dim(y)[1] != 0){
-        if(type=="Genome-wide"){
-        if(back == "random"){
-          bg <-'automatic'
-        }else{
-          data <- anno_data %>% dplyr::filter(! locus %in% rownames(data))
-          data2 <- range_changer(data)
-          bg <- data.frame(seqnames = data2$chr,start=data2$start,end=data2$end)
-          write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
-          bg <- paste0(tempdir(),"bed.bed")
-        }
-          }
-        if(type== "Promoter") {
-          bg <- subset(anno_data, ! gene_id %in% data$ENTREZID) 
-          bg <- as.data.frame(bg)
-          bg <- with(bg, GRanges(seqnames = seqnames, 
-                              ranges = IRanges(start,end)))
-          bg <- as.data.frame(bg)
-          write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
-          bg <- paste0(tempdir(),"bed.bed")
-        }
-        if(type=="Other"){
-          if(back == "random"){
-            bg <-'automatic'
-          }else{
-            bg <- as.data.frame(other_data)
-            write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
-            bg <- paste0(tempdir(),"bed.bed")
-          }
-            }
-        print(head(bg))
-      switch(motif,
-             "known motif" = motif_type <- TRUE,
-             "known and de novo motifs" = motif_type <- FALSE)
-      find_motifs_genome(
-        y,
-        path = group_dir,
-        genome = ref, 
-        motif_length = motif_length,
-        scan_size = size,
-        optimize_count = 25,
-        background = bg,
-        local_background = FALSE,
-        only_known = motif_type, only_denovo = FALSE,
-        cores = 2, cache = 500,
-        overwrite = TRUE, keep_minimal = FALSE
-      )
-      df2[[name]] <- group_dir
-      }
-      incProgress(1/group_file, message = paste("Finish motif analysis of Group '", name, "', ", perc, "/", group_file,sep = ""))
-    }
-    return(df2)
-  })
-}
-
-known_motif <- function(df){
-  df2 <- data.frame(matrix(rep(NA, 14), nrow=1))[numeric(0), ]
-  colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
-                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct", "log_odds_detection","Group")
-  for(name in names(df)){
-    if(file.exists(paste0(df[[name]],"/knownResults.txt")) == TRUE){
-    known <-  as.data.frame(read_known_results(path = df[[name]]))[,-13]
-    known$Group <- name
-    df2 <- rbind(df2,known)
-    }
-  }
-  colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
-                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct", "log_odds_detection","Group")
-  return(df2)
-}
-
-denovo_motif <- function(df){
-  df2 <- data.frame(matrix(rep(NA, 18), nrow=1))[numeric(0), ]
-  colnames(df2) <- c("consensus","motif_name", "log_odds_detection","motif_id",  "log_p_value_detection", 
-                     "tgt_num", "tgt_pct", "bgd_num", "bgd_pct"," log_p_value","fdr","tgt_pos","tgt_std","bgd_pos","bgd_std","strand_bias","multiplicity", "Group")
-  for(name in names(df)){
-    if(file.exists(paste0(df[[name]],"/homerResults.html")) == TRUE){
-      known <-  as.data.frame(read_denovo_results(path = df[[name]]))[,-5]
-      known$Group <- name
-      df2 <- rbind(df2,known)
-    }
-  }
-  return(df2)
-}
-
-
-homer_Motifplot <- function(df, showCategory=5,section=NULL){
-  df2 <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
-
-  for(name in names(df)){
-    print(file.exists(paste0(df[[name]],"/knownResults.txt")))
-    
-    if(file.exists(paste0(df[[name]],"/knownResults.txt")) == TRUE){
-    res <- as.data.frame(as.data.frame(read_known_results(path = df[[name]])))
-    if(length(res$motif_name) != 0){
-    res$Group <- name
-    if(length(rownames(res)) > showCategory){
-      res <- res[1:showCategory,]
-    }
-    df2 <- rbind(df2, res)
-    }
-    }
-  }
-  if(length(df2$motif_name) == 0){
-    return(NULL)
-  }else{
-    colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
-                       "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct","motif_pwm","log_odds_detection","Group")
-    if(!is.null(section)){
-      if(section == "withRNAseq"){
-        df2$Group <- gsub("--", ":\n", df2$Group)
-        df2$Group <- gsub("_", " ", df2$Group)
-        for(i in 1:length(df2$Group)){
-          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
-        }
-      }else if(section == "venn"){
-        df2$Group <- gsub("- ", "- ", df2$Group)
-        for(i in 1:length(df2$Group)){
-          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
-        }
-      }else{
-        df2$Group <- gsub("_", " ", df2$Group)
-        for(i in 1:length(df2$Group)){
-          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
-        }
-      }
-      df2$Group <- gsub(" \\(", "\n\\(", df2$Group)
-    }
-    df2 <- dplyr::mutate(df2, x = paste0(Group, 1/-log10(eval(parse(text = "p_value")))))
-    df2$x <- gsub(":","", df2$x)
-    df2 <- dplyr::arrange(df2, x)
-    idx <- order(df2[["x"]], decreasing = FALSE)
-    df2$motif_name <- factor(df2$motif_name,
-                             levels=rev(unique(df2$motif_name[idx])))
-    d <- ggplot(df2, aes(x = Group,y= motif_name,color=p_value,size=log_odds_detection))+
-      geom_point() +
-      scale_color_continuous(low="red", high="blue",
-                             guide=guide_colorbar(reverse=TRUE)) +
-      scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
-      scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top")+
-      theme(plot.margin=margin(l=-0.75,unit="cm"))
-    df2 <- df2 %>% distinct(motif_name, .keep_all = T)
-    pfm <- df2$motif_pwm
-    pfm1 <- list()
-    for(name in names(pfm)){
-      pfm1[[name]] <- t(pfm[[name]])
-    }
-    Seqlogo <- as.grob(ggseqlogo(pfm1,ncol = 1)+
-                         theme_void()) 
-    p <- plot_grid(plot_grid(NULL, Seqlogo, ncol = 1, rel_heights = c(0.05:10)),as.grob(d))
-    
-    return(p)
-  }
-}
 
 files2GRangelist <- function(files){
   Glist <- GRangesList()
@@ -1266,7 +1001,7 @@ RNAseqDEGimport <- function(tmp,exampleButton){
     if(is.null(tmp)) {
       return(NULL)
     }else{
-      if(tools::file_ext(tmp) == "xlsx") df <- read.xls(tmp, header=TRUE, row.names = 1)
+      if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
       if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
       if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
       rownames(df) = gsub("\"", "", rownames(df))
@@ -2017,7 +1752,7 @@ donut_replot <- function(dat){
                 undefined="#FFFFFF")
   l <- unlist(unname(labs))
   l1 <- paste0(l, " (",
-               round(dplyr::filter(dat,source=="rep1")$percentage[match(names(l), dplyr::filter(dat,source=="rep1")$type)]*100,
+               round(dat$percentage[match(names(l), dat$type)]*100,
                      digits = 1), "%)")
   names(l1) <- names(l)
   l1 <- c(l1, undefined="")
@@ -2034,3 +1769,275 @@ donut_replot <- function(dat){
                       guide = guide_legend(reverse=TRUE))
   return(p)
 }
+
+
+##Docker only----------
+library(marge)
+options('homer_path' = "/usr/local/homer")
+check_homer()
+
+read_known_results<-function (path, homer_dir = TRUE) {
+  if (homer_dir == TRUE) {
+    path <- paste0(path, "/knownResults.txt")
+  }
+  if (!file.exists(path)) {
+    warning(paste("File", path, "does not exist"))
+    return(NULL)
+  }
+  col_spec <- readr::cols("c", "c", "d", "-", "d", "d", "c", 
+                          "d", "c")
+  raw <- readr::read_tsv(path, col_types = col_spec)
+  colnames(raw) <- c("motif_name", "consensus", "log_p_value", 
+                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct")
+  tmp <- raw %>% tidyr::separate_("motif_name", c("motif_name", 
+                                                  "experiment", "database"), "/", extra = "drop")
+  parsed <- .parse_homer_subfields(tmp) %>% dplyr::mutate_at(vars(contains("pct")), 
+                                                             .parse_pcts)
+  known <- .append_known_pwm(parsed)
+  names(known$motif_pwm) <- known$motif_name
+  return(known)
+}
+.parse_homer_subfields <- function(motif_tbl) {
+  cond <- stringr::str_detect(motif_tbl$motif_name, "/") %>%
+    sum(., na.rm = TRUE) > 0
+  if (cond == TRUE) {
+    motif_tbl <- motif_tbl %>%
+      tidyr::separate_('motif_name',
+                       c('motif_name', 'experiment', 'database'),
+                       '/', extra = "drop", fill = "right")
+  }
+  
+  ## Detect if parentheses are present in motif_name
+  ## to break apart into motif_name vs. motif_family
+  cond <- stringr::str_detect(motif_tbl$motif_name, '\\(') %>%
+    sum(., na.rm = TRUE) > 0
+  if (cond == TRUE) {
+    motif_tbl <- motif_tbl %>%
+      tidyr::separate_('motif_name',
+                       c('motif_name', 'motif_family'),
+                       '\\(', extra = "drop", fill = "right")
+    motif_tbl$motif_family <- stringr::str_replace(motif_tbl$motif_family, '\\)', '')
+  }
+  
+  ## Detect If parentheses are present in experiment
+  ## to break apart into experiment vs. accession
+  if ("experiment" %in% colnames(motif_tbl)) {
+    cond <- stringr::str_detect(motif_tbl$experiment, '\\(') %>%
+      sum(., na.rm = TRUE) > 0
+    if (cond == TRUE) {
+      motif_tbl <- motif_tbl %>%
+        tidyr::separate_('experiment',
+                         c('experiment', 'accession'),
+                         '\\(', extra = "drop", fill = "right")
+      motif_tbl$accession <- stringr::str_replace(motif_tbl$accession, '\\)', '')
+    }
+  }
+  
+  return(motif_tbl)
+}
+.parse_pcts <- function(x) {
+  stringr::str_replace(x, "%", "") %>%
+    as.numeric() * 0.01
+}
+.append_known_pwm <- function(known_results) {
+  data(HOMER_motifs, envir = environment())
+  hm <- HOMER_motifs %>%
+    ##        dplyr::filter(rlang::UQ(rlang::sym('log_odds_detection')) > 0) %>%
+    dplyr::select("motif_name", "motif_family", "experiment", "accession",
+                  "motif_pwm", "log_odds_detection")
+  dplyr::inner_join(known_results, hm, 
+                    by = c("motif_name", "motif_family", "experiment", "accession"))
+}   
+findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
+                      motif,size,back="random",bw_count=NULL,other_data=NULL,motif_length){
+  ref <- gsub(".+\\(","",gsub(")", "", Species))
+  switch(motif,
+         "known motif" = time <- "10 ~ 20",
+         "known and de novo motifs" = time <- "20 ~ 30")
+  withProgress(message = paste0("Motif analysis takes about ",time," min per group"),{
+    if(type == "Genome-wide" || type == "Other") {
+      group_name <- names(df)
+      group_file <- length(names(df))
+    }else{
+      group_name <- unique(df$group)
+      group_file <- length(unique(df$group))
+    }
+    perc <- 0
+    df2 <- list()
+    path <- paste0(format(Sys.time(), "%Y%m%d_%H%M_homer_"),back,"_size-",size)
+    dir.create(path = path)
+    for(name in group_name){
+      group_dir <- paste0(path, "/",name)
+      dir.create(path = group_dir)
+      perc <- perc + 1
+      if(!is.null(anno_data)){
+        if(type == "Genome-wide"){
+          data <- df[[name]]
+          data2 <- anno_data %>% dplyr::filter(locus %in% rownames(data))
+          y <- with(data2, GRanges(seqnames = seqnames, 
+                                   ranges = IRanges(start,end)))
+        }else{
+          data <- dplyr::filter(df, group == name)
+          y <- subset(anno_data, gene_id %in% data$ENTREZID)
+          y <- as.data.frame(y)
+          y <- with(y, GRanges(seqnames = seqnames, 
+                               ranges = IRanges(start,end)))
+        }
+      }else y<- df[[name]]
+      y <- as.data.frame(y)
+      print(head(y))
+      if(dim(y)[1] != 0){
+        if(type=="Genome-wide"){
+          if(back == "random"){
+            bg <-'automatic'
+          }else{
+            data <- anno_data %>% dplyr::filter(! locus %in% rownames(data))
+            data2 <- range_changer(data)
+            bg <- data.frame(seqnames = data2$chr,start=data2$start,end=data2$end)
+            write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
+            bg <- paste0(tempdir(),"bed.bed")
+          }
+        }
+        if(type== "Promoter") {
+          bg <- subset(anno_data, ! gene_id %in% data$ENTREZID) 
+          bg <- as.data.frame(bg)
+          bg <- with(bg, GRanges(seqnames = seqnames, 
+                                 ranges = IRanges(start,end)))
+          bg <- as.data.frame(bg)
+          write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
+          bg <- paste0(tempdir(),"bed.bed")
+        }
+        if(type=="Other"){
+          if(back == "random"){
+            bg <-'automatic'
+          }else{
+            bg <- as.data.frame(other_data)
+            write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
+            bg <- paste0(tempdir(),"bed.bed")
+          }
+        }
+        print(head(bg))
+        switch(motif,
+               "known motif" = motif_type <- TRUE,
+               "known and de novo motifs" = motif_type <- FALSE)
+        find_motifs_genome(
+          y,
+          path = group_dir,
+          genome = ref, 
+          motif_length = motif_length,
+          scan_size = size,
+          optimize_count = 25,
+          background = bg,
+          local_background = FALSE,
+          only_known = motif_type, only_denovo = FALSE,
+          cores = 2, cache = 500,
+          overwrite = TRUE, keep_minimal = FALSE
+        )
+        df2[[name]] <- group_dir
+      }
+      incProgress(1/group_file, message = paste("Finish motif analysis of Group '", name, "', ", perc, "/", group_file,sep = ""))
+    }
+    return(df2)
+  })
+}
+
+known_motif <- function(df){
+  df2 <- data.frame(matrix(rep(NA, 14), nrow=1))[numeric(0), ]
+  colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
+                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct", "log_odds_detection","Group")
+  for(name in names(df)){
+    if(file.exists(paste0(df[[name]],"/knownResults.txt")) == TRUE){
+      known <-  as.data.frame(read_known_results(path = df[[name]]))[,-13]
+      known$Group <- name
+      df2 <- rbind(df2,known)
+    }
+  }
+  colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
+                     "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct", "log_odds_detection","Group")
+  return(df2)
+}
+
+denovo_motif <- function(df){
+  df2 <- data.frame(matrix(rep(NA, 18), nrow=1))[numeric(0), ]
+  colnames(df2) <- c("consensus","motif_name", "log_odds_detection","motif_id",  "log_p_value_detection", 
+                     "tgt_num", "tgt_pct", "bgd_num", "bgd_pct"," log_p_value","fdr","tgt_pos","tgt_std","bgd_pos","bgd_std","strand_bias","multiplicity", "Group")
+  for(name in names(df)){
+    if(file.exists(paste0(df[[name]],"/homerResults.html")) == TRUE){
+      known <-  as.data.frame(read_denovo_results(path = df[[name]]))[,-5]
+      known$Group <- name
+      df2 <- rbind(df2,known)
+    }
+  }
+  return(df2)
+}
+
+
+homer_Motifplot <- function(df, showCategory=5,section=NULL){
+  df2 <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
+  
+  for(name in names(df)){
+    print(file.exists(paste0(df[[name]],"/knownResults.txt")))
+    
+    if(file.exists(paste0(df[[name]],"/knownResults.txt")) == TRUE){
+      res <- as.data.frame(as.data.frame(read_known_results(path = df[[name]])))
+      if(length(res$motif_name) != 0){
+        res$Group <- name
+        if(length(rownames(res)) > showCategory){
+          res <- res[1:showCategory,]
+        }
+        df2 <- rbind(df2, res)
+      }
+    }
+  }
+  if(length(df2$motif_name) == 0){
+    return(NULL)
+  }else{
+    colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
+                       "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct","motif_pwm","log_odds_detection","Group")
+    if(!is.null(section)){
+      if(section == "withRNAseq"){
+        df2$Group <- gsub("--", ":\n", df2$Group)
+        df2$Group <- gsub("_", " ", df2$Group)
+        for(i in 1:length(df2$Group)){
+          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
+        }
+      }else if(section == "venn"){
+        df2$Group <- gsub("- ", "- ", df2$Group)
+        for(i in 1:length(df2$Group)){
+          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
+        }
+      }else{
+        df2$Group <- gsub("_", " ", df2$Group)
+        for(i in 1:length(df2$Group)){
+          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
+        }
+      }
+      df2$Group <- gsub(" \\(", "\n\\(", df2$Group)
+    }
+    df2 <- dplyr::mutate(df2, x = paste0(Group, 1/-log10(eval(parse(text = "p_value")))))
+    df2$x <- gsub(":","", df2$x)
+    df2 <- dplyr::arrange(df2, x)
+    idx <- order(df2[["x"]], decreasing = FALSE)
+    df2$motif_name <- factor(df2$motif_name,
+                             levels=rev(unique(df2$motif_name[idx])))
+    d <- ggplot(df2, aes(x = Group,y= motif_name,color=p_value,size=log_odds_detection))+
+      geom_point() +
+      scale_color_continuous(low="red", high="blue",
+                             guide=guide_colorbar(reverse=TRUE)) +
+      scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
+      scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top")+
+      theme(plot.margin=margin(l=-0.75,unit="cm"))
+    df2 <- df2 %>% distinct(motif_name, .keep_all = T)
+    pfm <- df2$motif_pwm
+    pfm1 <- list()
+    for(name in names(pfm)){
+      pfm1[[name]] <- t(pfm[[name]])
+    }
+    Seqlogo <- as.grob(ggseqlogo(pfm1,ncol = 1)+
+                         theme_void()) 
+    p <- plot_grid(plot_grid(NULL, Seqlogo, ncol = 1, rel_heights = c(0.05:10)),as.grob(d))
+    
+    return(p)
+  }
+}
+
