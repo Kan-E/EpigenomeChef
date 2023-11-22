@@ -1632,10 +1632,12 @@ rnaseqDEGs_for_integrated_heatmap <- function(files,Species,gene_type){
     return(rna)
   }
 }
-rnaseqCounts_for_integrated_heatmap <- function(files,Species,gene_type){
+rnaseqCounts_for_integrated_heatmap <- function(files,Species,gene_type, pre_zscoring =NULL){
   if(!is.null(files)){
     df <- files_name2ENTREZID(files = files,Species=Species,gene_type = gene_type)
     if(length(names(df)) != 1){
+      if(is.null(pre_zscoring)) validate("")
+      matrix_list <- list()
       matrix_z_list <- list()
       for (name in names(df)) {
         matrix <- as.data.frame(df[name])
@@ -1643,16 +1645,31 @@ rnaseqCounts_for_integrated_heatmap <- function(files,Species,gene_type){
           rownames(matrix) <- matrix[,1]
           matrix <- matrix[,-1]
         }
+        if(pre_zscoring == "TRUE"){
         matrix_z <- genescale(matrix, axis = 1, method = "Z")
         matrix_z[is.na(matrix_z)] <- 0
         matrix_z <- merge(matrix, matrix_z, by = 0)[,-2:-(1 + length(colnames(matrix)))]
         matrix_z_list[[name]] <- matrix_z
+        }else {
+        matrix_2 <- matrix
+        matrix_3 <- merge(matrix, matrix_2, by = 0)[,-2:-(1 + length(colnames(matrix)))]
+        matrix_list[name] <- list(matrix_3)
+        }
       }
-      base_z <- matrix_z_list[[1]]
-      int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+      if(pre_zscoring == "TRUE"){
+        base_z <- matrix_z_list[[1]]
+        int_matrix <- lapply(matrix_z_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+      }else{
+        base_z <- matrix_list[[1]]
+        int_matrix <- lapply(matrix_list[-1], function(i) base_z <<- merge(base_z, i, by = "Row.names"))
+      }
       rownames(base_z) <- base_z$Row.names
       colnames(base_z) <- gsub("\\.y$", "", colnames(base_z))
-      rna <- as.data.frame(base_z[,-1])
+      rna <- base_z[,-1]
+      if(pre_zscoring != "TRUE"){
+        rna <- genefilter::genescale(rna, axis = 1, method = "Z")
+        rna[is.na(rna)] <- 0
+      }
     }else{
       rna <- df[[names(df)]]
       if(str_detect(colnames(rna)[1], "ENTREZID")) {
@@ -1662,8 +1679,8 @@ rnaseqCounts_for_integrated_heatmap <- function(files,Species,gene_type){
       print(head(rna))
       rna <- genescale(rna, axis = 1, method = "Z")
       rna[is.na(rna)] <- 0
-      rna <- as.data.frame(rna)
     }
+    rna <- as.data.frame(rna)
     return(rna)
   }
 }

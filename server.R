@@ -3231,6 +3231,11 @@ shinyServer(function(input, output, session) {
       }
     })
   })
+  output$pre_zscoring <- renderUI({
+    if(length(names(rnaseq_count())) > 1){
+      selectInput("pre_zscoring","pre_zscoring for multiple normalized count data",choices = c(TRUE,FALSE),selected = TRUE)
+    }
+  })
   gene_type_rnaseq_DEGs <- reactive({
     files <- rnaseq_DEGs()
     return(gene_type_for_integrated_heatmap(files=files,Species=input$Species,org=org1()))
@@ -3245,7 +3250,7 @@ shinyServer(function(input, output, session) {
   })
   rnaseq_count2 <- reactive({
     files <- rnaseq_count()
-    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species,gene_type=gene_type_rnaseq_counts()))
+    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species,gene_type=gene_type_rnaseq_counts(),pre_zscoring = input$pre_zscoring))
   })
   observeEvent(input$pair_rnaseq_DEGs, ({
     updateCollapse(session,id =  "z-score_count", open="Uploaded_DEGs")
@@ -5585,9 +5590,9 @@ shinyServer(function(input, output, session) {
   
   output$download_vennKSplot = downloadHandler(
     filename = function(){
-      paste0("KSplot",".pdf")
+      paste0(format(Sys.time(), "%Y%m%d_"),"KSplot",".zip")
     },
-    content = function(file) {
+    content = function(fname) {
       withProgress(message = "Preparing download",{
         if(input$venn_pdf_height == 0){
           pdf_height <- 5
@@ -5595,56 +5600,64 @@ shinyServer(function(input, output, session) {
         if(input$venn_pdf_width == 0){
           pdf_width <- 7
         }else pdf_width <- input$venn_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(regulatory_potential_venn()[[input$intersect_RNA]])
-        dev.off()
+        fs <- c()
+        dir.create("KSplot/",showWarnings = FALSE)
+        for(name in names(regulatory_potential_venn())){
+          ksplot <- paste0("KSplot/",name,".pdf")
+          fs <- c(fs,ksplot)
+          pdf(ksplot, height = pdf_height, width = pdf_width)
+          print(regulatory_potential_venn()[[name]])
+          dev.off()
+        }
+        kstable <- paste0("KSplot/ks_test.txt")
+        fs <- c(fs,kstable)
+        write.table(ks_tables_venn(), kstable, row.names = F, sep = "\t", quote = F)
+        zip(zipfile=fname, files=fs)
         incProgress(1)
       })
     }
   )
-  output$download_vennKStable = downloadHandler(
-    filename = function(){
-      paste0("KS_test",".txt")
-    },
-    content = function(file) {
-      write.table(ks_tables_venn(), file, row.names = F, sep = "\t", quote = F)
-    }
-  )
   output$download_RP_venn_table = downloadHandler(
-    filename = function() {
-      paste0("RP_summary_table.txt")
+    filename = function(){
+      paste0(format(Sys.time(), "%Y%m%d_"),"RP_table",".zip")
     },
-    content = function(file){write.table(RP_all_table_venn(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  
-  output$download_selected_RP_venn_table = downloadHandler(
-    filename = function() {
-      paste0("RP_",input$RNAseqGroup_venn,"_table.txt")
-    },
-    content = function(file){write.table(RP_selected_table_venn(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  int_selected_bed_venn <- reactive({
-    if(!is.null(RP_selected_table_venn())){
-      gene <- RP_selected_table_venn()$gene_id
-      y <- NULL
-      if(!is.null(pre_mmAnno_venn())) {
-        up_peak <- subset(mmAnno_venn(), gene_id %in% gene)
-        up_peak2 <- as.data.frame(up_peak)
-        up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-        up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-        up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-        mcols(up_peak3) <- DataFrame(Group = "up")
-        y <- as.data.frame(up_peak3)
-      }
-      return(y)
+    content = function(fname) {
+      withProgress(message = "Preparing download",{
+        fs <- c()
+        dir.create("RP_table/",showWarnings = FALSE)
+        dir.create("RP_table/selected_table(epigenome--RNA)/",showWarnings = FALSE)
+        dir.create("RP_table/selected_bed(epigenome--RNA)/",showWarnings = FALSE)
+        RP_summary <- paste0("RP_table/summary.txt")
+        fs <- c(fs,RP_summary)
+        write.table(RP_all_table_venn(), RP_summary, row.names = F, sep = "\t", quote = F)
+        for(name in unique(RP_all_table_venn()$Group)){
+          RP_selected <- paste0("RP_table/selected_table(epigenome--RNA)/",name,".txt")
+          RP_selected_bed <- paste0("RP_table/selected_bed(epigenome--RNA)/",name,".bed")
+          RP_selected <- gsub(":","--",RP_selected)
+          RP_selected_bed <- gsub(":","--",RP_selected_bed)
+          fs <- c(fs,RP_selected,RP_selected_bed)
+          table <- RP_all_table_venn() %>% dplyr::filter(Group == name)
+          write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
+          
+          gene <- table$gene_id
+          y <- NULL
+          if(!is.null(pre_mmAnno_venn())) {
+            up_peak <- subset(mmAnno_venn(), gene_id %in% gene)
+            up_peak2 <- as.data.frame(up_peak)
+            up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+            up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+            up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+            mcols(up_peak3) <- DataFrame(Group = "up")
+            y <- as.data.frame(up_peak3)
+          }
+          write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+        }
+        zip(zipfile=fname, files=fs)
+        incProgress(1)
+      })
     }
-  })
-  output$download_selected_int_peak_venn = downloadHandler(
-    filename = function() {
-      paste0("RP_",input$RNAseqGroup_venn,"_table.bed")
-    },
-    content = function(file){write.table(int_selected_bed_venn(), file, row.names = F, col.names = F,sep = "\t", quote = F)}
   )
+
   observeEvent(input$venn_DEG_result, ({
     updateCollapse(session,id =  "input_collapse_venn_RP", open="KS_panel")
   }))
@@ -6020,6 +6033,11 @@ shinyServer(function(input, output, session) {
       }
     })
   })
+  output$pre_zscoring_venn <- renderUI({
+    if(length(names(rnaseq_count_venn())) > 1){
+      selectInput("pre_zscoring_venn","pre_zscoring for multiple normalized count data",choices = c(TRUE,FALSE),selected = TRUE)
+    }
+  })
   gene_type_rnaseq_DEGs_venn <- reactive({
     files <- rnaseq_DEGs_venn()
     return(gene_type_for_integrated_heatmap(files=files,Species=input$Species_venn,org=org_venn()))
@@ -6034,7 +6052,7 @@ shinyServer(function(input, output, session) {
   })
   rnaseq_count2_venn <- reactive({
     files <- rnaseq_count_venn()
-    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_counts_venn()))
+    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_counts_venn(),pre_zscoring = input$pre_zscoring_venn))
   })
   observeEvent(input$pair_rnaseq_DEGs_venn, ({
     updateCollapse(session,id =  "z-score_count_venn", open="Uploaded_DEGs_venn")
@@ -8148,6 +8166,11 @@ shinyServer(function(input, output, session) {
       }
     })
   })
+  output$pre_zscoring_enrich <- renderUI({
+    if(length(names(rnaseq_count_enrich())) > 1){
+      selectInput("pre_zscoring_enrich","pre_zscoring for multiple normalized count data",choices = c(TRUE,FALSE),selected = TRUE)
+    }
+  })
   gene_type_rnaseq_DEGs_enrich <- reactive({
     files <- rnaseq_DEGs_enrich()
     return(gene_type_for_integrated_heatmap(files=files,org=org_enrich(),Species=input$Species_enrich))
@@ -8162,7 +8185,7 @@ shinyServer(function(input, output, session) {
   })
   rnaseq_count2_enrich <- reactive({
     files <- rnaseq_count_enrich()
-    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_counts_enrich()))
+    return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_counts_enrich(),pre_zscoring = input$pre_zscoring_enrich))
   })
   observeEvent(input$pair_rnaseq_DEGs_enrich, ({
     updateCollapse(session,id =  "z-score_count_enrich", open="Uploaded_DEGs_enrich")
@@ -9045,9 +9068,9 @@ shinyServer(function(input, output, session) {
   
   output$download_enrichKSplot = downloadHandler(
     filename = function(){
-      paste0("KSplot",".pdf")
+      paste0(format(Sys.time(), "%Y%m%d_"),"KSplot",".zip")
     },
-    content = function(file) {
+    content = function(fname) {
       withProgress(message = "Preparing download",{
         if(input$enrich_pdf_height == 0){
           pdf_height <- 5
@@ -9055,56 +9078,64 @@ shinyServer(function(input, output, session) {
         if(input$enrich_pdf_width == 0){
           pdf_width <- 7
         }else pdf_width <- input$enrich_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(regulatory_potential_enrich()[[input$enrich_RNA]])
-        dev.off()
+        fs <- c()
+        dir.create("KSplot/",showWarnings = FALSE)
+        for(name in names(regulatory_potential_enrich())){
+          ksplot <- paste0("KSplot/",name,".pdf")
+          fs <- c(fs,ksplot)
+          pdf(ksplot, height = pdf_height, width = pdf_width)
+          print(regulatory_potential_enrich()[[name]])
+          dev.off()
+        }
+        kstable <- paste0("KSplot/ks_test.txt")
+        fs <- c(fs,kstable)
+        write.table(ks_tables_enrich(), kstable, row.names = F, sep = "\t", quote = F)
+        zip(zipfile=fname, files=fs)
         incProgress(1)
       })
     }
   )
-  output$download_enrichKStable = downloadHandler(
-    filename = function(){
-      paste0("KS_test",".txt")
-    },
-    content = function(file) {
-      write.table(ks_tables_enrich(), file, row.names = F, sep = "\t", quote = F)
-    }
-  )
   output$download_RP_enrich_table = downloadHandler(
-    filename = function() {
-      paste0("RP_summary_table.txt")
+    filename = function(){
+      paste0(format(Sys.time(), "%Y%m%d_"),"RP_table",".zip")
     },
-    content = function(file){write.table(RP_all_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
+    content = function(fname) {
+      withProgress(message = "Preparing download",{
+        fs <- c()
+        dir.create("RP_table/",showWarnings = FALSE)
+        dir.create("RP_table/selected_table(epigenome--RNA)/",showWarnings = FALSE)
+        dir.create("RP_table/selected_bed(epigenome--RNA)/",showWarnings = FALSE)
+        RP_summary <- paste0("RP_table/summary.txt")
+        fs <- c(fs,RP_summary)
+        write.table(RP_all_table_enrich(), RP_summary, row.names = F, sep = "\t", quote = F)
+        for(name in unique(RP_all_table_enrich()$Group)){
+          RP_selected <- paste0("RP_table/selected_table(epigenome--RNA)/",name,".txt")
+          RP_selected_bed <- paste0("RP_table/selected_bed(epigenome--RNA)/",name,".bed")
+          RP_selected <- gsub(":","--",RP_selected)
+          RP_selected_bed <- gsub(":","--",RP_selected_bed)
+          fs <- c(fs,RP_selected,RP_selected_bed)
+          table <- RP_all_table_enrich() %>% dplyr::filter(Group == name)
+          write.table(table, RP_selected, row.names = F, sep = "\t", quote = F)
+          
+          gene <- table$gene_id
+          y <- NULL
+          if(!is.null(pre_mmAnno_enrich())) {
+            up_peak <- subset(mmAnno_enrich(), gene_id %in% gene)
+            up_peak2 <- as.data.frame(up_peak)
+            up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+            up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+            up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+            mcols(up_peak3) <- DataFrame(Group = "up")
+            y <- as.data.frame(up_peak3)
+          }
+          write.table(y, RP_selected_bed, row.names = F, col.names = F,sep = "\t", quote = F)
+        }
+        zip(zipfile=fname, files=fs)
+        incProgress(1)
+      })
+    }
   )
   
-  output$download_selected_RP_enrich_table = downloadHandler(
-    filename = function() {
-      paste0("RP_",input$RNAseqGroup_enrich,"_table.txt")
-    },
-    content = function(file){write.table(RP_selected_table_enrich(), file, row.names = F, sep = "\t", quote = F)}
-  )
-  int_selected_bed_enrich <- reactive({
-    if(!is.null(RP_selected_table_enrich())){
-      gene <- RP_selected_table_enrich()$gene_id
-      y <- NULL
-      if(!is.null(pre_mmAnno_enrich())) {
-        up_peak <- subset(mmAnno_enrich(), gene_id %in% gene)
-        up_peak2 <- as.data.frame(up_peak)
-        up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-        up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-        up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-        mcols(up_peak3) <- DataFrame(Group = "up")
-        y <- as.data.frame(up_peak3)
-      }
-      return(y)
-    }
-  })
-  output$download_selected_int_peak_enrich = downloadHandler(
-    filename = function() {
-      paste0("RP_",input$RNAseqGroup_enrich,"_table.bed")
-    },
-    content = function(file){write.table(int_selected_bed_enrich(), file, row.names = F, col.names = F,sep = "\t", quote = F)}
-  )
   observeEvent(input$enrich_DEG_result, ({
     updateCollapse(session,id =  "input_collapse_enrich_RP", open="KS_panel")
   }))

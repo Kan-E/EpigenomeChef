@@ -106,7 +106,7 @@ shinyUI(
                                     bsPopover("icon1", "BigWig files (bw, BigWig):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>Short names are recommended for file names."), 
-                                              placement = "right",options = list(container = "body"))
+                                              placement = "right",options = list(container = "body"),trigger = "click")
                                     
                    ),
                    conditionalPanel(condition="input.data_file_type=='Row2'",
@@ -119,7 +119,7 @@ shinyUI(
                                     bsPopover("icon1_bam", "Bam files (bam):", 
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>Short names are recommended for file names.<br>"), 
-                                              placement = "right",options = list(container = "body")),
+                                              placement = "right",options = list(container = "body"),trigger = "click"),
                    ),
                    conditionalPanel(condition="input.data_file_type=='Row2'",
                                     radioButtons('Pair_or_single','Sequence type:',
@@ -148,7 +148,7 @@ shinyUI(
                                                             "The third column is end position on the chromosome.<br>",
                                                             strong("Multiple peak call files are required for the filteration.<br>"),
                                                             img(src="pair_peakcallfilter.png", width = 200,height = 400)),
-                                              placement = "right",options = list(container = "body")),
+                                              placement = "right",options = list(container = "body"),trigger = "click"),
                                     radioButtons('pair_filter','Filter:',
                                                  c('Reproducible peaks'="Reproducible_peaks",
                                                    'ALL peaks'="ALL_peaks"
@@ -456,7 +456,8 @@ shinyUI(
             }")),
                               fluidRow(
                                 column(6, htmlOutput("rnaseq_DEGs")),
-                                column(6, htmlOutput("rnaseq_count"))
+                                column(6, htmlOutput("rnaseq_count"),
+                                       htmlOutput("pre_zscoring"))
                               ),
                               bsCollapse(id="z-score_count",open="z-score_multiple_count_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Uploaded DEG result files",
@@ -498,19 +499,24 @@ shinyUI(
                      ##pair with RNA-seq--------
                      tabPanel("with RNA-seq",
                               bsCollapse(id="RNAseqresult_pair_panel",open="RNAseqresult_pair_table",
-                              bsCollapsePanel(title= p(span("RNA-seq result"),span(icon("info-circle"), id = "RNAseqresult_pair", 
+                              bsCollapsePanel(title= p(span("RNA-seq data"),span(icon("info-circle"), id = "RNAseqresult_pair", 
                                                                                options = list(template = popoverTempate))),
                                               bsPopover("RNAseqresult_pair", "RNA-seq data:", 
-                                                        content=paste("You can use a pair-wise RNA-seq DEG result file as input.<br>",
+                                                        content=paste(h4("1. Input: Raw_count (2conditions)"),
+                                                                      strong("The replication number"), "is represented by", strong("the underline"),".<br>", strong("Do not use it for anything else"),".<br><br>",
+                                                                      img(src="input_format1.png", width = 400,height = 250),
+                                                                      "<br><br>",
+                                                                      h4("2. Input: DEG_Result from pair-wise analysis"),
+                                                                      "You can use a pair-wise RNA-seq DEG result file as input.<br>",
                                                                       "First column must be gene name (Gene symbol or ENSEMBL ID).<br>", 
                                                                       "The file must contain", strong("log2FoldChange"), "and", strong("padj"), "columns.<br>",
                                                                       "<br>", 
-                                                                      img(src="input_format_volcano.png", width = 500,height = 230)), 
-                                                        placement = "right",options = list(container = "body")),
+                                                                      img(src="input_format_volcano.png", width = 500,height = 220)), 
+                                                        placement = "right",options = list(container = "body"),trigger = "click"),
                                               value="RNAseqresult_pair_table",
                                               radioButtons('RNAseq_data_type','Input:',
-                                                           c('Raw_count (2 condition)'="Raw_pair",
-                                                             'DEG_Result'="Result"
+                                                           c('Raw_count (2 conditions)'="Raw_pair",
+                                                             'DEG_Result from pair-wise analysis'="Result"
                                                            ),selected = "Raw_pair"),
                                               htmlOutput("pairRNAseqresult"),
                                               
@@ -539,9 +545,24 @@ shinyUI(
                               )),
                               verbatimTextOutput("RNAseq_RPmean"),
                               radioButtons('RNAseq_mode','Mode:',
-                                           c('Nearest'="Nearest",
-                                             'Gene_scan'="Gene_scan"
-                                           ),selected = "Nearest"),
+                                           choiceNames = list(
+                                             tagList(
+                                               tags$span("Nearest"),
+                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode1_pair", style = "color: black;")
+                                             ), 
+                                             tagList(
+                                               tags$span("Gene_scan"),
+                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode2_pair", style = "color: black;")
+                                             )
+                                           ),
+                                           choiceValues = c("Nearest","Gene_scan"),
+                                           selected = "Nearest"),
+                              bsPopover("icon_rnaseq_mode1_pair", "Nearest mode:", 
+                                        content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
+                                                      img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
+                              bsPopover("icon_rnaseq_mode2_pair", "Gene scan mode:", 
+                                        content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
+                                                      img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
                               sliderInput("peak_distance","Regulatory range (distance (kb) from TSS)",
                                           min=0,max=200,value=100,step = 5),
                               fluidRow(
@@ -717,7 +738,7 @@ shinyUI(
                                            "The second column is start position on the chromosome.<br>",
                                            "The third column is end position on the chromosome.<br>",
                                            strong("Short names are recommended for file names.")), 
-                             placement = "right",options = list(container = "body")),
+                             placement = "right",options = list(container = "body"),trigger = "click"),
                    strong(
                      span("Select BigWig files"),
                      span(icon("info-circle"), id = "icon_venn2", 
@@ -726,7 +747,7 @@ shinyUI(
                    htmlOutput("file_venn1"),
                    bsPopover("icon_venn2", "BigWig files (bw, BigWig):", 
                              content=paste(strong("Short names are recommended for file names.")), 
-                             placement = "right",options = list(container = "body")),
+                             placement = "right",options = list(container = "body"),trigger = "click"),
                    fluidRow(
                      column(8, selectizeInput("sample_order_venn", "Sample order:", choices = "", multiple = T)),
                      column(4,  actionButton("vennButton", "Start"),
@@ -965,7 +986,8 @@ shinyUI(
                               ),
                               fluidRow(
                                 column(6, htmlOutput("rnaseq_DEGs_venn")),
-                                column(6, htmlOutput("rnaseq_count_venn"))
+                                column(6, htmlOutput("rnaseq_count_venn"),
+                                       htmlOutput("pre_zscoring_venn"))
                               ),
                               bsCollapse(id="z-score_count_venn",open="z-score_multiple_count_venn_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Uploaded DEG result files",
@@ -1007,20 +1029,38 @@ shinyUI(
                      ##Venn withRNA-seq-----------
                      tabPanel("with RNA-seq",
                               bsCollapse(id="RNAseqresult_venn_panel",open="RNAseqresult_venn_table",
-                                         bsCollapsePanel(title= p(span("RNA-seq result"),span(icon("info-circle"), id = "RNAseqresult_venn", 
+                                         bsCollapsePanel(title= p(span("RNA-seq data"),span(icon("info-circle"), id = "RNAseqresult_venn", 
                                                                                               options = list(template = popoverTempate))),
-                                                         bsPopover("RNAseqresult_venn", "RNA-seq result file:", 
-                                                                   content=paste("You can use a pair-wise RNA-seq DEG result file as input.<br>",
+                                                         bsPopover("RNAseqresult_venn", "RNA-seq data:", 
+                                                                   content=paste(h4("1. Input: Raw_count (2conditions)"),
+                                                                                 strong("The replication number"), "is represented by", strong("the underline"),".<br>", strong("Do not use it for anything else"),".<br><br>",
+                                                                                 img(src="input_format1.png", width = 400,height = 250),
+                                                                                 "<br><br>",
+                                                                                 h4("2. Input: DEG_Result from pair-wise analysis"),
+                                                                                 "You can use a pair-wise RNA-seq DEG result file as input.<br>",
                                                                                  "First column must be gene name (Gene symbol or ENSEMBL ID).<br>", 
                                                                                  "The file must contain", strong("log2FoldChange"), "and", strong("padj"), "columns.<br>",
                                                                                  "<br>", 
-                                                                                 img(src="input_format_volcano.png", width = 500,height = 230)), 
-                                                                   placement = "right",options = list(container = "body")),
+                                                                                 img(src="input_format_volcano.png", width = 500,height = 220),
+                                                                                 "<br><br>",
+                                                                                 h4("3. Input: Gene_list"),
+                                                                                 "In this mode, the format requirements depend on the number of files to be uploaded.<br>",
+                                                                                 strong("Single file upload: "),
+                                                                                 "The first column is", strong("gene name"), ".<br>", 
+                                                                                 "The second and subsequent columns do not affect the analysis.<br>", 
+                                                                                 strong("Multiple files upload: "),
+                                                                                 "<br>The first column is", strong("gene name"), ".<br>", 
+                                                                                 "The second and subsequent columns do not affect the analysis.<br>", 
+                                                                                 "File names are used as", strong("group names"),".<br><br>",
+                                                                                 "Example: single file upload<br>",
+                                                                                 img(src="input_format_enrich.png", width = 400,height = 250)
+                                                                                 ),
+                                                                   placement = "right",options = list(container = "body"),trigger = "click"),
                                                          value="RNAseqresult_venn_table",
                                                          
                                                          radioButtons('RNAseq_data_type_venn','Input:',
-                                                                      c('Raw_count (2 condition)'="Raw_pair",
-                                                                        'DEG_Result'="Result",
+                                                                      c('Raw_count (2 conditions)'="Raw_pair",
+                                                                        'DEG_Result from pair-wise analysis'="Result",
                                                                         'Gene_list'="List"
                                                                       ),selected = "Result"),
                                                          htmlOutput("vennRNAseqresult"),
@@ -1053,9 +1093,24 @@ shinyUI(
                                          )),
                               verbatimTextOutput("RNAseq_RPmean_venn"),
                               radioButtons('RNAseq_mode_venn','Mode:',
-                                           c('Nearest'="Nearest",
-                                             'Gene_scan'="Gene_scan"
-                                           ),selected = "Nearest"),
+                                           choiceNames = list(
+                                             tagList(
+                                               tags$span("Nearest"),
+                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode1_venn", style = "color: black;")
+                                             ), 
+                                             tagList(
+                                               tags$span("Gene_scan"),
+                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode2_venn", style = "color: black;")
+                                             )
+                                           ),
+                                           choiceValues = c("Nearest","Gene_scan"),
+                                           selected = "Nearest"),
+                              bsPopover("icon_rnaseq_mode1_venn", "Nearest mode:", 
+                                        content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
+                                                      img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
+                              bsPopover("icon_rnaseq_mode2_venn", "Gene scan mode:", 
+                                        content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
+                                                      img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
                               fluidRow(
                                 column(4, sliderInput("peak_distance_venn","Regulatory range (distance (kb) from TSS)",
                                                       min=0,max=200,value=100,step = 5)),
@@ -1087,17 +1142,12 @@ shinyUI(
                                                          value="RP_panel",
                                                          fluidRow(
                                                            column(6, htmlOutput("intersect_RNA")),
-                                                           column(6, downloadButton("download_vennKSplot","Download selected ks plot"))
+                                                           column(6, downloadButton("download_vennKSplot","Download all ks plots (.pdf and .txt)"))
                                                          ),
                                                          plotOutput('ks_plot_venn'),
-                                                         downloadButton("download_vennKStable","Download ks test table"),
                                                          dataTableOutput("ks_table_venn"),
                                                          fluidRow(
-                                                           column(4, downloadButton("download_RP_venn_table","Download summary table")),
-                                                           column(4, downloadButton("download_selected_RP_venn_table","Download selected table"))
-                                                         ),
-                                                         fluidRow(
-                                                           column(6, downloadButton("download_selected_int_peak_venn","Download selected peak file (bed)"))
+                                                           column(4, downloadButton("download_RP_venn_table","Download all table data (.txt and .bed)"))
                                                          ),
                                                          htmlOutput("RNAseqGroup_venn"),
                                                          DTOutput('RP_table_venn')
@@ -1159,7 +1209,7 @@ shinyUI(
                                               content=paste("The count data from clustering analysis in EpigenomeChef is required.<br>", 
                                                             "You can skip creating count data from bigwig files and peak call files.<br>",
                                                             "You have to select the same ", strong("Genomic region"), " that you used when you obtained the count file."), 
-                                              placement = "right",options = list(container = "body")),
+                                              placement = "right",options = list(container = "body"),trigger = "click"),
                    ),
                    conditionalPanel(condition=c("input.data_file_type_clustering=='Row1' || input.data_file_type_clustering=='Row1_count'"),
                                     strong(
@@ -1172,7 +1222,7 @@ shinyUI(
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>",
                                                             strong("Short names are recommended for file names.")), 
-                                              placement = "right",options = list(container = "body")),
+                                              placement = "right",options = list(container = "body"),trigger = "click"),
                    ),
                    conditionalPanel(condition="input.data_file_type_clustering=='Row2'",
                                     fileInput("file_bam_clustering",
@@ -1188,7 +1238,7 @@ shinyUI(
                                               content=paste(strong("The replication number"), "is represented by", strong("the underline"),"in file names.<br>", 
                                                             strong("Do not use it for anything else"),".<br>",
                                                             strong("Short names are recommended for file names.")), 
-                                              placement = "right",options = list(container = "body")),
+                                              placement = "right",options = list(container = "body"),trigger = "click"),
                    ),
                    conditionalPanel(condition="input.data_file_type_clustering=='Row2'",
                                     radioButtons('Pair_or_single_clustering','Sequence type:',
@@ -1217,7 +1267,7 @@ shinyUI(
                                                             "The second and subsequent columns do not affect the analysis.<br>", 
                                                             "File names do not use `.` other than the extension.<br><br>", 
                                                             img(src="genelist_input.png", width = 100,height = 300)), 
-                                              placement = "right",options = list(container = "body"))
+                                              placement = "right",options = list(container = "body"),trigger = "click")
                    ),
                    conditionalPanel(condition="input.Genomic_region_clustering=='Genome-wide'",
                                     conditionalPanel(condition="input.data_file_type_clustering=='Row1'",
@@ -1231,7 +1281,7 @@ shinyUI(
                                               content=paste("The first column is chromosome (e.g. chr3, chrY) name.<br>",
                                                             "The second column is start position on the chromosome.<br>",
                                                             "The third column is end position on the chromosome.<br>"), 
-                                              placement = "right",options = list(container = "body")),
+                                              placement = "right",options = list(container = "body"),trigger = "click"),
                                     radioButtons('pair_filter_cluster','Filter:',
                                                  c('Reproducible peaks'="Reproducible_peaks",
                                                    'ALL peaks'="ALL_peaks"
@@ -1460,7 +1510,7 @@ shinyUI(
                                            strong("Do not use it for anything else"),".<br>",
                                            strong("Short names are recommended for file names."),".<br>",
                                            "File names do not use `.` other than the extension.<br><br>"), 
-                             placement = "right",options = list(container = "body")),
+                             placement = "right",options = list(container = "body"),trigger = "click"),
                    fluidRow(
                      column(12, selectInput("Species_enrich", "Species", species_list, selected = "not selected"))),
                    sliderInput("enrich_showCategory", "Most significant pathways",
@@ -1606,7 +1656,8 @@ shinyUI(
                               ),
                               fluidRow(
                                 column(6, htmlOutput("rnaseq_DEGs_enrich")),
-                                column(6, htmlOutput("rnaseq_count_enrich"))
+                                column(6, htmlOutput("rnaseq_count_enrich"),
+                                       htmlOutput("pre_zscoring_enrich"))
                               ),
                               bsCollapse(id="z-score_count_enrich",open="z-score_multiple_count_enrich_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Uploaded DEG result files",
@@ -1648,20 +1699,38 @@ shinyUI(
                      ##Enrich withRNA-seq-----------
                      tabPanel("with RNA-seq",
                               bsCollapse(id="RNAseqresult_enrich_panel",open="RNAseqresult_enrich_table",
-                                         bsCollapsePanel(title= p(span("RNA-seq result"),span(icon("info-circle"), id = "RNAseqresult_enrich", 
+                                         bsCollapsePanel(title= p(span("RNA-seq data"),span(icon("info-circle"), id = "RNAseqresult_enrich", 
                                                                                               options = list(template = popoverTempate))),
-                                                         bsPopover("RNAseqresult_enrich", "RNA-seq result file:", 
-                                                                   content=paste("You can use a pair-wise RNA-seq DEG result file as input.<br>",
+                                                         bsPopover("RNAseqresult_enrich", "RNA-seq data:", 
+                                                                   content=paste(h4("1. Input: Raw_count (2conditions)"),
+                                                                                 strong("The replication number"), "is represented by", strong("the underline"),".<br>", strong("Do not use it for anything else"),".<br><br>",
+                                                                                 img(src="input_format1.png", width = 400,height = 250),
+                                                                                 "<br><br>",
+                                                                                 h4("2. Input: DEG_Result from pair-wise analysis"),
+                                                                                 "You can use a pair-wise RNA-seq DEG result file as input.<br>",
                                                                                  "First column must be gene name (Gene symbol or ENSEMBL ID).<br>", 
                                                                                  "The file must contain", strong("log2FoldChange"), "and", strong("padj"), "columns.<br>",
                                                                                  "<br>", 
-                                                                                 img(src="input_format_volcano.png", width = 500,height = 230)), 
-                                                                   placement = "right",options = list(container = "body")),
+                                                                                 img(src="input_format_volcano.png", width = 500,height = 220),
+                                                                                 "<br><br>",
+                                                                                 h4("3. Input: Gene_list"),
+                                                                                 "In this mode, the format requirements depend on the number of files to be uploaded.<br>",
+                                                                                 strong("Single file upload: "),
+                                                                                 "The first column is", strong("gene name"), ".<br>", 
+                                                                                 "The second and subsequent columns do not affect the analysis.<br>", 
+                                                                                 strong("Multiple files upload: "),
+                                                                                 "<br>The first column is", strong("gene name"), ".<br>", 
+                                                                                 "The second and subsequent columns do not affect the analysis.<br>", 
+                                                                                 "File names are used as", strong("group names"),".<br><br>",
+                                                                                 "Example: single file upload<br>",
+                                                                                 img(src="input_format_enrich.png", width = 400,height = 250)
+                                                                   ),
+                                                                   placement = "right",options = list(container = "body"),trigger = "click"),
                                                          value="RNAseqresult_enrich_table",
                                                          
                                                          radioButtons('RNAseq_data_type_enrich','Input:',
-                                                                      c('Raw_count (2 condition)'="pair",
-                                                                        'DEG_Result'="Result",
+                                                                      c('Raw_count (2 conditions)'="pair",
+                                                                        'DEG_Result from pair-wise analysis'="Result",
                                                                         'Gene_list'="List"
                                                                       ),selected = "Result"),
                                                          htmlOutput("enrichRNAseqresult"),
@@ -1694,9 +1763,24 @@ shinyUI(
                                          )),
                               verbatimTextOutput("RNAseq_RPmean_enrich"),
                               radioButtons('RNAseq_mode_enrich','Mode:',
-                                           c('Nearest'="Nearest",
-                                             'Gene_scan'="Gene_scan"
-                                           ),selected = "Nearest"),
+                                           choiceNames = list(
+                                             tagList(
+                                               tags$span("Nearest"),
+                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode1_enrich", style = "color: black;")
+                                             ), 
+                                             tagList(
+                                               tags$span("Gene_scan"),
+                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode2_enrich", style = "color: black;")
+                                             )
+                                           ),
+                                           choiceValues = c("Nearest","Gene_scan"),
+                                           selected = "Nearest"),
+                              bsPopover("icon_rnaseq_mode1_enrich", "Nearest mode:", 
+                                        content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
+                                                      img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
+                              bsPopover("icon_rnaseq_mode2_enrich", "Gene scan mode:", 
+                                        content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
+                                                      img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
                               fluidRow(
                                 column(4, sliderInput("peak_distance_enrich","Regulatory range (distance (kb) from TSS)",
                                                       min=0,max=200,value=100,step = 5)),
@@ -1728,17 +1812,12 @@ shinyUI(
                                                          value="RP_panel",
                                                          fluidRow(
                                                            column(6, htmlOutput("enrich_RNA")),
-                                                           column(6, downloadButton("download_enrichKSplot","Download selected ks plot"))
+                                                           column(6, downloadButton("download_enrichKSplot","Download all ks plots (.pdf and .txt)"))
                                                          ),
                                                          plotOutput('ks_plot_enrich'),
-                                                         downloadButton("download_enrichKStable","Download ks test table"),
                                                          dataTableOutput("ks_table_enrich"),
                                                          fluidRow(
-                                                           column(4, downloadButton("download_RP_enrich_table","Download summary table")),
-                                                           column(4, downloadButton("download_selected_RP_enrich_table","Download selected table"))
-                                                         ),
-                                                         fluidRow(
-                                                           column(6, downloadButton("download_selected_int_peak_enrich","Download selected peak file (bed)"))
+                                                           column(4, downloadButton("download_RP_enrich_table","Download all table data (.txt and .bed)"))
                                                          ),
                                                          htmlOutput("RNAseqGroup_enrich"),
                                                          DTOutput('RP_table_enrich')
