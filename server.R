@@ -10118,7 +10118,7 @@ shinyServer(function(input, output, session) {
       df <- list()
       for(name in names(files)){
         file <- files[[name]]
-        df[[name]] <- merge_bed(file, max_dist = input$bed_merge_dist)
+        df[[name]] <- bedtorch::merge_bed(file, max_dist = input$bed_merge_dist)
       }
     }else if(input$data_file_type_bed == "type2"){
       files <- bed_peak_call_files1()
@@ -10127,7 +10127,7 @@ shinyServer(function(input, output, session) {
       for(i in 1:length(names(files))){
         name <- paste0(names(bed_peak_call_files1()[i])," - ", 
                        names(bed_peak_call_files2()[i]))
-        df[[name]] <- subtract_bed(files[[i]],files2[[i]])
+        df[[name]] <- bedtorch::subtract_bed(files[[i]],files2[[i]])
       }
     }else{
       if(input$intersect_bed == "default") mode <- "_intersect_"
@@ -10139,7 +10139,7 @@ shinyServer(function(input, output, session) {
       for(i in 1:length(names(files))){
         name <- paste0(names(bed_peak_call_files1()[i]),mode, 
                        names(bed_peak_call_files2()[i]))
-        df[[name]] <- intersect_bed(files[[i]],files2[[i]],mode=input$intersect_bed)
+        df[[name]] <- bedtorch::intersect_bed(files[[i]],files2[[i]],mode=input$intersect_bed)
       }
     }
     return(df)
