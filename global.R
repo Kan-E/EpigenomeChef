@@ -1874,6 +1874,7 @@ read_known_results<-function (path, homer_dir = TRUE) {
   dplyr::inner_join(known_results, hm, 
                     by = c("motif_name", "motif_family", "experiment", "accession"))
 }   
+
 findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
                       motif,size,back="random",bw_count=NULL,other_data=NULL,motif_length){
   ref <- gsub(".+\\(","",gsub(")", "", Species))
@@ -2067,3 +2068,15 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL){
   }
 }
 
+robust.system <- function (cmd) {
+  stderrFile = tempfile(pattern="R_robust.system_stderr", fileext=as.character(Sys.getpid()))
+  stdoutFile = tempfile(pattern="R_robust.system_stdout", fileext=as.character(Sys.getpid()))
+  
+  retval = list()
+  retval$exitStatus = system(paste0(cmd, " 2> ", shQuote(stderrFile), " > ", shQuote(stdoutFile)))
+  retval$stdout = readLines(stdoutFile)
+  retval$stderr = readLines(stderrFile)
+  
+  unlink(c(stdoutFile, stderrFile))
+  return(retval)
+}

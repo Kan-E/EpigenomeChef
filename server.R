@@ -9423,6 +9423,39 @@ shinyServer(function(input, output, session) {
   
   #Docker only---------
   ##Motif enrichment analysis----------
+  output$reference_download <- renderText({
+    if(input$Species != "not selected"){
+    if(input$HOMERreference_start > 0){
+      withProgress(message = paste0("Install Homer reference for ", gsub(".+\\(","",gsub(")", "", input$Species)),". It takes about > 10 min."),{
+        if(updateCounter_homerRef$i > 0) log <- paste0(robust.system(paste0('perl /usr/local/homer/.//configureHomer.pl -install ',gsub(".+\\(","",gsub(")", "", input$Species))))$stderr,collapse = "\n")
+        paste0(gsub(".+\\(","",gsub(")", "", input$Species)), " installation has been completed.")
+      })
+    }else{
+      paste("If the HOMER reference for your dataset species has not been installed in this container,",
+             "you need to press the 'Install HOMER reference' button", sep = "\n")
+    }
+    }
+  })
+  updateCounter_homerRef <- reactiveValues(i = 0)
+  
+  observe({
+    input$HOMERreference_start
+    isolate({
+      updateCounter_homerRef$i <- updateCounter_homerRef$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(input$reference_download, {
+    isolate(updateCounter_homerRef$i == 0)
+    updateCounter_homerRef <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species, {
+    isolate(updateCounter_homerRef$i == 0)
+    updateCounter_homerRef <<- reactiveValues(i = 0)
+  }) 
+  
   output$homer_bg <- renderUI({
     if(input$Genomic_region == "Genome-wide"){
       radioButtons('homer_bg','Background sequence',
@@ -9443,7 +9476,7 @@ shinyServer(function(input, output, session) {
   
   
   #Restart
-  defaultvalues <- observeEvent(enrich_motif(), {
+  observeEvent(enrich_motif(), {
     isolate(updateCounter$i == 0)
     updateCounter <<- reactiveValues(i = 0)
   }) 
@@ -9470,10 +9503,10 @@ shinyServer(function(input, output, session) {
       if(input$homer_size == "custom") size <- input$homer_size2
       if(input$Genomic_region == "Genome-wide"){
         return(findMotif(df= preMotif_list(), anno_data = deg_result_anno2(),back = input$homer_bg,motif_length=input$homer_length,
-                         Species = input$Species, motif=input$homer_unknown,size=size,bw_count=bw_count()))
+                             Species = input$Species, motif=input$homer_unknown,size=size,bw_count=bw_count()))
       }else return(findMotif(df= data_degcount2(), anno_data = promoter_region(),
-                             Species = input$Species,motif_length=input$homer_length,
-                             type = "Promoter", motif=input$homer_unknown,size=size))
+                                 Species = input$Species,motif_length=input$homer_length,
+                                 type = "Promoter", motif=input$homer_unknown,size=size))
     }else return(NULL)
   })
   
@@ -9542,6 +9575,38 @@ shinyServer(function(input, output, session) {
     }
   })
   # with RNAseq HOMER-----------
+  output$with_reference_download <- renderText({
+    if(input$Species != "not selected"){
+      if(input$with_HOMERreference_start > 0){
+        withProgress(message = paste0("Install Homer reference for ", gsub(".+\\(","",gsub(")", "", input$Species)),". It takes about > 10 min."),{
+          if(with_updateCounter_homerRef$i > 0) log <- paste0(robust.system(paste0('perl /usr/local/homer/.//configureHomer.pl -install ',gsub(".+\\(","",gsub(")", "", input$Species))))$stderr,collapse = "\n")
+          paste0(gsub(".+\\(","",gsub(")", "", input$Species)), " installation has been completed.")
+        })
+      }else {
+        paste("If the HOMER reference for your dataset species has not been installed in this container,",
+              "you need to press the 'Install HOMER reference' button", sep = "\n")
+      }
+    }
+  })
+  with_updateCounter_homerRef <- reactiveValues(i = 0)
+  
+  observe({
+    input$with_HOMERreference_start
+    isolate({
+      with_updateCounter_homerRef$i <- with_updateCounter_homerRef$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(input$with_reference_download, {
+    isolate(with_updateCounter_homerRef$i == 0)
+    with_updateCounter_homerRef <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species, {
+    isolate(with_updateCounter_homerRef$i == 0)
+    with_updateCounter_homerRef <<- reactiveValues(i = 0)
+  }) 
   output$with_homer_bg <- renderUI({
     if(input$Genomic_region == "Genome-wide"){
       radioButtons('with_homer_bg','Background sequence',
@@ -9678,6 +9743,38 @@ shinyServer(function(input, output, session) {
     }
   })
   ##Venn motif -----------
+  output$reference_download_venn <- renderText({
+    if(input$Species_venn != "not selected"){
+      if(input$HOMERreference_start_venn > 0){
+        withProgress(message = paste0("Install Homer reference for ", gsub(".+\\(","",gsub(")", "", input$Species_venn)),". It takes about > 10 min."),{
+          if(updateCounter_homerRef_venn$i > 0) log <- paste0(robust.system(paste0('perl /usr/local/homer/.//configureHomer.pl -install ',gsub(".+\\(","",gsub(")", "", input$Species_venn))))$stderr,collapse = "\n")
+          paste0(gsub(".+\\(","",gsub(")", "", input$Species_venn)), " installation has been completed.")
+        })
+      }else{
+        paste("If the HOMER reference for your dataset species has not been installed in this container,",
+              "you need to press the 'Install HOMER reference' button", sep = "\n")
+      }
+    }
+  })
+  updateCounter_homerRef_venn <- reactiveValues(i = 0)
+  
+  observe({
+    input$HOMERreference_start_venn
+    isolate({
+      updateCounter_homerRef_venn$i <- updateCounter_homerRef_venn$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(input$reference_download_venn, {
+    isolate(updateCounter_homerRef_venn$i == 0)
+    updateCounter_homerRef_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species_venn, {
+    isolate(updateCounter_homerRef_venn$i == 0)
+    updateCounter_homerRef_venn <<- reactiveValues(i = 0)
+  }) 
   output$homer_showCategory_venn <- renderUI({
     sliderInput("homer_showCategory_venn","Most significant motifs", value=5, min=1,max=20)
   })
@@ -9864,6 +9961,38 @@ shinyServer(function(input, output, session) {
     contentType = "application/zip"
   )
   ##Enrich motif -----------
+  output$reference_download_enrich <- renderText({
+    if(input$Species_enrich != "not selected"){
+      if(input$HOMERreference_start_enrich > 0){
+        withProgress(message = paste0("Install Homer reference for ", gsub(".+\\(","",gsub(")", "", input$Species_enrich)),". It takes about > 10 min."),{
+          if(updateCounter_homerRef_enrich$i > 0) log <- paste0(robust.system(paste0('perl /usr/local/homer/.//configureHomer.pl -install ',gsub(".+\\(","",gsub(")", "", input$Species_enrich))))$stderr,collapse = "\n")
+          paste0(gsub(".+\\(","",gsub(")", "", input$Species_enrich)), " installation has been completed.")
+        })
+      }else{
+        paste("If the HOMER reference for your dataset species has not been installed in this container,",
+              "you need to press the 'Install HOMER reference' button", sep = "\n")
+      }
+    }
+  })
+  updateCounter_homerRef_enrich <- reactiveValues(i = 0)
+  
+  observe({
+    input$HOMERreference_start_enrich
+    isolate({
+      updateCounter_homerRef_enrich$i <- updateCounter_homerRef_enrich$i + 1
+    })
+  })
+  
+  
+  #Restart
+  observeEvent(input$reference_download_enrich, {
+    isolate(updateCounter_homerRef_enrich$i == 0)
+    updateCounter_homerRef_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species_enrich, {
+    isolate(updateCounter_homerRef_enrich$i == 0)
+    updateCounter_homerRef_enrich <<- reactiveValues(i = 0)
+  }) 
   output$homer_size_enrich <- renderUI({
     radioButtons('homer_size_enrich','Type of the region for motif finding',
                  c('given (exact size)'="given",

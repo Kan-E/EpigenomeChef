@@ -401,19 +401,25 @@ shinyUI(
                      ),
                      ##pair-wise HOMER-----
                      tabPanel("HOMER",
-                              fluidRow(
-                                column(3, downloadButton("download_motif_plot", "Download motif plot")),
-                                column(3, downloadButton("download_homer_report", "Download homer report"),
-                                       tags$head(tags$style("#download_homer_report{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),)
-                              ),
                               textOutput("Spe_motif"),
-                                     tags$head(tags$style("#Spe_motif{color: red;
+                              tags$head(tags$style("#Spe_motif{color: red;
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              fluidRow(
+                                column(4, actionButton("HOMERreference_start", "Install HOMER reference"),
+                                       tags$head(tags$style("#HOMERreference_start{color: blue;
+                                 font-size: 16px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                )
+                              ),
+                              verbatimTextOutput("reference_download"),
                               selectInput("homer_unknown","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif"),
                               fluidRow(
                                 column(4, radioButtons('homer_size','Type of the region for motif finding',
@@ -438,6 +444,14 @@ shinyUI(
                                 )
                               ),
                               sliderInput("homer_showCategory","Most significant motifs", value=5, min=1,max=20),
+                              fluidRow(
+                                column(3, downloadButton("download_motif_plot", "Download motif plot")),
+                                column(3, downloadButton("download_homer_report", "Download homer report"),
+                                       tags$head(tags$style("#download_homer_report{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
                               plotOutput("motif_plot"),
                               bsCollapse(id="Promoter_motif_collapse_panel",open="motif_result_table",multiple = TRUE,
                                          bsCollapsePanel(title="Known motif",
@@ -665,6 +679,20 @@ shinyUI(
                                          ),
                                          bsCollapsePanel(title="HOMER:",
                                                          value="HOMER_panel",
+                                                         fluidRow(
+                                                           column(4, actionButton("with_HOMERreference_start", "Install HOMER reference"),
+                                                                  tags$head(tags$style("#with_HOMERreference_start{color: blue;
+                                 font-size: 16px;
+                                 font-style: bold;
+                                 }"),
+                                                                            tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                                            ))
+                                                           )
+                                                         ),
+                                                         verbatimTextOutput("with_reference_download"),
                                                          fluidRow(
                                                            column(3, downloadButton("download_with_motif_plot", "Download motif plot")),
                                                            column(3, downloadButton("download_with_homer_report", "Download homer report"),
@@ -916,22 +944,29 @@ shinyUI(
                               DTOutput('region_gene_venn_associations')
                      ),
                      tabPanel("HOMER",
-                              fluidRow(
-                                column(3, downloadButton("download_motif_venn_plot", "Download motif plot")),
-                                column(3, downloadButton("download_homer_report_venn", "Download homer report"),
-                                       tags$head(tags$style("#download_homer_report_venn{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),)
-                              ),
-                              fluidRow(
-                                column(8, htmlOutput("venn_whichGroup1"))
-                              ),
                               textOutput("Spe_motif_venn"),
                               tags$head(tags$style("#Spe_motif_venn{color: red;
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              fluidRow(
+                                column(4, actionButton("HOMERreference_start_venn", "Install HOMER reference"),
+                                       tags$head(tags$style("#HOMERreference_start_venn{color: blue;
+                                 font-size: 16px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                )
+                              ),
+                              verbatimTextOutput("reference_download_venn"),
+                              
+                              fluidRow(
+                                column(8, htmlOutput("venn_whichGroup1"))
+                              ),
                               fluidRow(
                                 column(4, htmlOutput("homer_unknown_venn")),
                                 column(4, htmlOutput("homer_size_venn")),
@@ -955,8 +990,15 @@ shinyUI(
                                                  ))
                                 )
                               ),
-                              
                               htmlOutput("homer_showCategory_venn"),
+                              fluidRow(
+                                column(3, downloadButton("download_motif_venn_plot", "Download motif plot")),
+                                column(3, downloadButton("download_homer_report_venn", "Download homer report"),
+                                       tags$head(tags$style("#download_homer_report_venn{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
                               plotOutput("motif_venn_plot"),
                               bsCollapse(id="Promoter_motif_venn_collapse_panel",open="motif_venn_result_table",multiple = TRUE,
                                          bsCollapsePanel(title="Known motif",
@@ -1593,19 +1635,25 @@ shinyUI(
                               DTOutput('region_gene_enrich_associations')
                      ),
                      tabPanel("HOMER",
-                              fluidRow(
-                                column(3, downloadButton("download_motif_enrich_plot", "Download motif plot")),
-                                column(3, downloadButton("download_homer_report_enrich", "Download homer report"),
-                                       tags$head(tags$style("#download_homer_report_enrich{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),)
-                              ),
                               textOutput("Spe_motif_enrich"),
                               tags$head(tags$style("#Spe_motif_enrich{color: red;
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              fluidRow(
+                                column(4, actionButton("HOMERreference_start_enrich", "Install HOMER reference"),
+                                       tags$head(tags$style("#HOMERreference_start_enrich{color: blue;
+                                 font-size: 16px;
+                                 font-style: bold;
+                                 }"),
+                                                 tags$style("
+          body {
+            padding: 0 !important;
+          }"
+                                                 ))
+                                )
+                              ),
+                              verbatimTextOutput("reference_download_enrich"),
                               fluidRow(
                                 column(4, htmlOutput("homer_unknown_enrich")),
                                 column(4, htmlOutput("homer_size_enrich")),
@@ -1630,6 +1678,14 @@ shinyUI(
                                 )
                               ),
                               htmlOutput("homer_fdr_enrich"),
+                              fluidRow(
+                                column(3, downloadButton("download_motif_enrich_plot", "Download motif plot")),
+                                column(3, downloadButton("download_homer_report_enrich", "Download homer report"),
+                                       tags$head(tags$style("#download_homer_report_enrich{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                              ),
                               plotOutput("motif_enrich_plot"),
                               bsCollapse(id="Promoter_motif_enrich_collapse_panel",open="motif_enrich_result_table",multiple = TRUE,
                                          bsCollapsePanel(title="Known motif",
