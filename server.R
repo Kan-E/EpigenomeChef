@@ -237,13 +237,7 @@ shinyServer(function(input, output, session) {
     }
   })
   bws_order<-reactive({
-    if(!is.null(bws())){
-      order <- input$sample_order
-      bws <- bws()
-      order <- gsub("\\.","-",order)
-      bws <- bws[order]
-      return(bws)
-    }
+    return(bws_ordering(bws=bws(),sample_order=input$sample_order,additional=FALSE))
   })
   bws_count <- reactive({
     tmp <- input$file1_count$datapath
@@ -349,6 +343,9 @@ shinyServer(function(input, output, session) {
   })
   
   pre_bw_count <- reactive({
+    if(input$data_file_type == "Row1_count" && !is.null(bws_count())){
+      return(bws_count())
+    }
     if(input$createcountButton > 0 && updateCounter_createCount$i > 0){
       if(input$data_file_type == "Row1" && !is.null(bw_files())){
         if(input$Genomic_region == "Promoter"){
@@ -361,9 +358,6 @@ shinyServer(function(input, output, session) {
             return(Bigwig2count(bw = bw_files(),promoter_region(),input_type =input$Genomic_region))
           }
         }
-      }
-      if(input$data_file_type == "Row1_count" && !is.null(bws_count())){
-        return(bws_count())
       }
       if(input$Species != "not selected" && input$data_file_type == "Row2" && 
          !is.null(bam())){
@@ -454,6 +448,7 @@ shinyServer(function(input, output, session) {
   dds <- reactive({
     count <- bw_count()
     collist <- collist_bw_pair()
+    if(length(unique(collist)) != 2) validate(paste0("Your count file contains data for ", length(unique(collist))," conditions. Please select samples to narrow it down to 2 conditions."))
     withProgress(message = "DESeq2",{
       group <- data.frame(con = factor(collist))
       dds<- DESeqDataSetFromMatrix(countData = round(count),colData = group, design = ~ con)
@@ -476,6 +471,8 @@ shinyServer(function(input, output, session) {
       count <- log(bw_count() + 1,2)
       if(!is.null(input$regression_mode)){
         collist <- collist_bw_pair()
+        print(collist)
+        if(length(unique(collist)) != 2) validate(paste0("Your count file contains data for ", length(unique(collist))," conditions. Please select samples to narrow it down to 2 conditions."))
         colnames(count) <- gsub("\\-","\\_",colnames(count))
         collist<- gsub("\\-","\\_",collist)
         collist<- factor(collist, levels = unique(collist),ordered = TRUE)
@@ -1013,7 +1010,7 @@ shinyServer(function(input, output, session) {
     }
   })
   track_additional_files <- reactive({
-    return(pre_track_additional_files()[input$sample_order_pair_track])
+    return(bws_ordering(bws=pre_track_additional_files(),sample_order=input$sample_order_pair_track))
   })
   
   data_track <- reactive({
@@ -1723,7 +1720,7 @@ shinyServer(function(input, output, session) {
     }
   })
   up_additional <-reactive({
-    return(pre_up_additional()[input$sample_order_pair_pattern])
+    return(bws_ordering(bws=pre_up_additional(),sample_order=input$sample_order_pair_pattern))
   })
   output$peak_pattern_up_heat_range <- renderUI({
     if(!is.null(deg_result())){
@@ -2571,7 +2568,7 @@ shinyServer(function(input, output, session) {
     }
   })
   int_track_additional_files <- reactive({
-    return(pre_int_track_additional_files()[input$sample_order_pair_track_int])
+    return(bws_ordering(bws=pre_int_track_additional_files(),sample_order=input$sample_order_pair_track_int))
   })
   
   int_data_track <- reactive({
@@ -3026,25 +3023,19 @@ shinyServer(function(input, output, session) {
     return(pre_integrated_additional(input$with_integrated_bw_1))
   })
   with_integrated_additional1 <- reactive({
-    if(!is.null(input$with_sample_order_pair_comb1)){
-      return(with_pre_integrated_additional1()[input$with_sample_order_pair_comb1])
-    }
+      return(bws_ordering(bws=with_pre_integrated_additional1(),sample_order=input$with_sample_order_pair_comb1))
   })
   with_pre_integrated_additional2 <-reactive({
     return(pre_integrated_additional(input$with_integrated_bw_2))
   })
   with_integrated_additional2 <- reactive({
-    if(!is.null(input$with_sample_order_pair_comb2)){
-      return(with_pre_integrated_additional2()[input$with_sample_order_pair_comb2])
-    }
+      return(bws_ordering(bws=with_pre_integrated_additional2(),sample_order=input$with_sample_order_pair_comb2))
   })
   with_pre_integrated_additional3 <-reactive({
     return(pre_integrated_additional(input$with_integrated_bw_3))
   })
   with_integrated_additional3 <- reactive({
-    if(!is.null(input$with_sample_order_pair_comb3)){
-      return(with_pre_integrated_additional3()[input$with_sample_order_pair_comb3])
-    }
+      return(bws_ordering(bws=with_pre_integrated_additional3(),sample_order=input$with_sample_order_pair_comb3))
   })
   with_integrated_heatmap_add1 <- reactive({
     if(!is.null(with_integrated_additional1())){
@@ -3424,25 +3415,19 @@ shinyServer(function(input, output, session) {
     return(pre_integrated_additional(input$integrated_bw_1))
   })
   integrated_additional1 <- reactive({
-    if(!is.null(input$sample_order_pair_comb1)){
-      return(pre_integrated_additional1()[input$sample_order_pair_comb1])
-    }
+      return(bws_ordering(bws=pre_integrated_additional1(),sample_order=input$sample_order_pair_comb1))
   })
   pre_integrated_additional2 <-reactive({
     return(pre_integrated_additional(input$integrated_bw_2))
   })
   integrated_additional2 <- reactive({
-    if(!is.null(input$sample_order_pair_comb2)){
-      return(pre_integrated_additional2()[input$sample_order_pair_comb2])
-    }
+      return(bws_ordering(bws=pre_integrated_additional2(),sample_order=input$sample_order_pair_comb2))
   })
   pre_integrated_additional3 <-reactive({
     return(pre_integrated_additional(input$integrated_bw_3))
   })
   integrated_additional3 <- reactive({
-    if(!is.null(input$sample_order_pair_comb3)){
-      return(pre_integrated_additional3()[input$sample_order_pair_comb3])
-    }
+      return(bws_ordering(bws=pre_integrated_additional3(),sample_order=input$sample_order_pair_comb3))
   })
   integrated_heatmap_add1 <- reactive({
     if(!is.null(integrated_additional1())){
@@ -3987,13 +3972,7 @@ shinyServer(function(input, output, session) {
   })
   pre_bws_venn <- debounce(pre2_bws_venn, 1000)
   bws_venn <- reactive({
-    if(!is.null(input$sample_order_venn)){
-      order <- input$sample_order_venn
-      bws <- pre_bws_venn()
-      order <- gsub("\\.","-",order)
-      bws <- bws[order]
-      return(bws)
-    }else validate("Bigwig files are required.")
+    return(bws_ordering(bws=pre_bws_venn(),sample_order=input$sample_order_venn,additional=FALSE))
   })
   venn_overlap <- reactive({
     if(!is.null(Venn_peak_call_files()) && updateCounter_vennStart$i > 0){
@@ -6226,19 +6205,19 @@ shinyServer(function(input, output, session) {
     return(pre_integrated_additional(input$integrated_bw_2_venn))
   })
   integrated_additional2_venn <- reactive({
-    if(!is.null(input$sample_order_venn_comb2)) return(pre_integrated_additional2_venn()[input$sample_order_venn_comb2])
+    return(bws_ordering(bws=pre_integrated_additional2_venn(),sample_order=input$sample_order_venn_comb2))
   })
   pre_integrated_additional3_venn <-reactive({
     return(pre_integrated_additional(input$integrated_bw_3_venn))
   })
   integrated_additional3_venn <- reactive({
-    if(!is.null(input$sample_order_venn_comb3)) return(pre_integrated_additional3_venn()[input$sample_order_venn_comb3])
+    return(bws_ordering(bws=pre_integrated_additional3_venn(),sample_order=input$sample_order_venn_comb3))
   })
   pre_integrated_additional4_venn <-reactive({
     return(pre_integrated_additional(input$integrated_bw_4_venn))
   })
   integrated_additional4_venn <- reactive({
-    if(!is.null(input$sample_order_venn_comb4)) return(pre_integrated_additional4_venn()[input$sample_order_venn_comb4])
+    return(bws_ordering(bws=pre_integrated_additional4_venn(),sample_order=input$sample_order_venn_comb4))
   })
   integrated_heatmap_add1_venn <- reactive({
     if(!is.null(bws_venn())){
@@ -6412,13 +6391,7 @@ shinyServer(function(input, output, session) {
   })
   bws_order_clustering<-reactive({
     if(input$data_file_type_clustering == "Row1" || input$data_file_type_clustering == "Row1_count"){
-      if(!is.null(bws_clustering())){
-        order <- input$sample_order_clustering
-        bws <- bws_clustering()
-        order <- gsub("\\.","-",order)
-        bws <- bws[order]
-        return(bws)
-      }else validate("Bigwig files are required.")
+      return(bws_ordering(bws=bws_clustering(),sample_order=input$sample_order_clustering,additional=FALSE))
     }
   })
   bam_clustering <- reactive({
@@ -7330,7 +7303,6 @@ shinyServer(function(input, output, session) {
   })
   kmeans_pattern_range <- reactive({
     rg <- c()
-    print(bws_order_clustering())
     sig <- peak_pattern_function(grange=peak_kmeans_grange(), files=bws_order_clustering(),
                                  additional=kmeans_additional(),plot = FALSE)
     for(name in names(sig)){
@@ -7533,7 +7505,7 @@ shinyServer(function(input, output, session) {
   })
   track_additional_files_clustering <- reactive({
     if(!is.null(input$trackplot_additional1_clustering)){
-      if(input$sample_order_kmeans_track) return(pre_track_additional_files_clustering()[input$sample_order_kmeans_track])
+      if(input$sample_order_kmeans_track) return(bws_ordering(bws=pre_track_additional_files_clustering(),sample_order=input$sample_order_kmeans_track))
     }
   })
   data_track_clustering <- reactive({
@@ -8357,31 +8329,31 @@ shinyServer(function(input, output, session) {
       if(input$goButton_enrich > 0 ){
         file <- c("data/bigwig/A_1.BigWig",
                   "data/bigwig/B_1.BigWig")
-        names(file) <- c("A_1.bw","B_1.bw")
+        names(file) <- c("A_1","B_1")
         return(file)
       }
     }
   })
   integrated_additional1_enrich <- reactive({
-    if(!is.null(input$sample_order_enrich_comb1)) return(pre_integrated_additional1_enrich()[input$sample_order_enrich_comb1])
+      return(bws_ordering(bws=pre_integrated_additional1_enrich(),sample_order=input$sample_order_enrich_comb1))
   })
   pre_integrated_additional2_enrich <-reactive({
     return(pre_integrated_additional(input$integrated_bw_2_enrich))
   })
   integrated_additional2_enrich <- reactive({
-    if(!is.null(input$sample_order_enrich_comb2)) return(pre_integrated_additional2_enrich()[input$sample_order_enrich_comb2])
+    return(bws_ordering(bws=pre_integrated_additional2_enrich(),sample_order=input$sample_order_enrich_comb2))
   })
   pre_integrated_additional3_enrich <-reactive({
     return(pre_integrated_additional(input$integrated_bw_3_enrich))
   })
   integrated_additional3_enrich <- reactive({
-    if(!is.null(input$sample_order_enrich_comb3)) return(pre_integrated_additional3_enrich()[input$sample_order_enrich_comb3])
+    return(bws_ordering(bws=pre_integrated_additional3_enrich(),sample_order=input$sample_order_enrich_comb3))
   })
   pre_integrated_additional4_enrich <-reactive({
     return(pre_integrated_additional(input$integrated_bw_4_enrich))
   })
   integrated_additional4_enrich <- reactive({
-    if(!is.null(input$sample_order_enrich_comb4)) return(pre_integrated_additional4_enrich()[input$sample_order_enrich_comb4])
+    return(bws_ordering(bws=pre_integrated_additional4_enrich(),sample_order=input$sample_order_enrich_comb4))
   })
   integrated_heatmap_add1_enrich <- reactive({
     if(!is.null(integrated_additional1_enrich())){
@@ -9190,7 +9162,7 @@ shinyServer(function(input, output, session) {
   })
   pre_bws_enrich <- debounce(pre2_bws_enrich, 1000)
   bws_enrich <- reactive({
-    if(!is.null(input$sample_order_enrich)) return(pre_bws_enrich()[input$sample_order_enrich])
+    return(bws_ordering(bws=pre_bws_enrich(),sample_order=input$sample_order_enrich,additional=FALSE))
   })
   observeEvent(input$RP_table_enrich_rows_selected, ({
     updateCollapse(session,id =  "input_collapse_enrich_RP", open="int_Trackplot_panel")

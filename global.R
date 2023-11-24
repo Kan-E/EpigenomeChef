@@ -112,6 +112,15 @@ org <- function(Species){
     return(org)
   }
 }
+bws_ordering <- function(bws,sample_order,additional=TRUE){
+  if(!is.null(bws) && !is.null(sample_order)){
+    order <- sample_order
+    bws <- bws
+    order <- gsub("\\.","-",order)
+    bws <- bws[order]
+    return(bws)
+  }else if(additional == FALSE)  validate("Bigwig files are required.")
+}
 read_df <- function(tmp, Species=NULL){
   if(is.null(tmp)) {
     return(NULL)
