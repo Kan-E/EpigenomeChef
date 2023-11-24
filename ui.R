@@ -1203,7 +1203,7 @@ shinyUI(
                                                      options = list(template = popoverTempate))
                                               ),
                                               accept = c("txt"),
-                                              multiple = TRUE,
+                                              multiple = FALSE,
                                               width = "80%"),
                                     bsPopover("icon_count1_clustering", "count file (txt):", 
                                               content=paste("The count data from clustering analysis in EpigenomeChef is required.<br>", 

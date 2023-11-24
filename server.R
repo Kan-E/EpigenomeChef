@@ -239,7 +239,9 @@ shinyServer(function(input, output, session) {
   bws_order<-reactive({
     if(!is.null(bws())){
       order <- input$sample_order
-      bws <- bws()[order]
+      bws <- bws()
+      order <- gsub("\\.","-",order)
+      bws <- bws[order]
       return(bws)
     }
   })
@@ -3958,10 +3960,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$file_venn1)){
       if(input$goButton_venn > 0 ){
         df<-list()
-        df[["A_1.bw"]] <- "data/bigwig/A_1.BigWig"
-        df[["A_2.bw"]] <- "data/bigwig/A_2.BigWig"
-        df[["B_1.bw"]] <- "data/bigwig/B_1.BigWig"
-        df[["B_2.bw"]] <- "data/bigwig/B_2.BigWig"
+        df[["A_1"]] <- "data/bigwig/A_1.BigWig"
+        df[["A_2"]] <- "data/bigwig/A_2.BigWig"
+        df[["B_1"]] <- "data/bigwig/B_1.BigWig"
+        df[["B_2"]] <- "data/bigwig/B_2.BigWig"
         return(df)
       }
       return(NULL)
@@ -3985,7 +3987,13 @@ shinyServer(function(input, output, session) {
   })
   pre_bws_venn <- debounce(pre2_bws_venn, 1000)
   bws_venn <- reactive({
-    if(!is.null(input$sample_order_venn)) return(pre_bws_venn()[input$sample_order_venn])
+    if(!is.null(input$sample_order_venn)){
+      order <- input$sample_order_venn
+      bws <- pre_bws_venn()
+      order <- gsub("\\.","-",order)
+      bws <- bws[order]
+      return(bws)
+    }else validate("Bigwig files are required.")
   })
   venn_overlap <- reactive({
     if(!is.null(Venn_peak_call_files()) && updateCounter_vennStart$i > 0){
@@ -6407,8 +6415,6 @@ shinyServer(function(input, output, session) {
       if(!is.null(bws_clustering())){
         order <- input$sample_order_clustering
         bws <- bws_clustering()
-        print(bws)
-        print(order)
         order <- gsub("\\.","-",order)
         bws <- bws[order]
         return(bws)
