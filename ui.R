@@ -55,14 +55,14 @@ shinyUI(
                  ),
                  column(12,br(),
                         h3("'Pair-wise' detects and visualizes differentially accessible regions"),br(),
-                        div(img(src="pair-wise_DAR.png", width = 1200,height = 1800), style="text-align: center;"),br(),br(),hr(),
+                        div(img(src="pair-wise.png", width = 1200,height = 1800), style="text-align: center;"),br(),br(),hr(),
                         fluidRow(
                         column(5,h3("'Venn diagram' detects and visualizes the overlap between peaks from multiple datasets")),
                         column(7,h3("'Peaks of interest' dissects the annotation, function, motif, and correlation with gene expression of peaks of interest."))
                         ),br(),
-                        div(img(src="Venn.png", width = 1200,height = 1600), style="text-align: center;"),br(),br(),hr(), 
+                        div(img(src="Venn_diagram.png", width = 1200,height = 1600), style="text-align: center;"),br(),br(),hr(), 
                         h3("'Clustering' identifies similar samples and DNA binding patterns by clustering methods"),br(),
-                        div(img(src="Clustering.png", width = 1000,height = 700), style="text-align: center;"),br(),hr(),
+                        div(img(src="cluster.png", width = 1000,height = 700), style="text-align: center;"),br(),hr(),
                  )
                )
       ),
