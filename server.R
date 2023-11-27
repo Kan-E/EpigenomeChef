@@ -7092,6 +7092,7 @@ shinyServer(function(input, output, session) {
        input$kmeans_start == 0 || updateCounter_kmeans$i == 0){
       return(NULL)
     }else{
+      if(length(input$kmeans_order) == length(unique(pre_clustering_kmeans()))){
       withProgress(message = "k-means clustering",{
         ht <- Heatmap(data.z, name = "z-score",
                       column_order = colnames(data.z),
@@ -7101,6 +7102,7 @@ shinyServer(function(input, output, session) {
         ht <- draw(ht)
         return(ht)
       })
+      }
     }
   })
   
