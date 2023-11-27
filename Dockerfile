@@ -38,7 +38,6 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('org.Rn.eg.db', update = F)" && \
     R -e "BiocManager::install('org.Dm.eg.db', update = F)" && \
     R -e "BiocManager::install('org.Ce.eg.db', update = F)" && \
-    R -e "BiocManager::install('org.Xl.eg.db', update = F)" && \
     R -e "BiocManager::install('org.Bt.eg.db', update = F)" && \
     R -e "BiocManager::install('org.Cf.eg.db', update = F)" && \
     R -e "BiocManager::install('org.Dr.eg.db', update = F)" && \
@@ -100,14 +99,12 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('clue', update = F)" && \
     R -e "BiocManager::install('TxDb.Mmusculus.UCSC.mm39.refGene', update = F)" \
     R -e "BiocManager::install('statmod', update = F)"
-##Remove the unnecessary genomes for HOMER
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
     mkdir -p /usr/local/homer && \
     cd /usr/local/homer && \
     wget http://homer.ucsd.edu/homer/configureHomer.pl && \
-    perl configureHomer.pl -install && \
-    perl configureHomer.pl -install mm10
+    perl configureHomer.pl -install
 COPY ui.R /srv/shiny-server/EpigenomeChef/
 COPY server.R /srv/shiny-server/EpigenomeChef/
 COPY global.R /srv/shiny-server/EpigenomeChef/

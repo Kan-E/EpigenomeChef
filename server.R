@@ -9476,7 +9476,31 @@ shinyServer(function(input, output, session) {
   
   
   #Restart
-  observeEvent(enrich_motif(), {
+  observeEvent(preMotif_list(), {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Genomic_region, {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species, {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_unknown, {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_size, {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_size2, {
+    isolate(updateCounter$i == 0)
+    updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_bg, {
     isolate(updateCounter$i == 0)
     updateCounter <<- reactiveValues(i = 0)
   }) 
@@ -9627,7 +9651,31 @@ shinyServer(function(input, output, session) {
   
   
   #Restart
-  observeEvent(with_enrich_motif(), {
+  observeEvent(with_preMotif_list(), {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Group_homer, {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species, {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$with_homer_unknown, {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$with_homer_size, {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$with_homer_size2, {
+    isolate(with_updateCounter$i == 0)
+    with_updateCounter <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$with_homer_bg, {
     isolate(with_updateCounter$i == 0)
     with_updateCounter <<- reactiveValues(i = 0)
   }) 
@@ -9811,7 +9859,35 @@ shinyServer(function(input, output, session) {
   
   
   #Restart
-  defaultvalues_venn <- observeEvent(enrich_motif_venn(), {
+  observeEvent(preMotif_list_venn(), {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$venn_whichGroup1, {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species_venn, {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_unknown_venn, {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_size_venn, {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_size2_venn, {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_bg_venn, {
+    isolate(updateCounter_venn$i == 0)
+    updateCounter_venn <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_bg2_venn, {
     isolate(updateCounter_venn$i == 0)
     updateCounter_venn <<- reactiveValues(i = 0)
   }) 
@@ -10032,7 +10108,35 @@ shinyServer(function(input, output, session) {
   
   
   #Restart
-  defaultvalues_enrich <- observeEvent(enrich_motif_enrich(), {
+  observeEvent(Enrich_peak_call_files(), {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Group_homer, {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$Species_enrich, {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_unknown_enrich, {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_size_enrich, {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_size2_enrich, {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_bg_enrich, {
+    isolate(updateCounter_enrich$i == 0)
+    updateCounter_enrich <<- reactiveValues(i = 0)
+  }) 
+  observeEvent(input$homer_bg2_enrich, {
     isolate(updateCounter_enrich$i == 0)
     updateCounter_enrich <<- reactiveValues(i = 0)
   }) 
