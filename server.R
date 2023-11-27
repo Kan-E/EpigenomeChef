@@ -501,10 +501,7 @@ shinyServer(function(input, output, session) {
         count <- bw_count()
         collist <- collist_bw_pair()
         contrast <- c("con", unique(collist))
-        print(unique(collist))
-        print(dds())
         dds <- dds()
-        print(contrast)
         res <- results(dds,  contrast = contrast)
         res <- as.data.frame(res)
       }
@@ -670,7 +667,6 @@ shinyServer(function(input, output, session) {
         data2 <- merge(data,deg_result,by="locus")
         rownames(data2) <- data2$locus
         data2 <- data2[, - which(colnames(data2) == "locus")]
-        print(head(data2))
         return(data2)
       }
     }
@@ -836,7 +832,6 @@ shinyServer(function(input, output, session) {
           if(length(data$color[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr]) == 0) Color <- c("darkgray","red")
         }
         data$minusLog10padj<--log10(data$padj)
-        print(data$padj[data$log2FoldChange < -log2(input$fc) & data$padj < input$fdr])
         v <- ggplot(data, aes(x = log2FoldChange, y = minusLog10padj)) + ggrastr::geom_point_rast(aes(color = color),size = 0.4)
         v <- v  + geom_vline(xintercept = c(-log2(input$fc), log2(input$fc)), linetype = c(2, 2), color = c("black", "black")) +
           geom_hline(yintercept = c(-log10(input$fdr)), linetype = 2, color = c("black"))
@@ -4582,7 +4577,7 @@ shinyServer(function(input, output, session) {
   goi_promoter_position_venn<- reactive({
     if(!is.null(input$selected_intersect_annotation_rows_selected)){
       library(Gviz)
-      label_data <- selected_annoData_table()[[input$intersect_select2]][input$selected_intersect_annotation_rows_selected,]
+      label_data <- selected_annoData_table()[[input$intersect_select]][input$selected_intersect_annotation_rows_selected,]
       return(label_data)
     }
   })
@@ -5152,7 +5147,6 @@ shinyServer(function(input, output, session) {
       dds <- pre_RNAseqDEG_venn()
       contrast <- c("con", unique(collist))
       normalized_counts <- counts(dds, normalized=TRUE)
-      print(head(normalized_counts))
       return(normalized_counts)
     }
   })
@@ -5277,7 +5271,6 @@ shinyServer(function(input, output, session) {
        !is.na(input$DEG_fdr_venn) && !is.na(input$DEG_fc_venn) && 
        input$Species_venn != "not selected"  && !is.null(pre_mmAnno_venn())){
       df <- data.frame(matrix(rep(NA, 4), nrow=1))[numeric(0), ]
-      print(regulatory_potential_venn()[[1]]$statistics)
       for(name in names(regulatory_potential_venn())){
         df2 <- regulatory_potential_venn()[[name]]$statistics
         df2$Peak <- name
@@ -7073,7 +7066,6 @@ shinyServer(function(input, output, session) {
   pre_kmeans_order <- reactive({
     data.z <- clustering_data_z()
     cl = pre_clustering_kmeans()
-    print(unique(cl))
     if(is.null(cl) || length(unique(cl)) == 1  || 
        input$kmeans_start == 0 || updateCounter_kmeans$i == 0){
       return(NULL)
@@ -7157,7 +7149,6 @@ shinyServer(function(input, output, session) {
   
   clustering_kmeans_pattern_extract <- reactive({
     clusters <- clustering_kmeans_cluster()
-    print(head(clusters))
     if(is.null(clusters)){
       return(NULL)
     }else{
@@ -8486,8 +8477,6 @@ shinyServer(function(input, output, session) {
             if(str_detect(colnames(tmp)[1], "^X\\.")){
               colnames(tmp) = str_sub(colnames(tmp), start = 3, end = -2) 
             }
-            print(rownames(tmp)[1])
-            print(dim(tmp)[2])
             if(rownames(tmp)[1] == 1){
               if(dim(tmp)[2] >= 2){
                 tmp <- data.frame(Gene = tmp[,1], Group = tmp[,2])
@@ -8747,7 +8736,6 @@ shinyServer(function(input, output, session) {
        !is.na(input$DEG_fdr_enrich) && !is.na(input$DEG_fc_enrich) && 
        input$Species_enrich != "not selected"  && !is.null(pre_mmAnno_enrich())){
       df <- data.frame(matrix(rep(NA, 4), nrow=1))[numeric(0), ]
-      print(regulatory_potential_enrich()[[1]]$statistics)
       for(name in names(regulatory_potential_enrich())){
         df2 <- regulatory_potential_enrich()[[name]]$statistics
         df2$Peak <- name
