@@ -629,6 +629,7 @@ shinyServer(function(input, output, session) {
   })
   
   deg_result_anno <- reactive({
+    if(input$Species == "not selected") validate("Please select 'Species'.")
     if(!is.null(deg_result())){
       withProgress(message = "preparing annotation",{
         if(input$data_file_type == "Row1_count" && input$Genomic_region == "Genome-wide"){
@@ -9513,11 +9514,13 @@ shinyServer(function(input, output, session) {
   
   
   preMotif_list <- reactive({
+    if(input$Species != "not selected"){
     df <- list()
     collist <- collist_bw_pair()
     df[[paste0(unique(collist)[2],"_high")]] <- data_degcount_up()
     df[[paste0(unique(collist)[1],"_high")]] <- data_degcount_down()
     return(df)
+    }
   })
   
   enrich_motif <- reactive({
