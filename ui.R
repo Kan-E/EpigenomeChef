@@ -444,6 +444,7 @@ shinyUI(
                                 )
                               ),
                               sliderInput("homer_showCategory","Most significant motifs", value=5, min=1,max=20),
+                              htmlOutput("homer_sample_order"),
                               fluidRow(
                                 column(3, downloadButton("download_motif_plot", "Download motif plot")),
                                 column(3, downloadButton("download_homer_report", "Download homer report"),
@@ -557,32 +558,62 @@ shinyUI(
                                               ),
                                               dataTableOutput('pair_DEG_result')
                               )),
+                              fluidRow(
+                                column(4, radioButtons('RNAseq_mode_option','RP_definition:',
+                                                       choiceNames = list(
+                                                         tagList(
+                                                           tags$span("Fold change weighting (combined)"),
+                                                           tags$span(icon("info-circle"), id = "icon_rnaseq_definition1_pair", style = "color: black;")
+                                                         ), 
+                                                         tagList(
+                                                           tags$span("Fold change weighting (individual)"),
+                                                           tags$span(icon("info-circle"), id = "icon_rnaseq_definition3_pair", style = "color: black;")
+                                                         ),
+                                                         tagList(
+                                                           tags$span("No weighting (combined)"),
+                                                           tags$span(icon("info-circle"), id = "icon_rnaseq_definition2_pair", style = "color: black;")
+                                                         ), 
+                                                         tagList(
+                                                           tags$span("Classical (No weighting (individual))"),
+                                                           tags$span(icon("info-circle"), id = "icon_rnaseq_definition4_pair", style = "color: black;")
+                                                         )
+                                                       ),
+                                                       choiceValues = c("fcw_combined","fcw_separate","combined","Classical"),
+                                                       selected = "fcw_combined"),
+                                       bsPopover("icon_rnaseq_definition1_pair", "Fold change weighting (combined):", 
+                                                 content=paste(img(src="RP_definition1.png", width = 400,height = 250))), 
+                                       bsPopover("icon_rnaseq_definition2_pair", "No weighting (combined):", 
+                                                 content=paste(img(src="RP_definition2.png", width = 400,height = 250))), 
+                                       bsPopover("icon_rnaseq_definition3_pair", "Fold change weighting (individual):", 
+                                                 content=paste(img(src="RP_definition3.png", width = 700,height = 250))), 
+                                       bsPopover("icon_rnaseq_definition4_pair", "Classical (No weighting (individual)):", 
+                                                 content=paste(img(src="RP_definition4.png", width = 700,height = 250)))
+                                       ),
+                                column(4, radioButtons('RNAseq_mode','Mode:',
+                                                       choiceNames = list(
+                                                         tagList(
+                                                           tags$span("Nearest"),
+                                                           tags$span(icon("info-circle"), id = "icon_rnaseq_mode1_pair", style = "color: black;")
+                                                         ), 
+                                                         tagList(
+                                                           tags$span("Gene_scan"),
+                                                           tags$span(icon("info-circle"), id = "icon_rnaseq_mode2_pair", style = "color: black;")
+                                                         )
+                                                       ),
+                                                       choiceValues = c("Nearest","Gene_scan"),
+                                                       selected = "Nearest"),
+                                       bsPopover("icon_rnaseq_mode1_pair", "Nearest mode:", 
+                                                 content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
+                                                               img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
+                                       bsPopover("icon_rnaseq_mode2_pair", "Gene scan mode:", 
+                                                 content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
+                                                               img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
+                                )),
                               verbatimTextOutput("RNAseq_RPmean"),
-                              radioButtons('RNAseq_mode','Mode:',
-                                           choiceNames = list(
-                                             tagList(
-                                               tags$span("Nearest"),
-                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode1_pair", style = "color: black;")
-                                             ), 
-                                             tagList(
-                                               tags$span("Gene_scan"),
-                                               tags$span(icon("info-circle"), id = "icon_rnaseq_mode2_pair", style = "color: black;")
-                                             )
-                                           ),
-                                           choiceValues = c("Nearest","Gene_scan"),
-                                           selected = "Nearest"),
-                              bsPopover("icon_rnaseq_mode1_pair", "Nearest mode:", 
-                                        content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
-                                                      img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
-                              bsPopover("icon_rnaseq_mode2_pair", "Gene scan mode:", 
-                                        content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
-                                                      img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
                               sliderInput("peak_distance","Regulatory range (distance (kb) from TSS)",
                                           min=0,max=200,value=100,step = 5),
-                              fluidRow(
-                                column(4, downloadButton("download_pairintbox","Download box plot")),
-                                column(4, downloadButton("download_pairKSplot","Download ks plot"))
-                              ),
+                              downloadButton("download_pairintbox","Download boxplot (.pdf, .txt, and .bed)"),
+                              selectInput("Statistics","Statistics",c("not selected","TukeyHSD"),selected = "not selected"),
                               textOutput("Spe_int"),
                               tags$head(tags$style("#Spe_int{color: red;
                                  font-size: 20px;
@@ -593,14 +624,15 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
-                              fluidRow(
-                                column(6,plotOutput("int_boxplot")),
-                                column(6,plotOutput('ks_plot'))
-                              ),
+                              plotOutput("int_boxplot"),
+                              dataTableOutput("int_boxplot_table"),
                               fluidRow(
                                 column(4, htmlOutput("DEG_fc")),
                                 column(4, htmlOutput("DEG_fdr"))
                               ),
+                              downloadButton("download_pairKSplot","Download ks plot (.pdf and .txt)"),
+                              plotOutput('ks_plot'),
+                              dataTableOutput("ks_plot_table"),
                               fluidRow(
                                 column(4, downloadButton("download_pairintbar","Download bar plot"))
                               ),
@@ -623,21 +655,23 @@ shinyUI(
                                          ),
                                          bsCollapsePanel(title="Result table:",
                                                          value="RP_panel",
+                                                         
                                                          htmlOutput("RNAseqGroup"),
                                                          htmlOutput("ChIPseqGroup"),
                                                          fluidRow(
-                                                           column(4, downloadButton("download_RP_table","Download summary table")),
-                                                           column(4, downloadButton("download_selected_RP_table","Download selected table"))
-                                                         ),
-                                                         fluidRow(
-                                                           column(6, downloadButton("download_selected_int_peak","Download selected peak file (bed)"))
+                                                           column(4, downloadButton("download_RP_table","Download all table data (.txt and .bed)"))
                                                          ),
                                                          DTOutput('RP_table')
                                          ),
                                          bsCollapsePanel(title="Functional enrichment analysis:",
                                                          value="function_panel",
                                                          fluidRow(
-                                                           column(6, htmlOutput("intGroup")),
+                                                           column(6, radioButtons("withRNAseq_pair_enrich_type", "Category:",
+                                                                                  c('RP status (from boxplot)'="boxplot",
+                                                                                    'Relationship (Epigenome:RNAseq)'="Relationship"
+                                                                                  ),selected = "boxplot"),
+                                                                  htmlOutput("intGroup_for_RPstatus"),
+                                                                  htmlOutput("intGroup")),
                                                            column(6, htmlOutput("intGeneset"))
                                                          ),
                                                          downloadButton("download_pair_int_enrichment", "Download"),
@@ -706,6 +740,11 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                                                         radioButtons("withRNAseq_pair_homer_type", "Category:",
+                                                                      c('RP status (from boxplot)'="boxplot",
+                                                                        'Relationship (Epigenome:RNAseq)'="Relationship"
+                                                                      ),selected = "boxplot"),
+                                                         htmlOutput("homerGroup_for_RPstatus"),
                                                          htmlOutput("Group_homer"),
                                                          selectInput("with_homer_unknown","Type of enrichment analysis",c("known motif","known and de novo motifs"), selected = "known motif"),
                                                          fluidRow(
@@ -731,6 +770,7 @@ shinyUI(
                                                            )
                                                          ),
                                                          sliderInput("with_homer_showCategory","Most significant motifs", value=5, min=1,max=20),
+                                                         htmlOutput("with_homer_sample_order"),
                                                          div(
                                                            plotOutput('with_motif_plot', height = "100%"),
                                                            style = "height: calc(75vh  - 75px)"
@@ -749,7 +789,7 @@ shinyUI(
                    )
                  ) # main panel
                ) #sidebarLayout
-      ), #tabPanel
+      ), #tabPanel--------
       tabPanel("Venn diagram",
                sidebarLayout(
                  # venn diagram analysis---------------------------------
@@ -991,6 +1031,7 @@ shinyUI(
                                 )
                               ),
                               htmlOutput("homer_showCategory_venn"),
+                              htmlOutput("homer_sample_order_venn"),
                               fluidRow(
                                 column(3, downloadButton("download_motif_venn_plot", "Download motif plot")),
                                 column(3, downloadButton("download_homer_report_venn", "Download homer report"),
@@ -1153,11 +1194,8 @@ shinyUI(
                               bsPopover("icon_rnaseq_mode2_venn", "Gene scan mode:", 
                                         content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
                                                       img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
-                              fluidRow(
-                                column(4, sliderInput("peak_distance_venn","Regulatory range (distance (kb) from TSS)",
-                                                      min=0,max=200,value=100,step = 5)),
-                                column(4, downloadButton("download_vennintbox","Download box plot"))
-                              ),
+                              sliderInput("peak_distance_venn","Regulatory range (distance (kb) from TSS)",
+                                          min=0,max=200,value=100,step = 5),
                               htmlOutput("venn_select_RNA"),
                               textOutput("Spe_int_venn"),
                               tags$head(tags$style("#Spe_int_venn{color: red;
@@ -1169,7 +1207,12 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              fluidRow(
+                                column(4, selectInput("Statistics_venn","Statistics",c("not selected","TukeyHSD"),selected = "not selected")),
+                                column(4, downloadButton("download_vennintbox","Download boxplot (.pdf, .txt, and .bed)"))
+                              ),
                               plotOutput("int_box_venn"),
+                              dataTableOutput("int_boxplot_table_venn"),
                               fluidRow(
                                 column(4, htmlOutput("DEG_fc_venn")),
                                 column(4, htmlOutput("DEG_fdr_venn"))
@@ -1207,7 +1250,12 @@ shinyUI(
                                          bsCollapsePanel(title="Functional enrichment analysis:",
                                                          value="function_panel",
                                                          fluidRow(
-                                                           column(6, htmlOutput("intGroup_venn")),
+                                                           column(6, radioButtons("withRNAseq_venn_enrich_type", "Category:",
+                                                                                  c('RP status (from boxplot)'="boxplot",
+                                                                                    'Relationship (Epigenome:RNAseq)'="Relationship"
+                                                                                  ),selected = "boxplot"),
+                                                                  htmlOutput("intGroup_for_RPstatus_venn"),
+                                                                  htmlOutput("intGroup_venn")),
                                                            column(6, htmlOutput("intGeneset_venn"))
                                                          ),
                                                          downloadButton("download_venn_int_enrichment", "Download"),
@@ -1222,7 +1270,7 @@ shinyUI(
                      )
                    )
                  ) #sidebarLayout
-               ) #tabPanel
+               ) #tabPanel-------
       ),
       # Clustering -------------------------------------
       tabPanel("Clustering",
@@ -1678,6 +1726,7 @@ shinyUI(
                                 )
                               ),
                               htmlOutput("homer_fdr_enrich"),
+                              htmlOutput("homer_sample_order_enrich"),
                               fluidRow(
                                 column(3, downloadButton("download_motif_enrich_plot", "Download motif plot")),
                                 column(3, downloadButton("download_homer_report_enrich", "Download homer report"),
@@ -1837,11 +1886,9 @@ shinyUI(
                               bsPopover("icon_rnaseq_mode2_enrich", "Gene scan mode:", 
                                         content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
                                                       img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
-                              fluidRow(
-                                column(4, sliderInput("peak_distance_enrich","Regulatory range (distance (kb) from TSS)",
-                                                      min=0,max=200,value=100,step = 5)),
-                                column(4, downloadButton("download_enrichintbox","Download box plot"))
-                              ),
+                              sliderInput("peak_distance_enrich","Regulatory range (distance (kb) from TSS)",
+                                          min=0,max=200,value=100,step = 5),
+                              
                               htmlOutput("enrich_select_RNA"),
                               textOutput("Spe_int_enrich"),
                               tags$head(tags$style("#Spe_int_enrich{color: red;
@@ -1853,7 +1900,12 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              fluidRow(
+                                column(4, selectInput("Statistics_enrich","Statistics",c("not selected","TukeyHSD"),selected = "not selected")),
+                                column(4, downloadButton("download_enrichintbox","Download boxplot (.pdf, .txt, and .bed)"))
+                              ),
                               plotOutput("int_box_enrich"),
+                              dataTableOutput("int_boxplot_table_enrich"),
                               fluidRow(
                                 column(4, htmlOutput("DEG_fc_enrich")),
                                 column(4, htmlOutput("DEG_fdr_enrich"))
@@ -1893,7 +1945,12 @@ shinyUI(
                                          bsCollapsePanel(title="Functional enrichment analysis:",
                                                          value="function_panel",
                                                          fluidRow(
-                                                           column(6, htmlOutput("intGroup_enrich")),
+                                                           column(6, radioButtons("withRNAseq_enrich_enrich_type", "Category:",
+                                                                                  c('RP status (from boxplot)'="boxplot",
+                                                                                    'Relationship (Epigenome:RNAseq)'="Relationship"
+                                                                                  ),selected = "boxplot"),
+                                                                  htmlOutput("intGroup_for_RPstatus_enrich"),
+                                                                  htmlOutput("intGroup_enrich")),
                                                            column(6, htmlOutput("intGeneset_enrich"))
                                                          ),
                                                          downloadButton("download_enrich_int_enrichment", "Download"),
@@ -1908,7 +1965,7 @@ shinyUI(
                      )
                    )
                  )
-               ) #sidebarLayout
+               ) #sidebarLayout----
       ),
       #Instruction--------------------------
       navbarMenu("More",

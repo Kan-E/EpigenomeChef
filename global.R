@@ -1,4 +1,4 @@
-##information mark
+##with RNAseq homer startボタン
 
 library(rtracklayer) 
 library(Rsubread)
@@ -413,7 +413,42 @@ GOIheatmap <- function(data.z, show_row_names = TRUE){
                 row_names_gp = gpar(fontface = "italic"),use_raster = TRUE)
   return(ht)
 }
-
+pdf_h <- function(rowlist){
+  if ((length(rowlist) > 81) && (length(rowlist) <= 200)) pdf_hsize <- 44
+  if ((length(rowlist) > 64) && (length(rowlist) <= 81)) pdf_hsize <- 40
+  if ((length(rowlist) > 49) && (length(rowlist) <= 64)) pdf_hsize <- 36
+  if ((length(rowlist) > 36) && (length(rowlist) <= 49)) pdf_hsize <- 25
+  if ((length(rowlist) > 25) && (length(rowlist) <= 36)) pdf_hsize <- 25
+  if ((length(rowlist) > 16) && (length(rowlist) <= 25)) pdf_hsize <- 20
+  if ((length(rowlist) > 12) && (length(rowlist) <= 16)) pdf_hsize <- 15
+  if ((length(rowlist) > 9) && (length(rowlist) <= 12)) pdf_hsize <- 15
+  if ((length(rowlist) > 6) && (length(rowlist) <= 9)) pdf_hsize <- 15
+  if ((length(rowlist) > 4) && (length(rowlist) <= 6)) pdf_hsize <- 10
+  if (length(rowlist) == 4) pdf_hsize <- 10
+  if (length(rowlist) == 3) pdf_hsize <- 5
+  if (length(rowlist) == 2) pdf_hsize <- 5
+  if (length(rowlist) == 1) pdf_hsize <- 5
+  if (length(rowlist) > 200) pdf_hsize <- 30
+  return(pdf_hsize)
+}
+pdf_w <- function(rowlist){
+  if ((length(rowlist) > 81) && (length(rowlist) <= 200)) pdf_wsize <- 44
+  if ((length(rowlist) > 64) && (length(rowlist) <= 81)) pdf_wsize <- 40
+  if ((length(rowlist) > 49) && (length(rowlist) <= 64)) pdf_wsize <- 36
+  if ((length(rowlist) > 36) && (length(rowlist) <= 49)) pdf_wsize <- 30
+  if ((length(rowlist) > 25) && (length(rowlist) <= 36)) pdf_wsize <- 25
+  if ((length(rowlist) > 16) && (length(rowlist) <= 25)) pdf_wsize <- 20
+  if ((length(rowlist) > 12) && (length(rowlist) <= 16)) pdf_wsize <- 17
+  if ((length(rowlist) > 9) && (length(rowlist) <= 12)) pdf_wsize <- 17
+  if ((length(rowlist) > 6) && (length(rowlist) <= 9)) pdf_wsize <- 14
+  if ((length(rowlist) > 4) && (length(rowlist) <= 6)) pdf_wsize <- 17
+  if (length(rowlist) == 4) pdf_wsize <- 14
+  if (length(rowlist) == 3) pdf_wsize <- 17
+  if (length(rowlist) == 2) pdf_wsize <- 14
+  if (length(rowlist) == 1) pdf_wsize <- 8
+  if (length(rowlist) > 200) pdf_wsize <- 30
+  return(pdf_wsize)
+}
 pdfSize_for_GOI <- paste(strong("Heatmap:"),"height = 10, width = 7 <br>", 
                          strong("Boxplot:"),"<br>",
                          "Gene number = 1,","height = 3, width = 3 <br>",
@@ -687,6 +722,7 @@ enrich_for_table <- function(data, H_t2g, Gene_set){
                             p.adjust = data2$p.adjust, qvalue = data2$qvalue, GeneSymbol = data2$geneID)
         
       }
+      data3$Group <- gsub("\n"," ",data3$Group)
       return(data3) 
     }
   }
@@ -747,7 +783,6 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
             call. = FALSE)
     return(merge_result)
   }
-  #bonfferoni correction
   up_static_pvalue <- suppressWarnings(ks.test(upGenes_rank, 
                                                staticGenes_rank)$p.value)
   if(up_static_pvalue > 1) up_static_pvalue <- 1
@@ -759,6 +794,7 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
                     "\n pvalue of ", down_name," vs NS: ", format(down_static_pvalue, 
                                                                   digits = 3, scientific = TRUE))
   df <- data.frame(Group=c(paste0(up_name, " vs NS"), paste0(down_name, " vs NS")),
+                   statistics = c(ks.test(upGenes_rank, staticGenes_rank)$statistic,ks.test(downGenes_rank, staticGenes_rank)$statistic),
                    pvalue=c(up_static_pvalue, down_static_pvalue))
   padj <- p.adjust(df$pvalue,method="BH")
   df$padj <- padj
@@ -776,12 +812,15 @@ integrate_ChIP_RNA <- function (result_geneRP, result_geneDiff, lfc_threshold = 
     NS_rank <- filter(merge_result, Group == "Other")$RP_rank
     Genes_rank <- list()
     static_pvalue <- list()
+    static_D <- list()
     df <- data.frame(matrix(rep(NA, 3), nrow=1))[numeric(0), ]
     for(name in unique(merge_result$Group)){
       if(name != "Other"){
       Genes_rank[name] <- list(dplyr::filter(merge_result, Group == name)$RP_rank)
       static_pvalue[name] <- list(ks.test(Genes_rank[[name]],NS_rank)$p.value)
-      df2 <- data.frame(Group = paste0(name," vs Other"), pvalue = static_pvalue[[name]])
+      static_D[name] <- list(ks.test(Genes_rank[[name]],NS_rank)$statistic)
+      df2 <- data.frame(Group = paste0(name," vs Other"), statistics = static_D[[name]],
+                        pvalue = static_pvalue[[name]])
       df <- rbind(df, df2)
       }
     }
@@ -861,12 +900,13 @@ enrich_gene_list <- function(data, Gene_set, H_t2g, org){
   }
 }
 
-enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL){
+enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL,group_order=NULL){
   if(is.null(data) || is.null(enrich_gene_list)){
     return(NULL)
   }else{
     df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
     colnames(df) <- c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", " qvalue", "geneID", "Count", "Group")
+    cluster_list <- c()
     for (name in names(enrich_gene_list)) {
       sum <- length(data$ENTREZID[data$Group == name])
       em <- enrich_gene_list[[name]]
@@ -874,6 +914,8 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL){
         if(length(colnames(as.data.frame(em))) == 9){
           cnet1 <- as.data.frame(em)
           cnet1$Group <- paste(name, "\n","(",sum, ")",sep = "")
+          cluster_list <- c(cluster_list, paste(name, "\n","(",sum, ")",sep = ""))
+          if(!is.null(group_order)) group_order[which(group_order == name)] <- paste(name, "\n","(",sum, ")",sep = "")
           cnet1 <- cnet1[sort(cnet1$pvalue, decreasing = F, index=T)$ix,]
           if (length(cnet1$pvalue) > showCategory){
             cnet1 <- cnet1[1:showCategory,]
@@ -882,21 +924,27 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL){
         }
       }
     }
+    if(!is.null(group_order)) group_order <- group_order[group_order %in% cluster_list]
     if ((length(df$Description) == 0) || length(which(!is.na(unique(df$qvalue)))) == 0) {
       p1 <- NULL
     } else{
       if(!is.null(type)){
         if(type == "withRNAseq"){
           df$Group <- gsub(":", ":\n", df$Group)
+          if(!is.null(group_order)) group_order <- gsub(":", ":\n", group_order)
         }
+      }
+      if(!is.null(group_order)) {
+        df$Group <- factor(df$Group, levels=group_order)
+        df <- df %>% dplyr::arrange(Group) 
       }
       df$GeneRatio <- DOSE::parse_ratio(df$GeneRatio)
       df <- dplyr::filter(df, !is.na(qvalue))
       df$Description <- gsub("_", " ", df$Description)
       df <- dplyr::mutate(df, x = paste0(Group, 1/(-log10(eval(parse(text = "qvalue"))))))
       df$x <- gsub(":","", df$x)
-      df <- dplyr::arrange(df, x)
-      idx <- order(df[["x"]], decreasing = FALSE)
+      df <- dplyr::arrange(df, Group, x)
+      idx <- order(df[["Group"]], df[["x"]], decreasing = FALSE)
       df$Description <- factor(df$Description,
                                levels=rev(unique(df$Description[idx])))
       p1 <- as.grob(ggplot(df, aes(x = Group,y= Description,color=qvalue,size=GeneRatio))+
@@ -910,32 +958,7 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL){
     }
   }
 }
-enrich_for_table <- function(data, H_t2g, Gene_set){
-  if(length(as.data.frame(data)$Description) == 0 || is.null(H_t2g)){
-    return(NULL)
-  }else{
-    colnames(data)[1] <- "gs_name"
-    H_t2g <- H_t2g %>% distinct(gs_name, .keep_all = T)
-    data2 <- left_join(data, H_t2g, by="gs_name")  %>% as.data.frame()
-    if(Gene_set == "DoRothEA regulon (activator)" || Gene_set == "DoRothEA regulon (repressor)"){
-      data3 <- data.frame(Group = data2$Group, Gene_set_name = data2$gs_name, Confidence = data2$confidence,
-                          Count = data2$Count, GeneRatio = data2$GeneRatio, BgRatio = data2$BgRatio, pvalue = data2$pvalue, 
-                          p.adjust = data2$p.adjust, qvalue = data2$qvalue, GeneSymbol = data2$geneID)
-    }else{
-      if(Gene_set == "Custom gene set"){
-        data3 <- data.frame(Group = data2$Group, Gene_set_name = data2$gs_name,
-                            Count = data2$Count, GeneRatio = data2$GeneRatio, BgRatio = data2$BgRatio, pvalue = data2$pvalue, 
-                            p.adjust = data2$p.adjust, qvalue = data2$qvalue, GeneSymbol = data2$geneID)
-      }else{
-        data3 <- data.frame(Group = data2$Group, Gene_set_name = data2$gs_name, ID = data2$gs_id, Description = data2$gs_description,
-                            Count = data2$Count, GeneRatio = data2$GeneRatio, BgRatio = data2$BgRatio, pvalue = data2$pvalue, 
-                            p.adjust = data2$p.adjust, qvalue = data2$qvalue, GeneSymbol = data2$geneID)
-        
-      }
-      return(data3) 
-    }
-  }
-}
+
 symbol2gene_id <- function(data,org){
   if(str_detect(rownames(data)[1], "FBgn")) {
     data$gene_id <- rownames(data)
@@ -1129,9 +1152,9 @@ DAR_withRNAseq <- function(DAR,genomic_region=NULL,Species){
   return(DAR)
 } 
 
-RP_f <- function(mmAnno,txdb){
+RP_f <- function(mmAnno,txdb, mode="combined_fcw"){
   if(!is.null(mmAnno)) {
-    result_geneRP_up <- modified_calcRP_TFHit(mmAnno = mmAnno,Txdb = txdb)
+    result_geneRP_up <- modified_calcRP_TFHit(mmAnno = mmAnno,Txdb = txdb,mode = mode)
   }else result_geneRP_up <- NULL
   if(!is.null(result_geneRP_up)) {
     result_geneRP <-result_geneRP_up
@@ -1715,7 +1738,7 @@ if(!is.null(integrated_bw)){
 
 
 modified_calcRP_TFHit <- function (mmAnno, Txdb, decay_dist = 1000, report_fullInfo = FALSE, 
-                                   verbose = TRUE) 
+                                   verbose = TRUE,mode="fcw_combined") 
 {
   peak_scaned_center <- GenomicRanges::resize(mmAnno, width = 1, 
                                               fix = "center")
@@ -1731,7 +1754,11 @@ modified_calcRP_TFHit <- function (mmAnno, Txdb, decay_dist = 1000, report_fullI
               format(Sys.time(), "%Y-%m-%d %X"))
     }
   if(length(mmAnno$Log2FoldChange) != 0) {
-    mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist/2^abs(mmAnno$Log2FoldChange))
+    if(mode == "fcw_combined" || mode == "fcw_separate"){
+      print("RP definition")
+      print(mode)
+      mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist/2^abs(mmAnno$Log2FoldChange)) 
+    }else mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist)
   }else mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist)
   if (verbose) {
     message(">> merging all info together\t\t", format(Sys.time(), 
@@ -1874,7 +1901,7 @@ read_known_results<-function (path, homer_dir = TRUE) {
                     by = c("motif_name", "motif_family", "experiment", "accession"))
 }   
 
-findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
+findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",section=NULL,
                       motif,size,back="random",bw_count=NULL,other_data=NULL,motif_length){
   ref <- gsub(".+\\(","",gsub(")", "", Species))
   switch(motif,
@@ -1888,12 +1915,15 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
       group_name <- unique(df$group)
       group_file <- length(unique(df$group))
     }
+    print("start")
+    print(head(df))
     perc <- 0
     df2 <- list()
     path <- paste0(format(Sys.time(), "%Y%m%d_%H%M_homer_"),back,"_size-",size)
     dir.create(path = path)
     for(name in group_name){
       group_dir <- paste0(path, "/",name)
+      group_dir <- gsub(" < ","....",group_dir)
       dir.create(path = group_dir)
       perc <- perc + 1
       if(!is.null(anno_data)){
@@ -1942,10 +1972,13 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",
             bg <- paste0(tempdir(),"bed.bed")
           }
         }
+        print("background sequence")
         print(head(bg))
         switch(motif,
                "known motif" = motif_type <- TRUE,
                "known and de novo motifs" = motif_type <- FALSE)
+        print("tested sequence")
+        print(head(y))
         find_motifs_genome(
           y,
           path = group_dir,
@@ -1998,16 +2031,19 @@ denovo_motif <- function(df){
 }
 
 
-homer_Motifplot <- function(df, showCategory=5,section=NULL){
+homer_Motifplot <- function(df, showCategory=5,section=NULL,group_order=NULL){
   df2 <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
-  
+  cluster_list <- c()
   for(name in names(df)){
     print(file.exists(paste0(df[[name]],"/knownResults.txt")))
     
     if(file.exists(paste0(df[[name]],"/knownResults.txt")) == TRUE){
       res <- as.data.frame(as.data.frame(read_known_results(path = df[[name]])))
       if(length(res$motif_name) != 0){
+        name <- gsub("\\.\\.\\.\\."," < ",name)
         res$Group <- name
+        cluster_list <- c(cluster_list, name)
+        if(!is.null(group_order)) group_order[which(group_order == name)] <- name
         if(length(rownames(res)) > showCategory){
           res <- res[1:showCategory,]
         }
@@ -2015,35 +2051,24 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL){
       }
     }
   }
+  if(!is.null(group_order)) group_order <- group_order[group_order %in% cluster_list]
   if(length(df2$motif_name) == 0){
     return(NULL)
   }else{
     colnames(df2) <- c("motif_name", "motif_family", "experiment", "accession", "database", "consensus", "p_value",
                        "fdr", "tgt_num", "tgt_pct", "bgd_num", "bgd_pct","motif_pwm","log_odds_detection","Group")
-    if(!is.null(section)){
-      if(section == "withRNAseq"){
-        df2$Group <- gsub("--", ":\n", df2$Group)
-        df2$Group <- gsub("_", " ", df2$Group)
-        for(i in 1:length(df2$Group)){
-          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
-        }
-      }else if(section == "venn"){
-        df2$Group <- gsub("- ", "- ", df2$Group)
-        for(i in 1:length(df2$Group)){
-          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
-        }
-      }else{
-        df2$Group <- gsub("_", " ", df2$Group)
-        for(i in 1:length(df2$Group)){
-          df2$Group[i] <- paste(strwrap(df2$Group[i], width = 15),collapse = "\n")
-        }
-      }
-      df2$Group <- gsub(" \\(", "\n\\(", df2$Group)
+    df2$Group <- order_reform(group_order = df2$Group,section = section)
+    if(!is.null(group_order)) {
+      group_order <- order_reform(group_order = group_order,section = section)
+      print(head(df2$Group))
+      print(head(group_order))
+      df2$Group <- factor(df2$Group, levels=group_order)
+      df2 <- df2 %>% dplyr::arrange(Group) %>% dplyr::filter(!is.na(Group))
     }
     df2 <- dplyr::mutate(df2, x = paste0(Group, 1/-log10(eval(parse(text = "p_value")))))
     df2$x <- gsub(":","", df2$x)
-    df2 <- dplyr::arrange(df2, x)
-    idx <- order(df2[["x"]], decreasing = FALSE)
+    df2 <- dplyr::arrange(df2, Group, x)
+    idx <- order(df2[["Group"]], df2[["x"]], decreasing = FALSE)
     df2$motif_name <- factor(df2$motif_name,
                              levels=rev(unique(df2$motif_name[idx])))
     d <- ggplot(df2, aes(x = Group,y= motif_name,color=p_value,size=log_odds_detection))+
@@ -2060,11 +2085,41 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL){
       pfm1[[name]] <- t(pfm[[name]])
     }
     Seqlogo <- as.grob(ggseqlogo(pfm1,ncol = 1)+
-                         theme_void()) 
+                         theme_void(base_size = 0)) 
     p <- plot_grid(plot_grid(NULL, Seqlogo, ncol = 1, rel_heights = c(0.05:10)),as.grob(d))
     
     return(p)
   }
+}
+
+order_reform <- function(group_order=NULL,section =NULL){
+  if(!is.null(section)){
+    if(section == "withRNAseq"){
+      if(!is.null(group_order)) {
+        group_order <- gsub("--", ":\n", group_order)
+        group_order <- gsub("_", " ", group_order)
+        for(i in 1:length(group_order)){
+          group_order[i] <- paste(strwrap(group_order[i], width = 8),collapse = "\n")
+        }
+      }
+    }else if(section == "venn"){
+      if(!is.null(group_order)){
+        group_order <- gsub("- ", "- ", group_order)
+        for(i in 1:length(group_order)){
+          group_order[i] <- paste(strwrap(group_order[i], width = 8),collapse = "\n")
+        }
+      }
+    }else{
+      if(!is.null(group_order)){
+        group_order <- gsub("_", " ", group_order)
+        for(i in 1:length(group_order)){
+          group_order[i] <- paste(strwrap(group_order[i], width = 8),collapse = "\n")
+        }
+      } 
+    }
+    if(!is.null(group_order)) group_order <- gsub(" \\(", "\n\\(", group_order)
+  }
+    return(group_order)
 }
 
 robust.system <- function (cmd) {

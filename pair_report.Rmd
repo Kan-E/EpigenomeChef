@@ -1,5 +1,5 @@
 ---
-title: "Pair-wise analysis with EpigenomeChef v1.1.0"
+title: "Pair-wise analysis with EpigenomeChef v1.2.0"
 date: '`r format(Sys.time(), "%y/%m/%d %H:%M")`'
 params:
     raw_count: [some object]
@@ -290,10 +290,7 @@ if(params$input$Species != "not selected" && !is.null(params$input$peak_distance
 }
 ```
 
-`r paste0("Epigenome analysis: ",unique(params$collist_bw_pair)[1], " vs ", unique(params$collist_bw_pair)[2], "\n",
-             "RP > 0 genes have a higher epigenetic potential in ", unique(params$collist_bw_pair)[2]," condition.\n",
-             "RP < 0 genes have a higher epigenetic potential in ", unique(params$collist_bw_pair)[1]," condition.\n",
-             "RP = 0 genes have no significant difference in epigenetic potential between ", unique(params$collist_bw_pair)[1], " and ", unique(params$collist_bw_pair)[2]," conditions.")`
+- RP_definition: `r params$input$RNAseq_mode_option`
 
 - Mode: `r params$input$RNAseq_mode`
 
@@ -302,6 +299,12 @@ if(params$input$RNAseq_mode == "Gene_scan") {
   try(cat(paste0("range: **", params$input$peak_distance,"** kb\n\n")))
 }
 ```
+
+`r paste0("Epigenome analysis: ",unique(params$collist_bw_pair)[1], " vs ", unique(params$collist_bw_pair)[2], "\n",
+             "RP > 0 genes have a higher epigenetic potential in ", unique(params$collist_bw_pair)[2]," condition.\n",
+             "RP < 0 genes have a higher epigenetic potential in ", unique(params$collist_bw_pair)[1]," condition.\n",
+             "RP = 0 genes have no significant difference in epigenetic potential between ", unique(params$collist_bw_pair)[1], " and ", unique(params$collist_bw_pair)[2]," conditions.")`
+             
 
  - Parameters: FoldChange = `r params$input$DEG_fc`, FDR = `r params$input$DEG_fdr`
  
