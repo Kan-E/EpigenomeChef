@@ -1579,7 +1579,7 @@ shinyUI(
                    )
                  ),
 
-               ) #sidebarLayout
+               ) #sidebarLayout-----
       ),
       # enrichment viewer (Peak) -------------------------------------
       tabPanel("Peaks of interest",
