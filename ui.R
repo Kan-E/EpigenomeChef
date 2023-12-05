@@ -1283,8 +1283,7 @@ shinyUI(
                                 ),selected = "Row1"),
                    conditionalPanel(condition="input.data_file_type_clustering=='Row1_count'",
                                     radioButtons('count_file_type_clustering','Type:',
-                                                 c('Normalized count'="Norm",
-                                                   'Raw count'="Raw"
+                                                 c('Normalized count'="Norm"
                                                  ),selected = "Norm") ,
                                     fileInput("file1_count_clustering",
                                               strong(
