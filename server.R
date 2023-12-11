@@ -2702,6 +2702,7 @@ shinyServer(function(input, output, session) {
         }
       }else{
         dir.create("boxplot/gene_list/",showWarnings = FALSE)
+        dir.create("boxplot/bed/",showWarnings = FALSE)
         genelist_up <- paste0("boxplot/gene_list/",RNAseq_name()[2],".txt")
         genelist_down <- paste0("boxplot/gene_list/",RNAseq_name()[1],".txt")
         up <- pari_RNAseq_boxplot()[["genelist"]][[RNAseq_name()[2]]]
@@ -4696,6 +4697,7 @@ shinyServer(function(input, output, session) {
           write.table(RNAseq_boxplot_venn()[["statistical_test"]],boxplot_table,col.names = T,row.names = F,sep = "\t",quote = F)
           }
           dir.create(paste0(dirname,"boxplot/gene_list/"),showWarnings = FALSE)
+          dir.create(paste0(dirname,"boxplot/bed/"),showWarnings = FALSE)
           for(name in venn_select_RNA_debounce()){
             genelist <- paste0(dirname,"boxplot/gene_list/",name,".txt")
             up <- RNAseq_boxplot_venn()[["genelist"]][[name]]
@@ -6166,17 +6168,20 @@ shinyServer(function(input, output, session) {
         write.table(RNAseq_boxplot_venn()[["statistical_test"]],boxplot_table,col.names = T,row.names = F,sep = "\t",quote = F)
         }
         dir.create("boxplot/gene_list/",showWarnings = FALSE)
+        dir.create("boxplot/bed/",showWarnings = FALSE)
         for(name in venn_select_RNA_debounce()){
           genelist <- paste0("boxplot/gene_list/",name,".txt")
           up <- RNAseq_boxplot_venn()[["genelist"]][[name]]
           fs <- c(fs,genelist)
           write.table(up,genelist,col.names = T,row.names = F,sep = "\t",quote = F)
         }
+        
         for(name in names(RNAseq_boxplot_venn()[["bedlist"]])){
           dir.create(paste0("boxplot/bed/",name),showWarnings = FALSE)
           for(file in names(RNAseq_boxplot_venn()[["bedlist"]][[name]])){
             bed <- RNAseq_boxplot_venn()[["bedlist"]][[name]][[file]]
             bed_name <- paste0("boxplot/bed/",name,"/",file,".bed")
+            print(bed_name)
             fs <- c(fs, bed_name)
             write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
           }
@@ -9775,6 +9780,7 @@ shinyServer(function(input, output, session) {
         write.table(RNAseq_boxplot_enrich()[["statistical_test"]],boxplot_table,col.names = T,row.names = F,sep = "\t",quote = F)
         }
         dir.create("boxplot/gene_list/",showWarnings = FALSE)
+        dir.create("boxplot/bed/",showWarnings = FALSE)
         for(name in enrich_select_RNA_debounce()){
           genelist <- paste0("boxplot/gene_list/",name,".txt")
           up <- RNAseq_boxplot_enrich()[["genelist"]][[name]]
