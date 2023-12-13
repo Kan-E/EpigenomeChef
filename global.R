@@ -111,6 +111,32 @@ org <- function(Species){
     return(org)
   }
 }
+bed_name <- function(name){
+  name <- gsub(".+\\/","",name)
+  name <- gsub("\\.bed$", "", name)
+  name <- gsub("\\.narrowPeak$", "", name)
+  name <- gsub("\\.narrowpeak$", "", name)
+  name <- gsub("\\.sumit$", "", name)
+  name <- gsub("\\.\\.\\.\\."," < ",name)
+  return(name)
+}
+bigwig_name <- function(name){
+  name <- gsub(".+\\/","",name)
+  name <- gsub("\\.bigwig$", "", name)
+  name <- gsub("\\.BigWig$", "", name)
+  name <- gsub("\\.bw$", "", name)
+  name <- gsub("\\.Bigwig$", "", name)
+  name <- gsub("\\.\\.\\.\\."," < ",name)
+  return(name)
+}
+bam_name <- function(name){
+  name <- gsub(".+\\/","",name)
+  name <- gsub("\\.bam$", "", name)
+  name <- gsub("\\.Bam$", "", name)
+  name <- gsub("\\.\\.\\.\\."," < ",name)
+  return(name)
+}
+  
 bws_ordering <- function(bws,sample_order,additional=TRUE){
   if(!is.null(bws) && !is.null(sample_order)){
     order <- sample_order
@@ -1720,14 +1746,13 @@ pre_integrated_additional <- function(integrated_bw){
 if(!is.null(integrated_bw)){
   if(length(list.files("./Volume/")) > 0){
     files <- integrated_bw
-    name <- gsub(".+\\/","",integrated_bw)
-    names(files) <- gsub("\\..+$", "", name)
+    names(files) <- bigwig_name(integrated_bw)
   }else{
     files<-c()
     name<-c()
     for(nr in 1:length(integrated_bw[, 1])){
       file <- integrated_bw[[nr, 'datapath']]
-      name <- c(name, gsub("\\..+$", "", integrated_bw[nr,]$name))
+      name <- c(name, bigwig_name(integrated_bw[nr,]$name))
       files <- c(files,file)
     }
     names(files)<-name

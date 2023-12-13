@@ -228,14 +228,13 @@ shinyServer(function(input, output, session) {
       if(!is.null(input$file1)){
         if(length(list.files("./Volume/")) > 0){
           files <- input$file1
-          name <- gsub(".+\\/","",input$file1)
-          names(files) <- gsub("\\..+$", "", name)
+          names(files) <- bigwig_name(input$file1)
         }else{
           files<-c()
           name<-c()
           for(nr in 1:length(input$file1[, 1])){
             file <- input$file1[[nr, 'datapath']]
-            name <- c(name, gsub("\\..+$", "", input$file1[nr,]$name))
+            name <- c(name, bigwig_name(input$file1[nr,]$name))
             files <- c(files,file)
           }
           names(files)<-name
@@ -309,19 +308,17 @@ shinyServer(function(input, output, session) {
         if(length(list.files("./Volume/")) > 0){
           files <- input$peak_call_file1
           files2 <- lapply(files, GetGRanges, simple = TRUE)
-          name <- gsub(".+\\/","",input$peak_call_file1)
-          names(files2) <- gsub("\\..+$", "", name)
+          names(files2) <- bed_name(input$peak_call_file1)
         }else{
           files<-c()
           name<-c()
           for(nr in 1:length(input$peak_call_file1[, 1])){
             file <- input$peak_call_file1[[nr, 'datapath']]
-            name <- c(name, gsub("\\..+$", "", input$peak_call_file1[nr,]$name))
+            name <- c(name, bed_name(input$peak_call_file1[nr,]$name))
             files <- c(files,file)
           }
           files2 <- lapply(files, GetGRanges, simple = TRUE)
           names(files2)<-name
-          print(files2)
         }
         return(files2)
       }
@@ -719,7 +716,7 @@ shinyServer(function(input, output, session) {
       if(input$Genomic_region == "Promoter"){
         write.table(deg_result(), file, row.names = T, sep = "\t", quote = F)
       }else{
-        if(input$Species != "not_selected"){
+        if(input$Species != "not selected"){
           write.table(deg_result2(), file, row.names = T, sep = "\t", quote = F)
         }else write.table(deg_result(), file, row.names = T, sep = "\t", quote = F)
       }
@@ -2697,6 +2694,7 @@ shinyServer(function(input, output, session) {
         for(name in names(pari_RNAseq_boxplot()[["bedlist"]])){
           bed <- pari_RNAseq_boxplot()[["bedlist"]][[name]]
           bed_name <- paste0("boxplot/bed/",name,".bed")
+          bed_name <- gsub(" < ","....",bed_name)
           fs <- c(fs, bed_name)
           write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
         }
@@ -2716,6 +2714,7 @@ shinyServer(function(input, output, session) {
           for(file in names(pari_RNAseq_boxplot()[["bedlist"]][[name]])){
             bed <- pari_RNAseq_boxplot()[["bedlist"]][[name]][[file]]
             bed_name <- paste0("boxplot/bed/",name,"/",file,".bed")
+            bed_name <- gsub(" < ","....",bed_name)
             fs <- c(fs, bed_name)
             write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
           }
@@ -3604,7 +3603,7 @@ shinyServer(function(input, output, session) {
     }
   )
   output$rnaseq_count <- renderUI({
-    if(input$Species != "not_selected"){
+    if(input$Species != "not selected"){
       fileInput("pair_rnaseq_count",
                 "Select RNA-seq normalized count files",
                 accept = c("txt","csv","xlsx"),
@@ -3613,7 +3612,7 @@ shinyServer(function(input, output, session) {
     }
   })
   output$rnaseq_DEGs <- renderUI({
-    if(input$Species != "not_selected"){
+    if(input$Species != "not selected"){
       fileInput("pair_rnaseq_DEGs",
                 "Select RNA-seq DEG result files",
                 accept = c("txt","csv","xlsx"),
@@ -3679,12 +3678,12 @@ shinyServer(function(input, output, session) {
     updateCollapse(session,id =  "z-score_count", open="z-score_multiple_count_panel")
   }))
   output$rnaseq_count_output <- renderDataTable({
-    if(input$Species != "not_selected" && !is.null(rnaseq_count())){
+    if(input$Species != "not selected" && !is.null(rnaseq_count())){
       rnaseq_count2()
     }
   })
   output$rnaseq_DEGs_output <- renderDataTable({
-    if(input$Species != "not_selected" && !is.null(rnaseq_DEGs())){
+    if(input$Species != "not selected" && !is.null(rnaseq_DEGs())){
       rnaseq_DEGs2()
     }
   })
@@ -4125,6 +4124,7 @@ shinyServer(function(input, output, session) {
                 for(name in names(pari_RNAseq_boxplot()[["bedlist"]])){
                   bed <- pari_RNAseq_boxplot()[["bedlist"]][[name]]
                   bed_name <- paste0(dirname_withRNA,"boxplot/bed/",name,".bed")
+                  bed_name <- gsub(" < ","....",bed_name)
                   fs <- c(fs, bed_name)
                   write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
                 }
@@ -4143,6 +4143,7 @@ shinyServer(function(input, output, session) {
                   for(file in names(pari_RNAseq_boxplot()[["bedlist"]][[name]])){
                     bed <- pari_RNAseq_boxplot()[["bedlist"]][[name]][[file]]
                     bed_name <- paste0(dirname_withRNA,"boxplot/bed/",name,"/",file,".bed")
+                    bed_name <- gsub(" < ","....",bed_name)
                     fs <- c(fs, bed_name)
                     write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
                   }
@@ -4411,22 +4412,13 @@ shinyServer(function(input, output, session) {
       if(length(list.files("./Volume/")) > 0){
         files <- input$peak_call_file_venn1
         files2 <- lapply(files, GetGRanges, simple = TRUE)
-        name <- gsub(".+\\/","",input$peak_call_file_venn1)
-        name <- gsub("\\.bed$", "", name)
-        name <- gsub("\\.narrowPeak$", "", name)
-        name <- gsub("\\.narrowpeak$", "", name)
-        name <- gsub("\\.sumit$", "", name)
-        names(files2) <- name
+        names(files2) <- bed_name(input$peak_call_file_venn1)
       }else{
         files<-c()
         name<-c()
         for(nr in 1:length(input$peak_call_file_venn1[, 1])){
           file <- input$peak_call_file_venn1[[nr, 'datapath']]
-          nam <- gsub("\\.bed$", "", input$peak_call_file_venn1[nr,]$name)
-          nam <- gsub("\\.narrowPeak$", "", nam)
-          nam <- gsub("\\.narrowpeak$", "", nam)
-          nam <- gsub("\\.sumit$", "", nam)
-          name <- c(name, nam)
+          name <- c(name, bed_name(input$peak_call_file_venn1[nr,]$name))
           files <- c(files,file)
         }
         files2 <- lapply(files, GetGRanges, simple = TRUE)
@@ -4450,14 +4442,13 @@ shinyServer(function(input, output, session) {
     }else{
       if(length(list.files("./Volume/")) > 0){
         files <- input$file_venn1
-        name <- gsub(".+\\/","",input$file_venn1)
-        names(files) <- gsub("\\..+$", "", name)
+        names(files) <- bigwig_name(input$file_venn1)
       }else{
         files<-c()
         name<-c()
         for(nr in 1:length(input$file_venn1[, 1])){
           file <- input$file_venn1[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$file_venn1[nr,]$name))
+          name <- c(name, bigwig_name(input$file_venn1[nr,]$name))
           files <- c(files,file)
         }
         names(files)<-name
@@ -4709,6 +4700,7 @@ shinyServer(function(input, output, session) {
             for(file in names(RNAseq_boxplot_venn()[["bedlist"]][[name]])){
               bed <- RNAseq_boxplot_venn()[["bedlist"]][[name]][[file]]
               bed_name <- paste0(dirname,"boxplot/bed/",name,"/",file,".bed")
+              bed_name <- gsub(" < ","....",bed_name)
               fs <- c(fs, bed_name)
               write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
             }
@@ -4818,7 +4810,7 @@ shinyServer(function(input, output, session) {
   })
   selected_grange_venn <- reactive({
     if(!is.null(input$select_file2_venn)){
-      if(input$select_file2_venn != "not_selected"){
+      if(input$select_file2_venn != "not selected"){
         return(venn_overlap()$peaklist[[input$select_file2_venn]])
       }
     }
@@ -4958,14 +4950,14 @@ shinyServer(function(input, output, session) {
   ###Venn Peak pattern comparison--------
   selected_grange2 <- reactive({
     if(!is.null(input$intersect_select2)){
-      if(input$intersect_select2 != "not_selected"){
+      if(input$intersect_select2 != "not selected"){
         return(venn_overlap()$peaklist[[input$intersect_select2]])
       }
     }
   })
   output$peak_pattern_venn_heat_range <- renderUI({
     if(!is.null(input$intersect_select2) && 
-       input$intersect_select2 != "not_selected" && !is.null(bws_venn())){
+       input$intersect_select2 != "not selected" && !is.null(bws_venn())){
       withProgress(message = "Preparing peak pattern",{
         rg <- venn_pattern_range()
         print(ceiling(rg*2))
@@ -4993,14 +4985,14 @@ shinyServer(function(input, output, session) {
   
   output$peak_pattern_venn_heatmap <- renderPlot({
     if(!is.null(input$intersect_select2) && 
-       input$intersect_select2 != "not_selected" && !is.null(bws_venn())){
+       input$intersect_select2 != "not selected" && !is.null(bws_venn())){
       withProgress(message = "feature aligned heatmap",{
         plot_grid(peak_venn_alinedHeatmap()[["heat"]])
       })
     }
   })
   output$peak_pattern_venn_line <- renderPlot({
-    if(!is.null(input$intersect_select2) && input$intersect_select2 != "not_selected" && 
+    if(!is.null(input$intersect_select2) && input$intersect_select2 != "not selected" && 
        !is.null(bws_venn()) && !is.null(input$peak_venn_range)){
       withProgress(message = "feature aligned distribution",{
         matplot(peak_venn_alinedHeatmap()[["line"]],upstream=2000, downstream=2000,
@@ -6181,6 +6173,7 @@ shinyServer(function(input, output, session) {
           for(file in names(RNAseq_boxplot_venn()[["bedlist"]][[name]])){
             bed <- RNAseq_boxplot_venn()[["bedlist"]][[name]][[file]]
             bed_name <- paste0("boxplot/bed/",name,"/",file,".bed")
+            bed_name <- gsub(" < ","....",bed_name)
             print(bed_name)
             fs <- c(fs, bed_name)
             write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
@@ -7022,14 +7015,13 @@ shinyServer(function(input, output, session) {
       }else{
         if(length(list.files("./Volume/")) > 0){
           files <- input$file1_clustering
-          name <- gsub(".+\\/","",input$file1_clustering)
-          names(files) <- gsub("\\..+$", "", name)
+          names(files) <- bigwig_name(input$file1_clustering)
         }else{
           files<-c()
           name<-c()
           for(nr in 1:length(input$file1_clustering[, 1])){
             file <- input$file1_clustering[[nr, 'datapath']]
-            name <- c(name, gsub("\\..+$", "", input$file1_clustering[nr,]$name))
+            name <- c(name, bigwig_name(input$file1_clustering[nr,]$name))
             files <- c(files,file)
           }
           names(files)<-name
@@ -7065,7 +7057,7 @@ shinyServer(function(input, output, session) {
         name<-c()
         for(nr in 1:length(input$file_bam_clustering[, 1])){
           file <- input$file_bam_clustering[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$file_bam_clustering[nr,]$name))
+          name <- c(name, bigwig_name(input$file_bam_clustering[nr,]$name))
           files <- c(files,file)
         }
         names(files)<-name
@@ -8330,11 +8322,7 @@ shinyServer(function(input, output, session) {
       name<-c()
       for(nr in 1:length(input$enrich_data_file[, 1])){
         file <- input$enrich_data_file[[nr, 'datapath']]
-        nam <- gsub("\\.bed$", "", input$enrich_data_file[nr,]$name)
-        nam <- gsub("\\.narrowPeak$", "", nam)
-        nam <- gsub("\\.narrowpeak$", "", nam)
-        nam <- gsub("\\.sumit$", "", nam)
-        name <- c(name, nam)
+        name <- c(name, bed_name(input$enrich_data_file[nr,]$name))
         files <- c(files,file)
       }
       files2 <- lapply(files, GetGRanges, simple = TRUE)
@@ -8754,7 +8742,7 @@ shinyServer(function(input, output, session) {
     }
   )
   output$rnaseq_count_enrich <- renderUI({
-    if(input$Species_enrich != "not_selected"){
+    if(input$Species_enrich != "not selected"){
       fileInput("pair_rnaseq_count_enrich",
                 "Select RNA-seq normalized count files",
                 accept = c("txt","csv","xlsx"),
@@ -8763,7 +8751,7 @@ shinyServer(function(input, output, session) {
     }
   })
   output$rnaseq_DEGs_enrich <- renderUI({
-    if(input$Species_enrich != "not_selected"){
+    if(input$Species_enrich != "not selected"){
       fileInput("pair_rnaseq_DEGs_enrich",
                 "Select RNA-seq DEG result files",
                 accept = c("txt","csv","xlsx"),
@@ -8830,12 +8818,12 @@ shinyServer(function(input, output, session) {
     updateCollapse(session,id =  "z-score_count_enrich", open="z-score_multiple_count_enrich_panel")
   }))
   output$rnaseq_count_output_enrich <- renderDataTable({
-    if(input$Species_enrich != "not_selected" && !is.null(rnaseq_count_enrich())){
+    if(input$Species_enrich != "not selected" && !is.null(rnaseq_count_enrich())){
       rnaseq_count2_enrich()
     }
   })
   output$rnaseq_DEGs_output_enrich <- renderDataTable({
-    if(input$Species_enrich != "not_selected" && !is.null(rnaseq_DEGs_enrich())){
+    if(input$Species_enrich != "not selected" && !is.null(rnaseq_DEGs_enrich())){
       rnaseq_DEGs2_enrich()
     }
   })
@@ -9792,6 +9780,7 @@ shinyServer(function(input, output, session) {
         for(file in names(RNAseq_boxplot_enrich()[["bedlist"]][[name]])){
           bed <- RNAseq_boxplot_enrich()[["bedlist"]][[name]][[file]]
           bed_name <- paste0("boxplot/bed/",name,"/",file,".bed")
+          bed_name <- gsub(" < ","....",bed_name)
           fs <- c(fs, bed_name)
           write.table(as.data.frame(bed), bed_name, row.names = F, col.names = F,sep = "\t", quote = F)
         }
@@ -9906,14 +9895,13 @@ shinyServer(function(input, output, session) {
     }else{
       if(length(list.files("./Volume/")) > 0){
         files <- input$file_enrich1
-        name <- gsub(".+\\/","",input$file_enrich1)
-        names(files) <- gsub("\\..+$", "", name)
+        names(files) <- bigwig_name(input$file_enrich1)
       }else{
         files<-c()
         name<-c()
         for(nr in 1:length(input$file_enrich1[, 1])){
           file <- input$file_enrich1[[nr, 'datapath']]
-          name <- c(name, gsub("\\..+$", "", input$file_enrich1[nr,]$name))
+          name <- c(name, bigwig_name(input$file_enrich1[nr,]$name))
           files <- c(files,file)
         }
         names(files)<-name
