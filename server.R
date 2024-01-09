@@ -1117,9 +1117,11 @@ shinyServer(function(input, output, session) {
         up_all <- dplyr::filter(data2, log2FoldChange < -log2(input$fc) & padj < input$fdr)
       }else{
         data <- deg_result() %>% dplyr::filter(log2FoldChange < -log2(input$fc) & padj < input$fdr)
+        if(dim(data)[1] != 0){
         up <- symbol2gene_id(data,org1())
         up2 <- subset(promoter_region(), gene_id %in% up$gene_id) %>% as.data.frame()
         up_all <- data.frame(chr = up2$seqnames, start = up2$start, end = up2$end)
+        }else up_all <- NULL
       }
       return(up_all)
     }
@@ -1136,9 +1138,11 @@ shinyServer(function(input, output, session) {
       }
     }else{
       data <- deg_result() %>% dplyr::filter(log2FoldChange < -log2(input$fc) & padj < input$fdr)
+      if(dim(data)[1] != 0){
       up <- symbol2gene_id(data,org1())
       up2 <- subset(promoter_region(), gene_id %in% up$gene_id) %>% as.data.frame()
       data2 <- data.frame(chr = up2$seqnames, start = up2$start, end = up2$end)
+      }else data2 <-NULL
     }
     return(data2)
   })
@@ -1158,9 +1162,11 @@ shinyServer(function(input, output, session) {
       }
     }else{
       data <- deg_result() %>% dplyr::filter(log2FoldChange > log2(input$fc) & padj < input$fdr)
+      if(dim(data)[1] != 0){
       down <- symbol2gene_id(data,org1())
       down2 <- subset(promoter_region(), gene_id %in% down$gene_id) %>% as.data.frame()
       data2 <- data.frame(chr = down2$seqnames, start = down2$start, end = down2$end)
+      }else data2 <- NULL
     }
     return(data2)
   })
@@ -1190,9 +1196,11 @@ shinyServer(function(input, output, session) {
         down_all <- dplyr::filter(data2, log2FoldChange > log2(input$fc) & padj < input$fdr)
       }else{
         data <- deg_result() %>% dplyr::filter(log2FoldChange > log2(input$fc) & padj < input$fdr)
+        if(dim(data)[1] != 0){
         down <- symbol2gene_id(data,org1())
         down2 <- subset(promoter_region(), gene_id %in% down$gene_id) %>% as.data.frame()
         down_all <- data.frame(chr = down2$seqnames, start = down2$start, end = down2$end)
+        }else down_all <- NULL
       }
       return(down_all)
     }
