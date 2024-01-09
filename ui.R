@@ -255,7 +255,7 @@ shinyUI(
                               fluidRow(
                                 column(4, downloadButton("download_pair_volcano", "Download volcano plot"))
                               ),
-                              conditionalPanel(condition=c("input.data_file_type=='Row1' || input.data_file_type=='Row1_count'"),
+                              conditionalPanel(condition=c("input.data_file_type=='Row1' || input.count_file_type=='Norm'"),
                               fluidRow(
                                 column(4, radioButtons("regression_mode","Regression",
                                                        c('least squares'=FALSE,
