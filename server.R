@@ -7707,12 +7707,12 @@ shinyServer(function(input, output, session) {
       if(length(input$selectFC2) != 2){
         if(length(input$selectFC) != 2){
           
-        }else print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering,", |log2(", input$selectFC[1],"/", input$selectFC[2],")| > ", input$fc_clustering,"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+        }else print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering,", |log2(", input$selectFC[1],"/", input$selectFC[2],")| > ", log2(input$fc_clustering),"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
       }else{
         if(length(input$selectFC) != 2){
-          print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering,", |log2(", input$selectFC2[1],"/", input$selectFC2[2],")| > ", input$fc_clustering,"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+          print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering,", |log2(", input$selectFC2[1],"/", input$selectFC2[2],")| > ", log2(input$fc_clustering),"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
         }else print(paste0("The number of genomic regions after the filtration (fdr < ",input$fdr_clustering ,
-                           ", |log2(", input$selectFC[1],"/", input$selectFC[2],")| > ", input$fc_clustering,", |log2(", input$selectFC2[1],"/", input$selectFC2[2],")| > ", input$fc_clustering,"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
+                           ", |log2(", input$selectFC[1],"/", input$selectFC[2],")| > ", log2(input$fc_clustering),", |log2(", input$selectFC2[1],"/", input$selectFC2[2],")| > ", log2(input$fc_clustering),"): ", length(rownames(bw_count_clustering_fc_basemean_cutoff()))))
       }
     }
   })
