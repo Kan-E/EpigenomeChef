@@ -749,7 +749,7 @@ shinyServer(function(input, output, session) {
           pdf_width <- 9
         }else pdf_width <- input$pair_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(PCAplot(data = deg_norm_count(),plot=TRUE))
+        print(PCAplot(data = deg_norm_count(),plot=TRUE,legend=input$PCA_legend))
         dev.off()
         incProgress(1)
       })
@@ -761,7 +761,7 @@ shinyServer(function(input, output, session) {
       if(is.null(deg_norm_count())){
         return(NULL)
       }else{
-        print(PCAplot(data = deg_norm_count(),plot=TRUE))
+        print(PCAplot(data = deg_norm_count(),plot=TRUE,legend=input$PCA_legend))
       }
     })
   })
@@ -1988,7 +1988,21 @@ shinyServer(function(input, output, session) {
       if(is.null(tmp)) {
         return(NULL)
       }else{
-        if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
+        if(tools::file_ext(tmp) == "xlsx") {
+          df2 <- readxl::read_xlsx(tmp) 
+          df2 <- as.data.frame(df2)
+          df <- try(data.frame(row.names = df2[,1]),silent = T)
+          if(class(df) != "try-error") {
+            if(dim(df2)[2] == 2){
+              df <- data.frame(row.names = df2[,1],a = df2[,2])
+              colnames(df)[1] <- colnames(df2)[2]
+            }else{
+              rownames(df2) <- df2[,1]
+              df <- df2[,-1]
+              colnames(df) <- gsub("-",".",colnames(df))
+            }
+          }
+        }
         if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
         if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
         rownames(df) = gsub("\"", "", rownames(df))
@@ -2300,13 +2314,47 @@ shinyServer(function(input, output, session) {
         data$group[data$sumRP >= -0.1 & data$sumRP < -0.01] <- "-0.1 < RP < -0.01"
         data$group[data$sumRP >= -1 & data$sumRP < -0.1] <- "-1 < RP < -0.1"
         data$group[data$sumRP < -1] <- "RP < -1"
-        data$group <- factor(data$group,levels=c("RP < -1","-1 < RP < -0.1","-0.1 < RP < -0.01","-0.01 < RP < 0","Others","0 < RP < 0.01","0.01 < RP < 0.1","0.1 < RP < 1","1 < RP"),ordered=TRUE)
+        level <- NULL
+        col <- NULL
+        if(dim(dplyr::filter(data, group == "RP < -1"))[1] != 0) {
+          level <- c(level,"RP < -1")
+          col <- c(col,"blue")
+        }
+        if(dim(dplyr::filter(data, group == "-1 < RP < -0.1"))[1] != 0){
+          level <- c(level,"-1 < RP < -0.1")
+          col <- c(col,"#00BFC4")
+        }
+        if(dim(dplyr::filter(data, group == "-0.1 < RP < -0.01"))[1] != 0) {
+          level <- c(level,"-0.1 < RP < -0.01")
+          col <- c(col,"lightgreen")
+        }
+        if(dim(dplyr::filter(data, group == "-0.01 < RP < 0"))[1] != 0) {
+          level <- c(level,"-0.01 < RP < 0")
+          col <- c(col,"darkseagreen")
+        }
+        if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
+          level <- c(level,"Others")
+          col <- c(col,"gray")
+        }
+        if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
+          level <- c(level,"0 < RP < 0.01")
+          col <- c(col,"orange3")
+        }
+        if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
+          level <- c(level,"0.01 < RP < 0.1")
+          col <- c(col,"orange")
+        }
+        if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
+          level <- c(level,"0.1 < RP < 1")
+          col <- c(col,"#F8766D")
+        }
+        if(dim(dplyr::filter(data, group == "1 < RP"))[1] != 0) {
+          level <- c(level,"1 < RP")
+          col <- c(col,"red")
+        }
+        data$group <- factor(data$group,levels=level,ordered=TRUE)
         data$log10FoldChange <- log10(2^(data$log2FoldChange))
         collist <- unique(data$group)
-        col <- c("blue","#00BFC4","lightgreen","darkseagreen","gray","orange3","orange","#F8766D","red")
-        if(length(data$group[data$sumRP < -1]) == 0 && length(data$group[data$sumRP >= -1 & data$sumRP < -0.1]) == 0) col <- c("lightgreen","darkseagreen","gray","orange3","orange","#F8766D","red")
-        if(length(data$group[data$sumRP < -1]) != 0 && length(data$group[data$sumRP >= -1 & data$sumRP < -0.1]) == 0) col <- c("blue","lightgreen","darkseagreen","gray","orange3","orange","#F8766D","red")
-        if(length(data$group[data$sumRP < -1]) == 0 && length(data$group[data$sumRP >= -1 & data$sumRP < -0.1]) != 0) col <- c("#00BFC4","lightgreen","darkseagreen","gray","orange3","orange","#F8766D","red")
         if (length(collist) >= 3){
           stat.test <- data %>% tukey_hsd(log10FoldChange ~ group)
           stat.test <- stat.test %>% add_significance("p.adj")
@@ -2359,7 +2407,34 @@ shinyServer(function(input, output, session) {
           data$group[data$sumRP <= 1 & data$sumRP > 0.1] <- "0.1 < RP < 1"
           data$group[data$sumRP <= 0.1 & data$sumRP > 0.01] <- "0.01 < RP < 0.1"
           data$group[data$sumRP <= 0.01 & data$sumRP > 0] <- "0 < RP < 0.01"
-          data$group <- factor(data$group,levels=c("Others","0 < RP < 0.01","0.01 < RP < 0.1","0.1 < RP < 1","1 < RP < 2","2 < RP"),ordered=TRUE)
+          
+          level <- NULL
+          col <- NULL
+          if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
+            level <- c(level,"Others")
+            col <- c(col,"gray")
+          }
+          if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
+            level <- c(level,"0 < RP < 0.01")
+            col <- c(col,"blue")
+          }
+          if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
+            level <- c(level,"0.01 < RP < 0.1")
+            col <- c(col,"#00BFC4")
+          }
+          if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
+            level <- c(level,"0.1 < RP < 1")
+            col <- c(col,"lightgreen")
+          }
+          if(dim(dplyr::filter(data, group == "1 < RP < 2"))[1] != 0) {
+            level <- c(level,"1 < RP < 2")
+            col <- c(col,"#F8766D")
+          }
+          if(dim(dplyr::filter(data, group == "2 < RP"))[1] != 0) {
+            level <- c(level,"2 < RP")
+            col <- c(col,"red")
+          }
+          data$group <- factor(data$group,levels=level,ordered=TRUE)
           data$intersection <- as.factor(name)
           df <- rbind(df,data)
           genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,RNAlog2FC = -1*data$log2FoldChange,
@@ -2396,7 +2471,6 @@ shinyServer(function(input, output, session) {
         
         data$intersection <- gsub("-","-\n",data$intersection)
         collist <- unique(data$group)
-        col <-c("gray","blue","#00BFC4","lightgreen","#F8766D","red")
         if (length(collist) >= 3){
           stat.test <- data %>% dplyr::group_by(intersection) %>% 
             tukey_hsd(log10FoldChange ~ group)
@@ -3958,7 +4032,7 @@ shinyServer(function(input, output, session) {
         print(fs)
         if(input$Species != "not selected") process_num <- 9 else process_num <- 3
         pdf(PCA, height = 3.5, width = 9)
-        print(PCAplot(data = deg_norm_count(),plot=TRUE))
+        print(PCAplot(data = deg_norm_count(),plot=TRUE,legend=input$PCA_legend))
         dev.off()
         write.table(PCAplot(data = deg_norm_count(),plot=FALSE), PCA_table, row.names = T, sep = "\t", quote = F)
         write.table(deg_norm_count(), count, row.names = T, sep = "\t", quote = F)
@@ -5546,7 +5620,19 @@ shinyServer(function(input, output, session) {
           }else{
             for(nr in 1:length(input$venn_DEG_result[, 1])){
               if(tools::file_ext(input$venn_DEG_result[[nr, 'datapath']]) == "xlsx") {
-                df <- try(as.data.frame(read_xlsx(input$venn_DEG_result[[nr, 'datapath']])))
+                df2 <- read_xlsx(input$venn_DEG_result[[nr, 'datapath']])
+                df2 <- as.data.frame(df2)
+                df <- try(data.frame(row.names = df2[,1]),silent = T)
+                if(class(df) != "try-error") {
+                  if(dim(df2)[2] == 2){
+                    df <- data.frame(row.names = df2[,1],a = df2[,2])
+                    colnames(df)[1] <- colnames(df2)[2]
+                  }else{
+                    rownames(df2) <- df2[,1]
+                    df <- df2[,-1]
+                    colnames(df) <- gsub("-",".",colnames(df))
+                  }
+                }
               }
               if(tools::file_ext(input$venn_DEG_result[[nr, 'datapath']]) == "csv") df <- read.csv(input$venn_DEG_result[[nr, 'datapath']], header=TRUE, sep = ",",quote = "")
               if(tools::file_ext(input$venn_DEG_result[[nr, 'datapath']]) == "txt" || 
@@ -5593,7 +5679,21 @@ shinyServer(function(input, output, session) {
           tmp$Group <- gsub(":","-",tmp$Group)
           return(tmp)
         }else{
-          if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
+          if(tools::file_ext(tmp) == "xlsx") {
+            df2 <- readxl::read_xlsx(tmp) 
+            df2 <- as.data.frame(df2)
+            df <- try(data.frame(row.names = df2[,1]),silent = T)
+            if(class(df) != "try-error") {
+              if(dim(df2)[2] == 2){
+                df <- data.frame(row.names = df2[,1],a = df2[,2])
+                colnames(df)[1] <- colnames(df2)[2]
+              }else{
+                rownames(df2) <- df2[,1]
+                df <- df2[,-1]
+                colnames(df) <- gsub("-",".",colnames(df))
+              }
+            }
+          }
           if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
           if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
           rownames(df) = gsub("\"", "", rownames(df))
@@ -5879,7 +5979,33 @@ shinyServer(function(input, output, session) {
       data$group[data$sumRP <= 1 & data$sumRP > 0.1] <- "0.1 < RP < 1"
       data$group[data$sumRP <= 0.1 & data$sumRP > 0.01] <- "0.01 < RP < 0.1"
       data$group[data$sumRP <= 0.01 & data$sumRP > 0] <- "0 < RP < 0.01"
-      data$group <- factor(data$group,levels=c("Others","0 < RP < 0.01","0.01 < RP < 0.1","0.1 < RP < 1","1 < RP < 2","2 < RP"),ordered=TRUE)
+      level <- NULL
+      col <- NULL
+      if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
+        level <- c(level,"Others")
+        col <- c(col,"gray")
+      }
+      if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
+        level <- c(level,"0 < RP < 0.01")
+        col <- c(col,"blue")
+      }
+      if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
+        level <- c(level,"0.01 < RP < 0.1")
+        col <- c(col,"#00BFC4")
+      }
+      if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
+        level <- c(level,"0.1 < RP < 1")
+        col <- c(col,"lightgreen")
+      }
+      if(dim(dplyr::filter(data, group == "1 < RP < 2"))[1] != 0) {
+        level <- c(level,"1 < RP < 2")
+        col <- c(col,"#F8766D")
+      }
+      if(dim(dplyr::filter(data, group == "2 < RP"))[1] != 0) {
+        level <- c(level,"2 < RP")
+        col <- c(col,"red")
+      }
+      data$group <- factor(data$group,levels=level,ordered=TRUE)
       data$intersection <- as.factor(name)
       df <- rbind(df,data)
       if(input$RNAseq_data_type_venn != "List"){
@@ -7165,7 +7291,21 @@ shinyServer(function(input, output, session) {
       if(is.null(tmp)) {
         return(NULL)
       }else{
-        if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
+        if(tools::file_ext(tmp) == "xlsx") {
+          df2 <- readxl::read_xlsx(tmp) 
+          df2 <- as.data.frame(df2)
+          df <- try(data.frame(row.names = df2[,1]),silent = T)
+          if(class(df) != "try-error") {
+            if(dim(df2)[2] == 2){
+              df <- data.frame(row.names = df2[,1],a = df2[,2])
+              colnames(df)[1] <- colnames(df2)[2]
+            }else{
+              rownames(df2) <- df2[,1]
+              df <- df2[,-1]
+              colnames(df) <- gsub("-",".",colnames(df))
+            }
+          }
+        }
         if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
         if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
         rownames(df) = gsub("\"", "", rownames(df))
@@ -7382,7 +7522,7 @@ shinyServer(function(input, output, session) {
           pdf_width <- 9
         }else pdf_width <- input$clustering_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(PCAplot(data = bw_count_clustering(),plot=TRUE))
+        print(PCAplot(data = bw_count_clustering(),plot=TRUE,legend=input$PCA_legend_clustering))
         dev.off()
         incProgress(1)
       })
@@ -7396,7 +7536,7 @@ shinyServer(function(input, output, session) {
       }else{
         p <- length(colnames(bw_count_clustering()))
         if(p > 2){
-          print(PCAplot(data = bw_count_clustering(),plot=TRUE))
+          print(PCAplot(data = bw_count_clustering(),plot=TRUE,legend=input$PCA_legend_clustering))
         }
       }
     })
@@ -9152,7 +9292,19 @@ shinyServer(function(input, output, session) {
           }else{
             for(nr in 1:length(input$enrich_DEG_result[, 1])){
               if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "xlsx") {
-                df <- try(as.data.frame(read_xlsx(input$enrich_DEG_result[[nr, 'datapath']])))
+                df2 <- read_xlsx(input$enrich_DEG_result[[nr, 'datapath']])
+                df2 <- as.data.frame(df2)
+                df <- try(data.frame(row.names = df2[,1]),silent = T)
+                if(class(df) != "try-error") {
+                  if(dim(df2)[2] == 2){
+                    df <- data.frame(row.names = df2[,1],a = df2[,2])
+                    colnames(df)[1] <- colnames(df2)[2]
+                  }else{
+                    rownames(df2) <- df2[,1]
+                    df <- df2[,-1]
+                    colnames(df) <- gsub("-",".",colnames(df))
+                  }
+                }
               }
               if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "csv") df <- read.csv(input$enrich_DEG_result[[nr, 'datapath']], header=TRUE, sep = ",",quote = "")
               if(tools::file_ext(input$enrich_DEG_result[[nr, 'datapath']]) == "txt" || 
@@ -9197,7 +9349,21 @@ shinyServer(function(input, output, session) {
           tmp$Group <- gsub(":","-",tmp$Group)
           return(tmp)
         }else{
-          if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
+          if(tools::file_ext(tmp) == "xlsx") {
+            df2 <- readxl::read_xlsx(tmp) 
+            df2 <- as.data.frame(df2)
+            df <- try(data.frame(row.names = df2[,1]),silent = T)
+            if(class(df) != "try-error") {
+              if(dim(df2)[2] == 2){
+                df <- data.frame(row.names = df2[,1],a = df2[,2])
+                colnames(df)[1] <- colnames(df2)[2]
+              }else{
+                rownames(df2) <- df2[,1]
+                df <- df2[,-1]
+                colnames(df) <- gsub("-",".",colnames(df))
+              }
+            }
+          }
           if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
           if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
           rownames(df) = gsub("\"", "", rownames(df))
@@ -9481,7 +9647,33 @@ shinyServer(function(input, output, session) {
       data$group[data$sumRP <= 1 & data$sumRP > 0.1] <- "0.1 < RP < 1"
       data$group[data$sumRP <= 0.1 & data$sumRP > 0.01] <- "0.01 < RP < 0.1"
       data$group[data$sumRP <= 0.01 & data$sumRP > 0] <- "0 < RP < 0.01"
-      data$group <- factor(data$group,levels=c("Others","0 < RP < 0.01","0.01 < RP < 0.1","0.1 < RP < 1","1 < RP < 2","2 < RP"),ordered=TRUE)
+      level <- NULL
+      col <- NULL
+      if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
+        level <- c(level,"Others")
+        col <- c(col,"gray")
+      }
+      if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
+        level <- c(level,"0 < RP < 0.01")
+        col <- c(col,"blue")
+      }
+      if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
+        level <- c(level,"0.01 < RP < 0.1")
+        col <- c(col,"#00BFC4")
+      }
+      if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
+        level <- c(level,"0.1 < RP < 1")
+        col <- c(col,"lightgreen")
+      }
+      if(dim(dplyr::filter(data, group == "1 < RP < 2"))[1] != 0) {
+        level <- c(level,"1 < RP < 2")
+        col <- c(col,"#F8766D")
+      }
+      if(dim(dplyr::filter(data, group == "2 < RP"))[1] != 0) {
+        level <- c(level,"2 < RP")
+        col <- c(col,"red")
+      }
+      data$group <- factor(data$group,levels=level,ordered=TRUE)
       data$intersection <- as.factor(name)
       df <- rbind(df,data)
       if(input$RNAseq_data_type_enrich != "List") {

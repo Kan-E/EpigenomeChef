@@ -150,7 +150,21 @@ read_df <- function(tmp, Species=NULL){
   if(is.null(tmp)) {
     return(NULL)
   }else{
-    if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
+    if(tools::file_ext(tmp) == "xlsx") {
+      df2 <- readxl::read_xlsx(tmp) 
+      df2 <- as.data.frame(df2)
+      df <- try(data.frame(row.names = df2[,1]),silent = T)
+      if(class(df) != "try-error") {
+        if(dim(df2)[2] == 2){
+          df <- data.frame(row.names = df2[,1],a = df2[,2])
+          colnames(df)[1] <- colnames(df2)[2]
+        }else{
+          rownames(df2) <- df2[,1]
+          df <- df2[,-1]
+          colnames(df) <- gsub("-",".",colnames(df))
+        }
+      }
+    }
     if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
     if(tools::file_ext(tmp) == "txt" || tools::file_ext(tmp) == "tsv") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
     rownames(df) = gsub("\"", "", rownames(df))
@@ -358,7 +372,7 @@ return(counts)
 
 
 
-PCAplot <- function(data, plot){
+PCAplot <- function(data, plot,legend=NULL){
   if(length(grep("SYMBOL", colnames(data))) != 0){
     data <- data[, - which(colnames(data) == "SYMBOL")]
   }
@@ -367,7 +381,6 @@ PCAplot <- function(data, plot){
   }
   pca <- prcomp(data, scale. = T)
   label<- colnames(data)
-  label<- gsub("\\_.+$", "", label)
   lab_x <- paste(summary(pca)$importance[2,1]*100,
                  "% of variance)", sep = "")
   lab_x <- paste("PC1 (", lab_x, sep = "")
@@ -376,26 +389,43 @@ PCAplot <- function(data, plot){
   lab_y <- paste("PC2 (", lab_y, sep = "")
   pca$rotation <- as.data.frame(pca$rotation)
   if(plot==TRUE){
-  g1 <- ggplot(pca$rotation,aes(x=pca$rotation[,1],
-                                y=pca$rotation[,2],
-                                col=label, label = label)) +
-    geom_point()+
-    theme(panel.background =element_rect(fill=NA,color=NA),
-          panel.border = element_rect(fill = NA)) +
-    xlab(lab_x) + ylab(lab_y) + geom_text_repel()  +
-    theme(legend.position="none", aspect.ratio=1)
+    if(!is.null(legend)) {
+      if(legend == "Legend"){
+        legend_position <- "top" 
+        label2<- NULL
+      }else{
+        legend_position <- "none"
+        label2<- label
+      }
+    }
+    g1 <- ggplot(pca$rotation,aes(x=pca$rotation[,1],
+                                  y=pca$rotation[,2],
+                                  col=gsub("\\_.+$", "", label), label = label2)) +
+      geom_point()+
+      theme(panel.background =element_rect(fill=NA,color=NA),
+            panel.border = element_rect(fill = NA)) +
+      xlab(lab_x) + ylab(lab_y) +
+      theme(legend.position=legend_position, aspect.ratio=1)+ 
+      guides(color=guide_legend(title=""))
+    if(!is.null(legend)){
+      if(legend == "Label") g1 <- g1 + geom_text_repel(show.legend = NULL)
+    }
   rho <- cor(data,method="spearman")
   d <- dist(1-rho)
   mds <- as.data.frame(cmdscale(d))
   label<-colnames(data)
   label<-gsub("\\_.+$", "", label)
   g2 <- ggplot(mds, aes(x = mds[,1], y = mds[,2],
-                        col = label, label = label)) +
+                        col = gsub("\\_.+$", "", label), label = label2)) +
     geom_point()+
     theme(panel.background =element_rect(fill=NA,color=NA),
           panel.border = element_rect(fill = NA)) +
     xlab("dim 1") + ylab("dim 2") +
-    geom_text_repel() + theme(legend.position="none", aspect.ratio=1)
+    theme(legend.position=legend_position, aspect.ratio=1)+ 
+    guides(color=guide_legend(title=""))
+  if(!is.null(legend)){
+    if(legend == "Label") g2 <- g2 + geom_text_repel(show.legend = NULL)
+  }
   x <- NULL
   y <- NULL
   xend <- NULL
@@ -1058,7 +1088,21 @@ RNAseqDEGimport <- function(tmp,exampleButton){
     if(is.null(tmp)) {
       return(NULL)
     }else{
-      if(tools::file_ext(tmp) == "xlsx") df <- read_xlsx(tmp, header=TRUE, row.names = 1)
+      if(tools::file_ext(tmp) == "xlsx") {
+        df2 <- readxl::read_xlsx(tmp) 
+        df2 <- as.data.frame(df2)
+        df <- try(data.frame(row.names = df2[,1]),silent = T)
+        if(class(df) != "try-error") {
+          if(dim(df2)[2] == 2){
+            df <- data.frame(row.names = df2[,1],a = df2[,2])
+            colnames(df)[1] <- colnames(df2)[2]
+          }else{
+            rownames(df2) <- df2[,1]
+            df <- df2[,-1]
+            colnames(df) <- gsub("-",".",colnames(df))
+          }
+        }
+      }
       if(tools::file_ext(tmp) == "csv") df <- read.csv(tmp, header=TRUE, sep = ",", row.names = 1,quote = "")
       if(tools::file_ext(tmp) == "txt") df <- read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = "")
       rownames(df) = gsub("\"", "", rownames(df))

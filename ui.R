@@ -249,7 +249,8 @@ shinyUI(
                      ),
                      tabPanel("Result overview",
                               fluidRow(
-                                column(4, downloadButton("download_pair_PCA", "Download clustering analysis"))
+                                column(4, downloadButton("download_pair_PCA", "Download clustering analysis")),
+                                column(6, selectInput("PCA_legend","Label",c("Label","Legend"),selected = "Label"))
                               ),
                               plotOutput("PCA"),
                               fluidRow(
@@ -1460,7 +1461,8 @@ shinyUI(
                      ),
                      tabPanel("Result overview",
                               fluidRow(
-                                column(4, downloadButton("download_clustering_PCA", "Download clustering analysis"))
+                                column(4, downloadButton("download_clustering_PCA", "Download clustering analysis")),
+                                column(6, selectInput("PCA_legend_clustering","Label",c("Label","Legend"),selected = "Label"))
                               ),
                               textOutput("clustering_pca_error"),
                               tags$head(tags$style("#clustering_pca_error{color: red;
