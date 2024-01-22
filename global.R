@@ -1,5 +1,5 @@
 ##with RNAseq homer startボタン
-
+##Motif plot order反映されない
 library(rtracklayer) 
 library(Rsubread)
 library(Rsamtools)
@@ -1593,11 +1593,13 @@ pdf_w <- function(rowlist){
 }
 
 batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
-                          color=c("white", "red"),signal="signal",withRNAseq=FALSE){
+                          color=c("white", "red"),signal="signal",withRNAseq=FALSE,ylim=NULL){
   ht_list <- NULL
   perc <- 0
   if(withRNAseq == F){
-    names(files2) <- gsub("\\..+$", "",names(files2))
+    names(files2) <- gsub(".bw$", "",names(files2))
+    names(files2) <- gsub(".bigwig$", "",names(files2))
+    names(files2) <- gsub(".BigWig$", "",names(files2))
     names(files2) <- gsub("_", " ",names(files2))
     for(i in 1:length(names(files2))){
       names(files2)[i] <- paste(strwrap(names(files2)[i], width = 15),collapse = "\n")
@@ -1617,10 +1619,10 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
     target <- unlist(as(glist,"GRangesList"))
     mat1 = normalizeToMatrix(import(files_bw[[k]],as="GRanges"), target = target, value_column = "score",
                              extend = 2000, mean_mode = "absolute", w = 20, keep = c(0, 0.99))
-    axis_name <- c("-2000","summit","2000")
+    axis_name <- c("-2kb","summit","2kb")
     if(!is.null(type)){
     if(type == "Promoter"){
-      axis_name <- c("-2000","TSS","2000")
+      axis_name <- c("-2kb","TSS","2kb")
     }}
     name <- gsub("\\..+$", "", names(files_bw)[[k]])
     name <- gsub("_", " ", name)
@@ -1629,11 +1631,20 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
     name <- gsub(" ", "\\_", name)
     print("heat")
     print(unique(num_list))
-    ht <- EnrichedHeatmap(mat1, split = num_list, col = color,name=name,
-                          axis_name = axis_name,pos_line = F,
-                          column_title =name,use_raster=TRUE, row_title_rot = 0,
-                          top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:8, lty = 1),
-                                                                                      axis_param = list(side = "right", facing = "inside"))))
+    if(is.null(ylim)) {
+      ht <- EnrichedHeatmap(mat1, split = num_list, col = color,name=name,
+                            axis_name = axis_name,pos_line = F,
+                            column_title =name,use_raster=TRUE, row_title_rot = 0,
+                            top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:8, lty = 1),
+                                                                                        axis_param = list(side = "right", facing = "inside"))))
+    }else{
+
+      ht <- EnrichedHeatmap(mat1, split = num_list, col = circlize::colorRamp2(c(0, ylim), color),name=name,
+                            axis_name = axis_name,pos_line = F,
+                            column_title =name,use_raster=TRUE, row_title_rot = 0,
+                            top_annotation = HeatmapAnnotation(enriched = anno_enriched(gp = gpar(col = 1:8, lty = 1),ylim = c(0,ylim),
+                                                                                        axis_param = list(side = "right", facing = "inside")))) 
+    }
     ht_list <- ht_list + ht
     list <- list()
     list[["heatmap"]] <- ht_list
@@ -2153,10 +2164,10 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL,group_order=NULL){
     for(name in names(pfm)){
       pfm1[[name]] <- t(pfm[[name]])
     }
-    Seqlogo <- as.grob(ggseqlogo(pfm1,ncol = 1)+
-                         theme_void(base_size = 0)) 
-    p <- plot_grid(plot_grid(NULL, Seqlogo, ncol = 1, rel_heights = c(0.05:10)),as.grob(d))
-    
+    Seqlogo <- try(as.grob(ggseqlogo(pfm1,ncol = 1)+
+                         theme_void(base_size = 0))) 
+    p <- try(plot_grid(plot_grid(NULL, Seqlogo, ncol = 1, rel_heights = c(0.05:10)),as.grob(d)))
+    if(length(p) == 1) if(p == "try-error") p <- d
     return(p)
   }
 }

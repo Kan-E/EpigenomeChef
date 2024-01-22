@@ -99,6 +99,7 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('clue', update = F)" && \
     R -e "BiocManager::install('TxDb.Mmusculus.UCSC.mm39.refGene', update = F)" \
     R -e "BiocManager::install('statmod', update = F)"
+RUN R -e "BiocManager::install('circlize', update = F)"
 RUN mkdir -p /srv/shiny-server/EpigenomeChef && \
     rm -rf /srv/shiny-server/hello && \
     mkdir -p /usr/local/homer && \

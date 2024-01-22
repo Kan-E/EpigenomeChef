@@ -93,6 +93,31 @@ shinyServer(function(input, output, session) {
                   selected = names(with_pre_integrated_additional3()),multiple = TRUE)
     }
   })
+  output$with_integrated_range_type_0_pair_manual <- renderUI({
+    if(input$with_integrated_range_type_0_pair == "manual"){
+      numericInput(inputId = "with_integrated_range_type_0_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$with_integrated_range_type_1_pair_manual <- renderUI({
+    if(input$with_integrated_range_type_1_pair == "manual"){
+      numericInput(inputId = "with_integrated_range_type_1_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$with_integrated_range_type_2_pair_manual <- renderUI({
+    if(input$with_integrated_range_type_2_pair == "manual"){
+      numericInput(inputId = "with_integrated_range_type_2_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$with_integrated_range_type_3_pair_manual <- renderUI({
+    if(input$with_integrated_range_type_3_pair == "manual"){
+      numericInput(inputId = "with_integrated_range_type_3_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  
   output$sample_order_pair_comb1 <- renderUI({
     if(!is.null(pre_integrated_additional1())){
       selectInput(inputId = "sample_order_pair_comb1","Sample order (blue):",
@@ -114,7 +139,30 @@ shinyServer(function(input, output, session) {
                   selected = names(pre_integrated_additional3()),multiple = TRUE)
     }
   })
-  
+  output$integrated_range_type_0_pair_manual <- renderUI({
+    if(input$integrated_range_type_0_pair == "manual"){
+      numericInput(inputId = "integrated_range_type_0_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_1_pair_manual <- renderUI({
+    if(input$integrated_range_type_1_pair == "manual"){
+      numericInput(inputId = "integrated_range_type_1_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_2_pair_manual <- renderUI({
+    if(input$integrated_range_type_2_pair == "manual"){
+      numericInput(inputId = "integrated_range_type_2_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_3_pair_manual <- renderUI({
+    if(input$integrated_range_type_3_pair == "manual"){
+      numericInput(inputId = "integrated_range_type_3_pair_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
   
   output$file1 <- renderUI({
     if(length(list.files("./Volume/")) > 0){
@@ -2049,6 +2097,7 @@ shinyServer(function(input, output, session) {
   pre_RNAseqDEG <- reactive({
     if(input$DEGanalysis_Button > 0 && updateCounter_DEGanalysis$i > 0){
       count <- RNAseq_file()
+      count[is.na(count)] <- 0
       if(!is.null(count)){
         collist <- gsub("\\_.+$", "", colnames(count))
         if(length(unique(collist)) == 2){
@@ -2243,8 +2292,10 @@ shinyServer(function(input, output, session) {
       if(input$RNAseq_mode_option == "fcw_combined" || input$RNAseq_mode_option == "combined"){
         regulatory_potential()
       }else{
-        down <- regulatory_potential()[[RNAseq_name()[1]]] + ggtitle(RNAseq_name()[1])
-        up <- regulatory_potential()[[RNAseq_name()[2]]] + ggtitle(RNAseq_name()[2])
+        down <- try(regulatory_potential()[[paste0(unique(collist_bw_pair())[2],"_high")]] + ggtitle(RNAseq_name()[1]))
+        up <- try(regulatory_potential()[[paste0(unique(collist_bw_pair())[1],"_high")]] + ggtitle(RNAseq_name()[2]))
+        if(length(down) == 1) if(down == "try-error") down <- NULL
+        if(length(up) == 1) if(up == "try-error") up <- NULL
         plot_grid(down,up,nrow = 1)
       }
     }
@@ -2260,8 +2311,10 @@ shinyServer(function(input, output, session) {
         df <- data.frame(matrix(rep(NA, 4), nrow=1))[numeric(0), ]
         for(name in names(regulatory_potential())){
           df2 <- regulatory_potential()[[name]]$statistics
+          if(length(df2) != 0){
           df2$Peak <- name
           df <- rbind(df,df2)
+          }
         }
         df <- df %>% dplyr::select(Peak,everything())
       }
@@ -2488,7 +2541,7 @@ shinyServer(function(input, output, session) {
         }
         p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
                                    fill = "group", scales = "free", 
-                                   xlab = FALSE, ylab = paste0("RNAseq log10(",cond2,"/",cond1,")"))+theme_bw(base_size = 15)+
+                                   xlab = FALSE, ylab = paste0("RNAseq log10(",cond2,"/",cond1,")"))+theme_bw(base_size = 15)+ 
                    xlab(NULL)+scale_fill_manual(values = col) + scale_x_discrete(labels = label_wrap_gen(8)))
         if(input$Statistics !="not selected") p <- p + stat_pvalue_manual(stat.test,hide.ns = T, size = 5)         
         p <- facet(p, facet.by = "intersection",
@@ -2718,9 +2771,13 @@ shinyServer(function(input, output, session) {
       }else{
         table_list <- list()
         for(name in names(RP())){
+          print(names(RP()))
+          print(names(regulatory_potential()))
           target_result <- regulatory_potential()[[name]]$data
           target_result$epigenome_category <- name
+          print(head(target_result))
           table <- NULL
+          if(length(target_result$gene_id) != 0){
           if(str_detect(target_result$gene_id[1], "FBgn")){
             symbol <- id_convert(my.symbols = target_result$gene_id,Species = input$Species,type = "ENSEMBL")
             symbol <- symbol %>% distinct(ENSEMBL, .keep_all = TRUE)
@@ -2736,6 +2793,7 @@ shinyServer(function(input, output, session) {
                                 gene_id = target_result$gene_id)
             table_list[[name]] <- table
           }
+        }
         }
         table <- table_list
       }
@@ -3332,7 +3390,8 @@ shinyServer(function(input, output, session) {
     return(list)
   })
   with_integrate_h <- reactive({
-    h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = bws_order(),type=input$Genomic_region,withRNAseq=TRUE)
+    if(input$with_integrated_range_type_0_pair == "auto") ylim <- NULL else ylim <- input$with_integrated_range_type_0_pair_manual
+    h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = bws_order(),type=input$Genomic_region,withRNAseq=TRUE,ylim=ylim)
     return(h)
   })
   with_integrated_legend <- reactive({
@@ -3574,22 +3633,25 @@ shinyServer(function(input, output, session) {
   })
   with_integrated_heatmap_add1 <- reactive({
     if(!is.null(with_integrated_additional1())){
+      if(input$with_integrated_range_type_1_pair == "auto") ylim <- NULL else ylim <- input$with_integrated_range_type_1_pair_manual
       h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = with_integrated_additional1(),
-                         color = c("white","blue"),signal = "blue",type=input$Genomic_region)
+                         color = c("white","darkblue"),signal = "darkblue",type=input$Genomic_region,ylim=ylim)
       return(h)
     }
   })
   with_integrated_heatmap_add2 <- reactive({
     if(!is.null(with_integrated_additional2())){
+      if(input$with_integrated_range_type_2_pair == "auto") ylim <- NULL else ylim <- input$with_integrated_range_type_2_pair_manual
       h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = with_integrated_additional2(),
-                         color = c("white","green"),signal = "green",type=input$Genomic_region)
+                         color = c("white","darkgreen"),signal = "darkgreen",type=input$Genomic_region,ylim=ylim)
       return(h)
     }
   })
   with_integrated_heatmap_add3 <- reactive({
     if(!is.null(with_integrated_additional3())){
+      if(input$with_integrated_range_type_3_pair == "auto") ylim <- NULL else ylim <- input$with_integrated_range_type_3_pair_manual
       h <- batch_heatmap(files2 = with_uniqueID_DAR(),files_bw = with_integrated_additional3(),
-                         color = c("white", "purple"),signal = "purple",type=input$Genomic_region)
+                         color = c("white", "purple"),signal = "purple",type=input$Genomic_region,ylim=ylim)
       return(h)
     }
   })
@@ -3643,7 +3705,8 @@ shinyServer(function(input, output, session) {
     return(list)
   })
   integrate_h <- reactive({
-    h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = bws_order(),type=input$Genomic_region)
+    if(input$integrated_range_type_0_pair == "auto") ylim <- NULL else ylim <- input$integrated_range_type_0_pair_manual
+    h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = bws_order(),type=input$Genomic_region,ylim = ylim)
     return(h)
   })
   integrated_legend <- reactive({
@@ -3966,22 +4029,25 @@ shinyServer(function(input, output, session) {
   })
   integrated_heatmap_add1 <- reactive({
     if(!is.null(integrated_additional1())){
+      if(input$integrated_range_type_1_pair == "auto") ylim <- NULL else ylim <- input$integrated_range_type_1_pair_manual
       h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional1(),
-                         color = c("white","darkblue"),signal = "darkblue",type=input$Genomic_region)
+                         color = c("white","darkblue"),signal = "darkblue",type=input$Genomic_region,ylim = ylim)
       return(h)
     }
   })
   integrated_heatmap_add2 <- reactive({
     if(!is.null(integrated_additional2())){
+      if(input$integrated_range_type_2_pair == "auto") ylim <- NULL else ylim <- input$integrated_range_type_2_pair_manual
       h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional2(),
-                         color = c("white","darkgreen"),signal = "green",type=input$Genomic_region)
+                         color = c("white","darkgreen"),signal = "darkgreen",type=input$Genomic_region,ylim = ylim)
       return(h)
     }
   })
   integrated_heatmap_add3 <- reactive({
     if(!is.null(integrated_additional3())){
+      if(input$integrated_range_type_3_pair == "auto") ylim <- NULL else ylim <- input$integrated_range_type_3_pair_manual
       h <- batch_heatmap(files2 = uniqueID_DAR(),files_bw = integrated_additional3(),
-                         color = c("white", "purple"),signal = "purple",type=input$Genomic_region)
+                         color = c("white", "purple"),signal = "purple",type=input$Genomic_region,ylim = ylim)
       return(h)
     }
   })
@@ -4334,7 +4400,7 @@ shinyServer(function(input, output, session) {
                 intcomheat <- paste0(dirname_withRNA,"combined_heatmap/combined_heatmap.pdf")
                 fs <- c(fs, intcomheat)
                 pdf(intcomheat, height = 6, width = 10)
-                with_integrated_heatlist_plot()
+                print(with_integrated_heatlist_plot())
                 dev.off()
               }
               if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
@@ -4443,6 +4509,30 @@ shinyServer(function(input, output, session) {
                   selected = names(pre_integrated_additional4_venn()),multiple = TRUE)
     }
   })
+  output$integrated_range_type_0_venn_manual <- renderUI({
+    if(input$integrated_range_type_0_venn == "manual"){
+      numericInput(inputId = "integrated_range_type_0_venn_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_1_venn_manual <- renderUI({
+    if(input$integrated_range_type_1_venn == "manual"){
+      numericInput(inputId = "integrated_range_type_1_venn_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_2_venn_manual <- renderUI({
+    if(input$integrated_range_type_2_venn == "manual"){
+      numericInput(inputId = "integrated_range_type_2_venn_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_3_venn_manual <- renderUI({
+    if(input$integrated_range_type_3_venn == "manual"){
+      numericInput(inputId = "integrated_range_type_3_venn_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
   ##-----------
   output$peak_call_file_venn1 <- renderUI({
     if(length(list.files("./Volume/")) > 0){
@@ -4533,6 +4623,7 @@ shinyServer(function(input, output, session) {
         files2 <- lapply(files, GetGRanges, simple = TRUE)
         names(files2)<-name
       }
+      print(files2)
       return(files2)
     }
   })
@@ -4676,7 +4767,9 @@ shinyServer(function(input, output, session) {
         pdf(venn, height = 6, width = 6)
         print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
         dev.off()
+        print("venn plot")
         write.table(input_list_data_venn()[["bed"]], input_list, row.names = F, sep = "\t", quote = F)
+        print("venn overlap")
         for(name in names(venn_overlap()$peaklist)){
           intersect_bed <- paste0("intersection_bed/",name,".bed")
           fs <- c(fs, intersect_bed)
@@ -4684,6 +4777,7 @@ shinyServer(function(input, output, session) {
           write.table(as.data.frame(venn_g)[1:3], 
                       intersect_bed, row.names = F, col.names = F,sep = "\t", quote = F)
         }
+        print("venn table")
         process_num <- length(names(venn_overlap()$peaklist))
         if(input$Species_venn != "not selected"){
           dir.create("annotation",showWarnings = FALSE)
@@ -4709,7 +4803,7 @@ shinyServer(function(input, output, session) {
         pdf(line_plot_all_bed, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
         print(venn_batch_lineplot()[["bed"]])
         dev.off()
-        
+        print("line plot")
         if(!is.null(bws_venn())){
           line_plot_all_bw <- paste0("lineplot_bigwig.pdf")
           fs <- c(fs, line_plot_all_bw)
@@ -4736,6 +4830,7 @@ shinyServer(function(input, output, session) {
             dev.off()
           }
         }
+        print("heatmap plot")
         if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
            !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
           path_list <- enrich_motif_venn()
@@ -4753,6 +4848,7 @@ shinyServer(function(input, output, session) {
           print(venn_motif_plot())
           dev.off()
         }
+        print("homer plot")
         if(!is.null(input$venn_whichGroup2) && input$Species_venn != "not selected"){
           dir.create("GREAT",showWarnings = FALSE)
           great_dotplot <- paste0("GREAT/dotplot_",input$Gene_set_venn,".pdf")
@@ -4779,6 +4875,7 @@ shinyServer(function(input, output, session) {
           dev.off()
           write.table(region_gene_associate_venn(), great_regionplot_table, row.names = F, sep = "\t", quote = F)
         }
+        print("great plot")
         if(!is.null(input$RNAseqGroup_venn) && 
            !is.null(input$peak_distance_venn && !is.null(pre_mmAnno_venn()))){
           dirname <- paste0("withRNAseq-",input$RNAseq_mode_venn,"_range-",input$peak_distance_venn,"kb_fc",input$DEG_fc_venn,"_fdr",input$DEG_fdr_venn,"_RNAseq-",input$venn_DEG_result$name,"/")
@@ -5746,6 +5843,7 @@ shinyServer(function(input, output, session) {
   pre_RNAseqDEG_venn <- reactive({
     if(input$DEGanalysis_Button_venn > 0 && updateCounter_DEGanalysis_venn$i > 0){
       count <- RNAseq_file_venn()
+      count[is.na(count)] <- 0
       if(!is.null(count)){
         collist <- gsub("\\_.+$", "", colnames(count))
         if(length(unique(collist)) == 2){
@@ -6868,7 +6966,7 @@ shinyServer(function(input, output, session) {
   output$venn_heatmap_group <- renderUI({
     if(!is.null(Venn_peak_call_files())){
       if(!is.null(venn_overlap())){
-        selectInput("venn_heatmap_group", "Select intersects", choices = c(names(venn_overlap()$peaklist)),multiple = TRUE)
+        selectInput("venn_heatmap_group", "Select intersects", selected = c(names(venn_overlap()$peaklist)),choices = c(names(venn_overlap()$peaklist)),multiple = TRUE)
       }
     }
   })
@@ -7029,29 +7127,33 @@ shinyServer(function(input, output, session) {
   })
   integrated_heatmap_add1_venn <- reactive({
     if(!is.null(bws_venn())){
+      if(input$integrated_range_type_0_venn == "auto") ylim <- NULL else ylim <- input$integrated_range_type_0_venn_manual
       h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = bws_venn(),
-                         color = c("white","red"),signal = "red")
+                         color = c("white","red"),signal = "red",ylim=ylim)
       return(h)
     }
   })
   integrated_heatmap_add2_venn <- reactive({
     if(!is.null(integrated_additional2_venn())){
+      if(input$integrated_range_type_1_venn == "auto") ylim <- NULL else ylim <- input$integrated_range_type_1_venn_manual
       h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = integrated_additional2_venn(),
-                         color = c("white","darkblue"),signal = "darkblue")
+                         color = c("white","darkblue"),signal = "darkblue",ylim=ylim)
       return(h)
     }
   })
   integrated_heatmap_add3_venn <- reactive({
     if(!is.null(integrated_additional3_venn())){
+      if(input$integrated_range_type_2_venn == "auto") ylim <- NULL else ylim <- input$integrated_range_type_2_venn_manual
       h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = integrated_additional3_venn(),
-                         color = c("white","darkgreen"),signal = "green")
+                         color = c("white","darkgreen"),signal = "darkgreen",ylim=ylim)
       return(h)
     }
   })
   integrated_heatmap_add4_venn <- reactive({
     if(!is.null(integrated_additional4_venn())){
+      if(input$integrated_range_type_3_venn == "auto") ylim <- NULL else ylim <- input$integrated_range_type_3_venn_manual
       h <- batch_heatmap(files2 = Venn_peak_call_files_locus(),files_bw = integrated_additional4_venn(),
-                         color = c("white","purple"),signal = "purple")
+                         color = c("white","purple"),signal = "purple",ylim=ylim)
       return(h)
     }
   })
@@ -8464,7 +8566,30 @@ shinyServer(function(input, output, session) {
                   selected = names(pre_integrated_additional4_enrich()),multiple = TRUE)
     }
   })
-  
+  output$integrated_range_type_0_enrich_manual <- renderUI({
+    if(input$integrated_range_type_0_enrich == "manual"){
+      numericInput(inputId = "integrated_range_type_0_enrich_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_1_enrich_manual <- renderUI({
+    if(input$integrated_range_type_1_enrich == "manual"){
+      numericInput(inputId = "integrated_range_type_1_enrich_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_2_enrich_manual <- renderUI({
+    if(input$integrated_range_type_2_enrich == "manual"){
+      numericInput(inputId = "integrated_range_type_2_enrich_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_3_enrich_manual <- renderUI({
+    if(input$integrated_range_type_3_enrich == "manual"){
+      numericInput(inputId = "integrated_range_type_3_enrich_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
   #--------
   output$Spe_motif_enrich <- renderText({
     if(input$Species_enrich == "not selected") print("Please select 'Species'")
@@ -9181,29 +9306,33 @@ shinyServer(function(input, output, session) {
   })
   integrated_heatmap_add1_enrich <- reactive({
     if(!is.null(integrated_additional1_enrich())){
+      if(input$integrated_range_type_0_enrich == "auto") ylim <- NULL else ylim <- input$integrated_range_type_0_enrich_manual
       h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional1_enrich(),
-                         color = c("white","red"),signal = "red")
+                         color = c("white","red"),signal = "red",ylim=ylim)
       return(h)
     }
   })
   integrated_heatmap_add2_enrich <- reactive({
     if(!is.null(integrated_additional2_enrich())){
+      if(input$integrated_range_type_1_enrich == "auto") ylim <- NULL else ylim <- input$integrated_range_type_1_enrich_manual
       h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional2_enrich(),
-                         color = c("white","darkblue"),signal = "darkblue")
+                         color = c("white","darkblue"),signal = "darkblue",ylim=ylim)
       return(h)
     }
   })
   integrated_heatmap_add3_enrich <- reactive({
     if(!is.null(integrated_additional3_enrich())){
+      if(input$integrated_range_type_2_enrich == "auto") ylim <- NULL else ylim <- input$integrated_range_type_2_enrich_manual
       h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional3_enrich(),
-                         color = c("white","darkgreen"),signal = "green")
+                         color = c("white","darkgreen"),signal = "darkgreen",ylim=ylim)
       return(h)
     }
   })
   integrated_heatmap_add4_enrich <- reactive({
     if(!is.null(integrated_additional4_enrich())){
+      if(input$integrated_range_type_3_enrich == "auto") ylim <- NULL else ylim <- input$integrated_range_type_3_enrich_manual
       h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional4_enrich(),
-                         color = c("white","purple"),signal = "purple")
+                         color = c("white","purple"),signal = "purple",ylim=ylim)
       return(h)
     }
   })
@@ -9416,6 +9545,7 @@ shinyServer(function(input, output, session) {
   pre_RNAseqDEG_enrich <- reactive({
     if(input$DEGanalysis_Button_enrich > 0 && updateCounter_DEGanalysis_enrich$i > 0){
       count <- RNAseq_file_enrich()
+      count[is.na(count)] <- 0
       if(!is.null(count)){
         collist <- gsub("\\_.+$", "", colnames(count))
         if(length(unique(collist)) == 2){
@@ -10115,10 +10245,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$file_enrich1)){
       if(input$goButton_enrich > 0 ){
         df<-list()
-        df[["A_1.bw"]] <- "data/bigwig/A_1.BigWig"
-        df[["A_2.bw"]] <- "data/bigwig/A_2.BigWig"
-        df[["B_1.bw"]] <- "data/bigwig/B_1.BigWig"
-        df[["B_2.bw"]] <- "data/bigwig/B_2.BigWig"
+        df[["A_1"]] <- "data/bigwig/A_1.BigWig"
+        df[["A_2"]] <- "data/bigwig/A_2.BigWig"
+        df[["B_1"]] <- "data/bigwig/B_1.BigWig"
+        df[["B_2"]] <- "data/bigwig/B_2.BigWig"
         return(df)
       }
       return(NULL)
@@ -10568,7 +10698,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
+        p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory,group_order=input$homer_sample_order)
         if(input$pair_pdf_height == 0){
           pdf_height <- 6
         }else pdf_height <- input$pair_pdf_height
@@ -10804,7 +10934,8 @@ shinyServer(function(input, output, session) {
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
+        p1 <- homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory,
+                              section = "withRNAseq",group_order = input$with_homer_sample_order)
         if(input$pair_pdf_height == 0){
           pdf_height <- 6
         }else pdf_height <- input$pair_pdf_height
@@ -11270,7 +11401,8 @@ shinyServer(function(input, output, session) {
     },
     content = function(file) {
       withProgress(message = "Preparing download",{
-        p1 <- homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich")
+        p1 <- homer_Motifplot(df = enrich_motif_enrich(),showCategory = input$enrich_showCategory,section="enrich",
+                              group_order = input$homer_sample_order_enrich)
         if(input$enrich_pdf_height == 0){
           pdf_height <- 6
         }else pdf_height <- input$enrich_pdf_height

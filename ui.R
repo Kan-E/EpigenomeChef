@@ -493,6 +493,29 @@ shinyUI(
                                 column(4, htmlOutput("integrated_bw3"),
                                        htmlOutput("sample_order_pair_comb3"))
                               ),
+                              h4("Maximum values of the y-axis on a line plot"),
+                              fluidRow(
+                                column(3, radioButtons('integrated_range_type_0_pair','red:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_0_pair_manual")),
+                                column(3, radioButtons('integrated_range_type_1_pair','blue:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_1_pair_manual")),
+                                column(3, radioButtons('integrated_range_type_2_pair','green:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_2_pair_manual")),
+                                column(3, radioButtons('integrated_range_type_3_pair','purple:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_3_pair_manual"))
+                              ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton", "Start"),
                                        tags$head(tags$style("#integrated_heatmapButton{color: red;
@@ -693,6 +716,29 @@ shinyUI(
                                                            column(4, htmlOutput("with_integrated_bw3"),
                                                                   htmlOutput("with_sample_order_pair_comb3"))
                                                          ),  
+                                                         h4("Maximum values of the y-axis on a line plot"),
+                                                         fluidRow(
+                                                           column(3, radioButtons('with_integrated_range_type_0_pair','red:',
+                                                                                  c('auto'="auto",
+                                                                                    'manual'="manual"
+                                                                                  ),selected = "auto"),
+                                                                  htmlOutput("with_integrated_range_type_0_pair_manual")),
+                                                           column(3, radioButtons('with_integrated_range_type_1_pair','blue:',
+                                                                                  c('auto'="auto",
+                                                                                    'manual'="manual"
+                                                                                  ),selected = "auto"),
+                                                                  htmlOutput("with_integrated_range_type_1_pair_manual")),
+                                                           column(3, radioButtons('with_integrated_range_type_2_pair','green:',
+                                                                                  c('auto'="auto",
+                                                                                    'manual'="manual"
+                                                                                  ),selected = "auto"),
+                                                                  htmlOutput("with_integrated_range_type_2_pair_manual")),
+                                                           column(3, radioButtons('with_integrated_range_type_3_pair','purple:',
+                                                                                  c('auto'="auto",
+                                                                                    'manual'="manual"
+                                                                                  ),selected = "auto"),
+                                                                  htmlOutput("with_integrated_range_type_3_pair_manual"))
+                                                         ),
                                                          fluidRow(
                                                            column(4, actionButton("with_integrated_heatmapButton", "Start"),
                                                                   tags$head(tags$style("#with_integrated_heatmapButton{color: red;
@@ -1090,6 +1136,29 @@ shinyUI(
                                        htmlOutput("sample_order_venn_comb3")),
                                 column(4, htmlOutput("integrated_bw4_venn"),
                                        htmlOutput("sample_order_venn_comb4"))
+                              ),
+                              h4("Maximum values of the y-axis on a line plot"),
+                              fluidRow(
+                                column(3, radioButtons('integrated_range_type_0_venn','red:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_0_venn_manual")),
+                                column(3, radioButtons('integrated_range_type_1_venn','blue:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_1_venn_manual")),
+                                column(3, radioButtons('integrated_range_type_2_venn','green:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_2_venn_manual")),
+                                column(3, radioButtons('integrated_range_type_3_venn','purple:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_3_venn_manual"))
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton_venn", "Start"),
@@ -1782,6 +1851,29 @@ shinyUI(
                                        htmlOutput("sample_order_enrich_comb3")),
                                 column(4, htmlOutput("integrated_bw4_enrich"),
                                        htmlOutput("sample_order_enrich_comb4"))
+                              ),
+                              h4("Maximum values of the y-axis on a line plot"),
+                              fluidRow(
+                                column(3, radioButtons('integrated_range_type_0_enrich','red:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_0_enrich_manual")),
+                                column(3, radioButtons('integrated_range_type_1_enrich','blue:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_1_enrich_manual")),
+                                column(3, radioButtons('integrated_range_type_2_enrich','green:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_2_enrich_manual")),
+                                column(3, radioButtons('integrated_range_type_3_enrich','purple:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_3_enrich_manual"))
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton_enrich", "Start"),
