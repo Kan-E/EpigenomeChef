@@ -6,6 +6,9 @@ params:
     input: [some object]
     collist_bw_pair: [some object]
     norm_count: [some object]
+    annotation_test: [some object]
+    dir_name_annotation: [some object]
+    annotation_group: [some object]
     deg_norm_count: [some object]
     input_list_data_pair: [some object]
     enrichment_1_1: [some object]
@@ -56,35 +59,79 @@ try(magick::image_read_pdf("./Clustering/clustering.pdf"))
 ```
  - PCA_table (Clustering/pca.txt)
 
- - Volcano plot (DAR_result/volcano_plot.pdf)
+ - Volcano plot (DMR_result/volcano_plot.pdf)
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$xrange)){
-try(magick::image_read_pdf("./DAR_result/volcano_plot.pdf"))
+try(magick::image_read_pdf("./DMR_result/volcano_plot.pdf"))
 }else print("No plot")
 ```
  
- - Result table (DAR_result/DAR_result.txt)
- - Up DAR (DAR_result/up.bed)
- - Down DAR (DAR_result/down.bed)
+ - Result table (DMR_result/DMR_result.txt)
+ - Up DMR (DMR_result/up.bed)
+ - Down DMR (DMR_result/down.bed)
 \newpage
 
-## Peak distribution
- - Annotation of `r params$collist_bw_pair[2]`_high peaks (peak_distribution/`r params$collist_bw_pair[2]`_high_annotation.pdf)
+## Peak annotation
+
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
-try(magick::image_read_pdf(paste0("./peak_distribution/",unique(params$collist_bw_pair)[2],"_high_annotation.pdf")))
+            try(magick::image_read_pdf(paste0("./annotation/summary.pdf")))
           }}else print("No plot")
 ```
+```{r echo = FALSE}
+try(knitr::kable(head(params$annotation_test)))
+cat("\n\n")
+```
 
- - Annotation of `r params$collist_bw_pair[1]`_high peaks (peak_distribution/`r params$collist_bw_pair[1]`_high_annotation.pdf)
+- all peak
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
-try(magick::image_read_pdf(paste0("./peak_distribution/",unique(params$collist_bw_pair)[1],"_high_annotation.pdf")))
+            try(magick::image_read_pdf(paste0("./annotation/all_peak.pdf")))
           }}else print("No plot")
 ```
-
+- `r unique(params$collist_bw_pair[2])`_high peaks
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
+if(params$input$Species != "not selected"){
+          if(params$input$Genomic_region == "Genome-wide"){
+            try(magick::image_read_pdf(paste0("./annotation/",
+                                              unique(params$collist_bw_pair)[2],"_high.pdf")))
+          }}else print("No plot")
+```
+- `r unique(params$collist_bw_pair[1])`_high peaks
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
+if(params$input$Species != "not selected"){
+          if(params$input$Genomic_region == "Genome-wide"){
+            try(magick::image_read_pdf(paste0("./annotation/",
+                                              unique(params$collist_bw_pair)[1],"_high.pdf")))
+          }}else print("No plot")
+cat("\n\n")
+```
+Histogram (`r params$dir_name_annotation`)
+- all peak
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
+if(params$input$Species != "not selected"){
+          if(params$input$Genomic_region == "Genome-wide"){
+              try(magick::image_read_pdf(paste0("./",params$dir_name_annotation,"all_peak.pdf")))
+          }}else print("No plot")
+```
+- `r unique(params$collist_bw_pair[2])`_high peaks
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
+if(params$input$Species != "not selected"){
+          if(params$input$Genomic_region == "Genome-wide"){
+              try(magick::image_read_pdf(paste0("./",params$dir_name_annotation,
+                                                unique(params$collist_bw_pair)[2],"_high.pdf")))
+          }}else print("No plot")
+```
+- `r unique(params$collist_bw_pair[1])`_high peaks
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
+if(params$input$Species != "not selected"){
+          if(params$input$Genomic_region == "Genome-wide"){
+              try(magick::image_read_pdf(paste0("./",params$dir_name_annotation,
+                                                unique(params$collist_bw_pair)[1],"_high.pdf")))
+          }}else print("No plot")
+```
 ・Gene level
 
 Promoter = 2000 bp upstream to 100 bp downstream of the transcription start site (TSS)

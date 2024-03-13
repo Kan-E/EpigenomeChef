@@ -1,5 +1,8 @@
+##Annotation 重複が生まれる
+
 ##with RNAseq homer startボタン
 ##Motif plot order反映されない
+##rmdの修正
 library(rtracklayer) 
 library(Rsubread)
 library(Rsamtools)
@@ -72,6 +75,8 @@ library(clue)
 library(TxDb.Mmusculus.UCSC.mm39.refGene)
 library(stringr)
 library(readxl)
+file.copy("pair_report.Rmd",file.path(tempdir(),"pair_report.Rmd"), overwrite = TRUE)
+home_dir <- paste0(getwd(),"/")
 Sys.setenv(OPENSSL_CONF="/dev/null")
 jscode <- "shinyjs.closeWindow = function() { window.close(); }"
 options(rsconnect.max.bundle.size=31457280000000000000)
@@ -965,6 +970,9 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL,gro
     cluster_list <- c()
     for (name in names(enrich_gene_list)) {
       sum <- length(data$ENTREZID[data$Group == name])
+      if(!is.null(type)){
+        if(type=="pairwise") sum <- length(dplyr::filter(data, group == name)$ENTREZID)
+        }else sum <- length(data$ENTREZID[data$Group == name])
       em <- enrich_gene_list[[name]]
       if (length(as.data.frame(em)$ID) != 0) {
         if(length(colnames(as.data.frame(em))) == 9){
@@ -992,7 +1000,7 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL,gro
       }
       if(!is.null(group_order)) {
         df$Group <- factor(df$Group, levels=group_order)
-        df <- df %>% dplyr::arrange(Group) 
+        df <- df %>% dplyr::arrange(Group) %>% dplyr::filter(!is.na(Group))
       }
       df$GeneRatio <- DOSE::parse_ratio(df$GeneRatio)
       df <- dplyr::filter(df, !is.na(qvalue))
@@ -1003,11 +1011,11 @@ enrich_genelist <- function(data, enrich_gene_list, showCategory=5,type=NULL,gro
       idx <- order(df[["Group"]], df[["x"]], decreasing = FALSE)
       df$Description <- factor(df$Description,
                                levels=rev(unique(df$Description[idx])))
-      p1 <- as.grob(ggplot(df, aes(x = Group,y= Description,color=qvalue,size=GeneRatio))+
+      df$log10padj <- -log10(df$qvalue)
+      p1 <- as.grob(ggplot(df, aes(x = Group,y= Description,color=log10padj,size=GeneRatio))+
                       geom_point() +
-                      scale_color_continuous(low="red", high="blue",
-                                             guide=guide_colorbar(reverse=TRUE)) +
-                      scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=12)+ylab(NULL)+xlab(NULL)+
+                      scale_color_continuous(low="blue", high="red",name="-log10\n(q value)") +
+                      scale_size(range=c(1, 6),name="Gene\nratio")+ DOSE::theme_dose(font.size=12)+ylab(NULL)+xlab(NULL)+
                       scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
       p <- plot_grid(p1)
       return(p)
@@ -1138,110 +1146,6 @@ RNAseqDEG_ann <- function(RNAdata,Species,gene_type,input_type=NULL){
   }
   }
   return(data)
-}
-mmAnno <- function(peak,genomic_region=NULL,txdb,peak_distance,mode=NULL,group_name,distribution,DAR){
-  if(!is.null(peak)){
-    if(genomic_region == "Promoter"){ 
-      peak <- peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
-      peak <- with(peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
-      if(length(as.data.frame(peak)$seqnames) != 0){
-        mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
-        mmAnno_up <- mm_nearestGene(peak,txdb)
-        mmAnno_up$Group <- group_name
-      }
-    }else{
-      range <- peak_distance * 1000
-      if(mode == "Gene_scan"){
-        if(is.null(peak_distance)) validate("")
-        if(genomic_region != "Promoter"){ 
-          withProgress(message = paste0("Preparing annotation of ", group_name," peaks"),{
-            anno <- distribution
-            incProgress(1)
-          })
-          promoter <- subset(anno, geneLevel %in% "promoter")
-          other <- subset(anno, ! geneLevel %in% "promoter")
-          if(length(as.data.frame(promoter)$seqnames) != 0){
-            mcols(promoter) <- DataFrame(feature_id = paste0("peak_", seq_len(length(promoter))))
-            promoter_scan <- mm_geneScan(promoter, txdb,upstream = 2000,downstream = 100)
-            promoter_scan <- promoter_scan %>% plyranges::filter(distanceToTSS >= -2000 & distanceToTSS <= 100)
-          }else promoter_scan <- NULL
-          if(length(as.data.frame(other)$seqnames) != 0){
-            mcols(other) <- DataFrame(feature_id = paste0("peak_", seq_len(length(other))))
-            other_scan <- mm_geneScan(other, txdb,upstream = range,downstream = range)
-            other_scan <- other_scan %>% plyranges::filter(abs(distanceToTSS) <= range)
-          }else other_scan <- NULL
-          mmAnno_up <- plyranges::bind_ranges(promoter_scan, other_scan)
-        }
-        mmAnno_up$Group <- group_name
-      }else{
-        if(length(as.data.frame(peak)$seqnames) != 0){
-          mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
-          mmAnno_up <- mm_nearestGene(peak,txdb)
-          mmAnno_up <- mmAnno_up %>% plyranges::filter(abs(distanceToTSS) <= range)
-          mmAnno_up$Group <- group_name
-        }
-      }
-    }
-    if(!is.null(DAR)){
-    if(genomic_region == "Promoter") {
-      DAR <- data.frame(locus = DAR$locus,log2FoldChange = DAR[,2])
-    }else DAR <- data.frame(locus = rownames(DAR),log2FoldChange = DAR[,2])
-    mmano <- as.data.frame(mmAnno_up)
-    mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
-    print("mmano")
-    print(head(mmano))
-    print(head(DAR))
-    merge <- merge(mmano,DAR, by = "locus")
-    merge2<-with(merge,GRanges(seqnames,IRanges(start,end),
-                               feature_id = feature_id,
-                               gene_id = gene_id, distanceToTSS = distanceToTSS,
-                               Group = Group, Log2FoldChange = log2FoldChange))
-    print("merge2")
-    print(head(merge2))
-    return(merge2)
-    }else return(mmAnno_up)
-  }else return(NULL)
-}
-DAR_withRNAseq <- function(DAR,genomic_region=NULL,Species){
-  if(genomic_region == "Promoter"){ 
-    if(str_detect(rownames(DAR)[1], "FBgn")){
-      DAR <- DAR
-    }else{
-      my.symbols <- rownames(DAR)
-      gene_IDs<-id_convert(my.symbols, Species,type="SYMBOL_single")
-      colnames(gene_IDs) <- c("Symbol", "gene_id")
-      gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T) %>% distinct(gene_id, .keep_all = T)
-      gene_IDs <- data.frame(row.names = gene_IDs$Symbol, gene_id = gene_IDs$gene_id)
-      data <- merge(DAR, gene_IDs, by=0)
-      locus <- as.data.frame(promoter_region())
-      locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
-      DAR <- merge(data,locus,by="gene_id")
-      DAR <- DAR[,-2]
-    }
-  }  
-  return(DAR)
-} 
-
-RP_f <- function(mmAnno,txdb, mode="combined_fcw"){
-  if(!is.null(mmAnno)) {
-    result_geneRP_up <- modified_calcRP_TFHit(mmAnno = mmAnno,Txdb = txdb,mode = mode)
-  }else result_geneRP_up <- NULL
-  if(!is.null(result_geneRP_up)) {
-    result_geneRP <-result_geneRP_up
-    result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
-    result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
-    return(result_geneRP)
-  }else return(NULL)
-}
-regulatory_potential_f <- function(species,data,result_geneRP,DEG_fc,DEG_fdr,name){
-  if(species != "not selected"){
-    merge_data <- integrate_ChIP_RNA(
-      result_geneRP = result_geneRP,
-      result_geneDiff = data,lfc_threshold = log(DEG_fc,2),padj_threshold = DEG_fdr,
-      name=name
-    )
-    return(merge_data)
-  }
 }
 
 GetGRanges <- function (LoadFile, simple = FALSE,sepr = "\t", simplify = FALSE) {
@@ -1619,7 +1523,7 @@ batch_heatmap <- function(files2,files_bw,maxrange=NULL,type=NULL,
     target <- unlist(as(glist,"GRangesList"))
     mat1 = normalizeToMatrix(import(files_bw[[k]],as="GRanges"), target = target, value_column = "score",
                              extend = 2000, mean_mode = "absolute", w = 20, keep = c(0, 0.99))
-    axis_name <- c("-2kb","summit","2kb")
+    axis_name <- c("-2kb","0","2kb")
     if(!is.null(type)){
     if(type == "Promoter"){
       axis_name <- c("-2kb","TSS","2kb")
@@ -1817,47 +1721,6 @@ if(!is.null(integrated_bw)){
 }
 
 
-modified_calcRP_TFHit <- function (mmAnno, Txdb, decay_dist = 1000, report_fullInfo = FALSE, 
-                                   verbose = TRUE,mode="fcw_combined") 
-{
-  peak_scaned_center <- GenomicRanges::resize(mmAnno, width = 1, 
-                                              fix = "center")
-  all_gene_location <- GenomicFeatures::genes(Txdb)
-  gene_scaned <- all_gene_location[mmAnno$gene_id]
-  gene_scaned_TSS <- GenomicRanges::resize(gene_scaned, width = 1, 
-                                           fix = "start")
-  mmAnno$centerToTSS <- GenomicRanges::distance(peak_scaned_center, 
-                                                gene_scaned_TSS)
-  scan_result <- as.data.frame(mmAnno)
-    if (verbose) {
-      message(">> calculating RP using centerToTSS and TF hit\t\t", 
-              format(Sys.time(), "%Y-%m-%d %X"))
-    }
-  if(length(mmAnno$Log2FoldChange) != 0) {
-    if(mode == "fcw_combined" || mode == "fcw_separate"){
-      print("RP definition")
-      print(mode)
-      mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist/2^abs(mmAnno$Log2FoldChange)) 
-    }else mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist)
-  }else mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist)
-  if (verbose) {
-    message(">> merging all info together\t\t", format(Sys.time(), 
-                                                       "%Y-%m-%d %X"))
-  }
-  peakRP_gene <- mcols(mmAnno) %>% data.frame(stringsAsFactors = FALSE) %>% 
-    dplyr::group_by(gene_id) %>% dplyr::summarise(withPeakN = dplyr::n(), 
-                                                  sumRP = sum(RP)) %>% dplyr::arrange(-sumRP) %>% dplyr::mutate(RP_rank = rank(-sumRP))
-  if (verbose) {
-    message(">> done\t\t", format(Sys.time(), "%Y-%m-%d %X"))
-  }
-  if (report_fullInfo) {
-    metadata(mmAnno)$peakRP_gene <- peakRP_gene
-    return(mmAnno)
-  }
-  else {
-    return(peakRP_gene)
-  }
-}
 donut_replot <- function(dat){
   labs <- list(geneLevel=c(promoter="Promoter",
                            geneDownstream="Downstream",
@@ -1901,6 +1764,462 @@ donut_replot <- function(dat){
                       guide = guide_legend(reverse=TRUE))
   return(p)
 }
+chisquare_for_annotation <- function(annotation){
+  if(length(names(annotation$peaks))!=1){
+  df <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
+  for(name in names(annotation$peaks)){
+    df2 <- data.frame(annotation$peaks[[name]])
+    df2$Group <- name
+    df <- rbind(df, df2)
+  }
+  res <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
+  for(level in c("geneLevel","ExonIntron","Exons")){
+    table <- df %>% dplyr::group_by_(level) %>% 
+      dplyr::count(Group) %>% tidyr::spread(key=level, value=n) %>%
+      as.data.frame()
+    rownames(table) <- table$Group
+    table <- table[,-1]
+    table[is.na(table)] <- 0
+    if(level == "geneLevel") level_rename <-"Gene level" else 
+      if(level == "ExonIntron") level_rename <- "Exon/Intron/Intergenic" else
+        if(level == "Exons") level_rename <- "Exon level"
+    combination <- combn(x=rownames(table),m=2)
+    print(table)
+    for(i in 1:dim(combination)[2]){
+      table2 <- table[combination[,i],]
+      chisq <- chisq.test(table2)
+      res2 <- data.frame(group = paste0(paste(combination[,i],collapse = " vs ")," (",level_rename,")"), 
+                         statistic=chisq$statistic,
+                         method="Chi-square test",
+                         pvalue=chisq$p.value,
+                         row.names = NULL)
+      res <- rbind(res, res2)
+    } 
+  }
+  res$padj<- p.adjust(res$pvalue,method = "BH")
+  return(res)
+  }
+}
+annotation_barplot <- function(annotation){
+  df <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
+  for(name in names(annotation$peaks)){
+    df2 <- data.frame(Group = name, peakN = log10(length(annotation$peaks[[name]])))
+    df <- rbind(df, df2)
+  }
+  p <- ggbarplot(df,x="Group",y="peakN",fill = "Group") +
+    coord_flip()+ theme_bw(base_size = 15) + xlab(NULL) + ylab("log10(Number of peaks)")
+  return(p)
+}
+
+plot_annoDistance <- function (mmAnno, title=NULL){
+  mmAnno$abs_dist <- abs(mmAnno$distanceToTSS) + 1
+  summary_value <- summary(mmAnno$abs_dist) - 1
+  df <- data.frame(row.names = names(summary_value),summary=round(as.numeric(summary_value),digits = 2))
+  p1 <- ggplot2::ggplot(data.frame(mmAnno), aes(x = abs_dist)) + 
+    ggplot2::geom_histogram(bins = 50) + ggplot2::scale_x_log10() +
+    ggplot2::theme_bw() + ggplot2::xlab("abs(distanceToTSS) + 1")+ 
+    ggplot2::ylab("Number of peaks") + ggtitle(title)
+  p <- plot_grid(p1,tableGrob(unname(df),theme = ttheme_minimal()),nrow = 1,rel_widths = c(3,1))
+  return(p)
+}
+
+GREAT_dotplot <- function(data,data3,df,type,group_order=NULL){
+  cluster_list <- c()
+  for(name in names(df)){
+    if(length(as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))$id) != 0) {
+      if(type !="pairwise") group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]])) else group1 <- as.data.frame(df[[name]])
+      if(length(group1$id)==0){
+        group1 <- NULL
+      }else{
+        if(type=="pairwise"){
+          sum <- length(dplyr::filter(data3, group == name)$ENTREZID)
+        }else if(type=="pair") {
+          sum <- length(dplyr::filter(data3, group == name)$group)
+        }else{
+          sum <- length(as.data.frame(data3[[name]])$start)
+        }
+        group1$Group <- paste(name, "\n(",sum,")",sep = "")
+        if(!is.null(group_order)) group_order[which(group_order == name)] <- paste(name, "\n","(",sum, ")",sep = "")
+        cluster_list <- c(cluster_list, paste(name, "\n","(",sum, ")",sep = ""))
+        if (length(group1$p_adjust_hyper) > 5){
+          group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
+          group1 <- group1[1:5,]
+        }
+      }
+    }else group1 <- NULL
+    data <- rbind(data, group1)
+  }
+  if(!is.null(group_order)) group_order <- group_order[group_order %in% cluster_list]
+  colnames(data) <-  colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
+                                         "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
+  if(length(data$Description) != 0){
+    data$Group <- gsub("_", " ", data$Group)
+    for(i in 1:length(data$Group)){
+      data$Group[i] <- paste(strwrap(data$Group[i], width = 15),collapse = "\n")
+    }
+    data$Group <- gsub(" \\(", "\n\\(", data$Group)
+    if(!is.null(group_order)) {
+      group_order <- gsub("_", " ", group_order)
+      for(i in 1:length(group_order)){
+        group_order[i] <- paste(strwrap(group_order[i], width = 15),collapse = "\n")
+      }
+      group_order <- gsub(" \\(", "\n\\(", group_order)
+      data$Group <- factor(data$Group, levels=group_order)
+      data <- data %>% dplyr::arrange(Group) %>% dplyr::filter(!is.na(Group))
+    }
+    data$Description <- gsub("_", " ", data$Description)
+    data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
+    data$x <- gsub(":","", data$x)
+    data <- dplyr::arrange(data, x)
+    idx <- order(data[["x"]], decreasing = FALSE)
+    data$Description <- factor(data$Description,
+                               levels=rev(unique(data$Description[idx])))
+    data$padj <- -log10(data$p_adjust_hyper+(1e-20))
+    p1 <- as.grob(ggplot(data, aes_string(x = "Group",y= "Description",color="padj",size="fold_enrichment_hyper"))+
+                    geom_point() +
+                    scale_color_continuous(low="blue", high="red",name="-log10\n(padj)") +
+                    scale_size(range=c(1, 6),name = "Enrichment\nratio")+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
+                    scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
+  }else p1 <- NULL
+  return(p1)
+}
+
+
+
+#withRNA-seq-------
+modified_calcRP_TFHit <- function (mmAnno, Txdb, decay_dist = 1000, report_fullInfo = FALSE, 
+                                   verbose = TRUE,mode="fcw_combined") 
+{
+  peak_scaned_center <- GenomicRanges::resize(mmAnno, width = 1, 
+                                              fix = "center")
+  all_gene_location <- GenomicFeatures::genes(Txdb)
+  gene_scaned <- all_gene_location[mmAnno$gene_id]
+  gene_scaned_TSS <- GenomicRanges::resize(gene_scaned, width = 1, 
+                                           fix = "start")
+  mmAnno$centerToTSS <- GenomicRanges::distance(peak_scaned_center, 
+                                                gene_scaned_TSS)
+  scan_result <- as.data.frame(mmAnno)
+  if (verbose) {
+    message(">> calculating RP using centerToTSS and TF hit\t\t", 
+            format(Sys.time(), "%Y-%m-%d %X"))
+  }
+  if(length(mmAnno$Log2FoldChange) != 0) {
+    if(mode == "fcw_combined" || mode == "fcw_separate"){
+      print("RP definition")
+      mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist/2^abs(mmAnno$Log2FoldChange)) 
+    }else mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist)
+  }else mmAnno$RP <- 2^(-mmAnno$centerToTSS/decay_dist)
+  if (verbose) {
+    message(">> merging all info together\t\t", format(Sys.time(), 
+                                                       "%Y-%m-%d %X"))
+  }
+  peakRP_gene <- mcols(mmAnno) %>% data.frame(stringsAsFactors = FALSE) %>% 
+    dplyr::group_by(gene_id) %>% dplyr::summarise(withPeakN = dplyr::n(), 
+                                                  sumRP = sum(RP)) %>% dplyr::arrange(-sumRP) %>% dplyr::mutate(RP_rank = rank(-sumRP))
+  if (verbose) {
+    message(">> done\t\t", format(Sys.time(), "%Y-%m-%d %X"))
+  }
+  if (report_fullInfo) {
+    metadata(mmAnno)$peakRP_gene <- peakRP_gene
+    return(mmAnno)
+  }
+  else {
+    return(peakRP_gene)
+  }
+}
+mmAnno <- function(peak,genomic_region=NULL,txdb,peak_distance,mode=NULL,group_name,distribution,DAR=NULL){
+  if(!is.null(peak)){
+    if(genomic_region == "Promoter"){ 
+      peak <- peak  %>% as.data.frame() %>% distinct(start, .keep_all = T)
+      peak <- with(peak, GRanges(seqnames = seqnames,ranges = IRanges(start=start,end=end)))
+      if(length(as.data.frame(peak)$seqnames) != 0){
+        mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
+        mmAnno_up <- mm_nearestGene(peak,txdb)
+        mmAnno_up$Group <- group_name
+      }
+    }else{
+      range <- peak_distance * 1000
+      if(mode == "Gene_scan"){
+        if(is.null(peak_distance)) validate("")
+        if(genomic_region != "Promoter"){ 
+          withProgress(message = paste0("Preparing annotation of ", group_name," peaks"),{
+            anno <- distribution
+            incProgress(1)
+          })
+          promoter <- subset(anno, geneLevel %in% "promoter")
+          other <- subset(anno, ! geneLevel %in% "promoter")
+          if(length(as.data.frame(promoter)$seqnames) != 0){
+            mcols(promoter) <- DataFrame(feature_id = paste0("peak_", seq_len(length(promoter))))
+            promoter_scan <- mm_geneScan(promoter, txdb,upstream = 2000,downstream = 100)
+            promoter_scan <- promoter_scan %>% plyranges::filter(distanceToTSS >= -2000 & distanceToTSS <= 100)
+          }else promoter_scan <- NULL
+          if(length(as.data.frame(other)$seqnames) != 0){
+            mcols(other) <- DataFrame(feature_id = paste0("peak_", seq_len(length(other))))
+            other_scan <- mm_geneScan(other, txdb,upstream = range,downstream = range)
+            other_scan <- other_scan %>% plyranges::filter(abs(distanceToTSS) <= range)
+          }else other_scan <- NULL
+          mmAnno_up <- plyranges::bind_ranges(promoter_scan, other_scan)
+        }
+        mmAnno_up$Group <- group_name
+      }else{
+        if(length(as.data.frame(peak)$seqnames) != 0){
+          mcols(peak) <- DataFrame(feature_id = paste0("peak_", seq_len(length(peak))))
+          mmAnno_up <- mm_nearestGene(peak,txdb)
+          mmAnno_up <- mmAnno_up %>% plyranges::filter(abs(distanceToTSS) <= range)
+          mmAnno_up$Group <- group_name
+        }
+      }
+    }
+    if(!is.null(DAR)){
+      if(genomic_region == "Promoter") {
+        DAR <- data.frame(locus = DAR$locus,log2FoldChange = DAR[,2])
+      }else DAR <- data.frame(locus = rownames(DAR),log2FoldChange = DAR[,2])
+      mmano <- as.data.frame(mmAnno_up)
+      mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
+      print("mmano")
+      print(head(mmano))
+      print(head(DAR))
+      merge <- merge(mmano,DAR, by = "locus")
+      merge2<-with(merge,GRanges(seqnames,IRanges(start,end),
+                                 feature_id = feature_id,
+                                 gene_id = gene_id, distanceToTSS = distanceToTSS,
+                                 Group = Group, Log2FoldChange = log2FoldChange))
+      print("merge2")
+      print(head(merge2))
+      return(merge2)
+    }else return(mmAnno_up)
+  }else return(NULL)
+}
+DAR_withRNAseq <- function(DAR,genomic_region=NULL,Species){
+  if(genomic_region == "Promoter"){ 
+    if(str_detect(rownames(DAR)[1], "FBgn")){
+      DAR <- DAR
+    }else{
+      my.symbols <- rownames(DAR)
+      gene_IDs<-id_convert(my.symbols, Species,type="SYMBOL_single")
+      colnames(gene_IDs) <- c("Symbol", "gene_id")
+      gene_IDs <- gene_IDs %>% distinct(Symbol, .keep_all = T) %>% distinct(gene_id, .keep_all = T)
+      gene_IDs <- data.frame(row.names = gene_IDs$Symbol, gene_id = gene_IDs$gene_id)
+      data <- merge(DAR, gene_IDs, by=0)
+      locus <- as.data.frame(promoter_region())
+      locus$locus <- paste0(locus$seqnames,":",locus$start,"-",locus$end)
+      DAR <- merge(data,locus,by="gene_id")
+      DAR <- DAR[,-2]
+    }
+  }  
+  return(DAR)
+} 
+
+RP_f <- function(mmAnno,txdb, mode="combined_fcw"){
+  if(!is.null(mmAnno)) {
+    result_geneRP_up <- modified_calcRP_TFHit(mmAnno = mmAnno,Txdb = txdb,mode = mode)
+  }else result_geneRP_up <- NULL
+  if(!is.null(result_geneRP_up)) {
+    result_geneRP <-result_geneRP_up
+    result_geneRP <- result_geneRP %>% dplyr::arrange(-sumRP)
+    result_geneRP$RP_rank <- rownames(result_geneRP) %>% as.numeric()
+    return(result_geneRP)
+  }else return(NULL)
+}
+regulatory_potential_f <- function(species,data,result_geneRP,DEG_fc,DEG_fdr,name){
+  if(species != "not selected"){
+    merge_data <- integrate_ChIP_RNA(
+      result_geneRP = result_geneRP,
+      result_geneDiff = data,lfc_threshold = log(DEG_fc,2),padj_threshold = DEG_fdr,
+      name=name
+    )
+    return(merge_data)
+  }
+}
+RNAseq_box <- function(RNA,rna_name,select,data_type,RP,mmAnno,statistics){
+  cond1 <- gsub("\\_.+$", "", rna_name[1])
+  cond2 <- gsub("\\_.+$", "", rna_name[2])
+  RNA <- dplyr::filter(RNA, !is.na(gene_id))
+  df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+  genelist <- list()
+  bed_list <- list()
+  for(name in select){
+    data <- merge(RNA,RP[[name]], by="gene_id",all=T)
+    if(data_type != "List") data <- dplyr::filter(data, baseMean != 0)
+    data$group <- "Others"
+    data$group[data$sumRP > 2] <- "2 < RP"
+    data$group[data$sumRP <= 2 & data$sumRP > 1] <- "1 < RP < 2"
+    data$group[data$sumRP <= 1 & data$sumRP > 0.1] <- "0.1 < RP < 1"
+    data$group[data$sumRP <= 0.1 & data$sumRP > 0.01] <- "0.01 < RP < 0.1"
+    data$group[data$sumRP <= 0.01 & data$sumRP > 0] <- "0 < RP < 0.01"
+    level <- NULL
+    col <- NULL
+    if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
+      level <- c(level,"Others")
+      col <- c(col,"gray")
+    }
+    if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
+      level <- c(level,"0 < RP < 0.01")
+      col <- c(col,"blue")
+    }
+    if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
+      level <- c(level,"0.01 < RP < 0.1")
+      col <- c(col,"#00BFC4")
+    }
+    if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
+      level <- c(level,"0.1 < RP < 1")
+      col <- c(col,"lightgreen")
+    }
+    if(dim(dplyr::filter(data, group == "1 < RP < 2"))[1] != 0) {
+      level <- c(level,"1 < RP < 2")
+      col <- c(col,"#F8766D")
+    }
+    if(dim(dplyr::filter(data, group == "2 < RP"))[1] != 0) {
+      level <- c(level,"2 < RP")
+      col <- c(col,"red")
+    }
+    data$group <- factor(data$group,levels=level,ordered=TRUE)
+    data$intersection <- as.factor(name)
+    df <- rbind(df,data)
+    if(data_type != "List") {
+      genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,RNAlog2FC = -1*data$log2FoldChange,
+                                     sumRP = data$sumRP, gene_id = data$gene_id)
+    }else{
+      genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,
+                                     sumRP = data$sumRP, gene_id = data$gene_id)
+    }
+    bed_list1 <- list()
+    for(name2 in unique(data$group)){
+      if(name2 != "Others"){
+        table <- genelist[[name]] %>% dplyr::filter(group == name2)
+        print(head(table))
+        gene <- table$gene_id
+        up_peak3 <- NULL
+        if(length(gene) != 0){
+          up_peak <- subset(mmAnno[[name]], gene_id %in% gene)
+          up_peak2 <- as.data.frame(up_peak)
+          up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
+          up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
+          up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
+          mcols(up_peak3) <- DataFrame(Group = paste0(name,":",name2))
+          print(up_peak3)
+          bed_list1[[name2]] <- up_peak3
+        }
+      }
+    }
+    bed_list[[name]] <- bed_list1
+  }
+  data <- df 
+  for(name in select){
+    check <- data %>% dplyr::filter(intersection == name) %>% 
+      dplyr::filter(group != "Others") %>% summarise(n())
+    if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
+  }
+  data$intersection <- gsub("-","-\n",data$intersection)
+  collist <- unique(data$group)
+  
+  col <-c("gray","blue","#00BFC4","lightgreen","#F8766D","red")
+  if(data_type != "List"){
+    data$log10FoldChange <- log10(2^data$log2FoldChange)
+    data$log10FoldChange <- as.numeric(data$log10FoldChange)
+    if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
+    if (length(collist) >= 3){
+      stat.test <- data %>% dplyr::group_by(intersection) %>% 
+        tukey_hsd(log10FoldChange ~ group)
+      stat.test <- stat.test %>% add_significance("p.adj")
+      stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
+    }else{
+      group1 <- dplyr::filter(data, group == collist[1])
+      group2 <- dplyr::filter(data, group == collist[2])
+      if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
+        stat.test <- data %>% dplyr::group_by(intersection) %>% 
+          t_test(log10FoldChange ~ group)
+        stat.test <- stat.test %>% add_significance()
+        stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
+      }else stat.test <- NULL
+    }
+    p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
+                               fill = "group", scales = "free", 
+                               xlab = FALSE, ylab = paste0("RNAseq log10(",cond2,"/",cond1,")"))+theme_bw(base_size = 15)+
+               xlab(NULL)+scale_fill_manual(values = col) + scale_x_discrete(labels = label_wrap_gen(8)))
+    if(statistics !="not selected") p <- p + stat_pvalue_manual(stat.test,hide.ns = T, size = 5)         
+    p <- facet(p, facet.by = "intersection",
+               panel.labs.background = list(fill = "transparent", color = "transparent"),
+               scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
+    stat.test <- stat.test[,-2]
+    stat.test <- stat.test[,1:9]
+    colnames(stat.test)[1] <- "Peak"
+    df <- list()
+    df[["plot"]] <- p
+    df[["statistical_test"]] <- stat.test
+  }else {
+    df <- list()
+    table2 <- data %>% group_by(group, intersection) %>%
+      summarise(count = n(), .groups = "drop")
+    p <- ggplot(table2,aes(x = group,y= count, fill= group)) +
+      geom_col(position=position_dodge2(preserve = "single"))+scale_fill_manual(values = col) +
+      theme_bw(base_size = 15)+facet_wrap(~intersection,scales = "free") +
+      xlab(NULL) + ylab("Gene number") + scale_x_discrete(labels = label_wrap_gen(8))
+    df[["plot"]] <- p
+  }
+  df[["genelist"]] <- genelist
+  df[["bedlist"]] <- bed_list
+  return(df)}
+
+peak_population <- function(select,RNA,mmAnno,rna_name,data_type,DEG_fdr,DEG_fc,RNAseq_mode){
+  df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
+  for(name in select){
+    mmano <- as.data.frame(mmAnno[[name]])
+    mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
+    up_name <- paste0(rna_name[2]," gene only")
+    down_name <- paste0(rna_name[1]," gene only")
+    merge <- merge(mmano,RNA, by = "gene_id")
+    if(data_type != "List"){
+      merge <- merge  %>% dplyr::mutate(Up_gene = if_else(padj < DEG_fdr & log2FoldChange > log(DEG_fc,2), 1, 0),
+                                        Down_gene = if_else(padj < DEG_fdr & log2FoldChange < -log(DEG_fc,2), 1, 0),
+                                        NS_gene = if_else(padj >= DEG_fdr | baseMean == 0 | is.na(padj) |
+                                                            (padj <= DEG_fdr & abs(log2FoldChange) <= log(DEG_fc,2)), 1, 0))
+      merge[is.na(merge)] <- 0
+      merge2 <- merge %>% group_by(locus,Group) %>% summarise(Total_associated_gene = sum(Up_gene)+sum(Down_gene)+sum(NS_gene),Group = Group,
+                                                              Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
+      table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
+                                                       if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
+                                                               if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "unaffected genes", "Either combination\nof the above"))))
+      table$type <- factor(table$type,levels = c(down_name,up_name,"unaffected genes","Either combination\nof the above"))
+    }else{
+      merge2 <- merge %>% group_by(locus, Group.y) %>% summarise(Count = n()) 
+      merge2 <- spread(merge2,Group.y,Count)
+      merge2[is.na(merge2)] <- 0
+      namelist <- unique(merge$Group.y)
+      merge2$Total_associated_gene <- rowSums(merge2[,-1],na.rm = TRUE)
+      vec <- c()
+      merge3 <- merge2[,-1]
+      merge3 <- merge3[,-length(colnames(merge3))]
+      for(i in 1:dim(merge3)[1]){
+        type <- merge3[i,]
+        type <- paste(names(type[which(type != 0)]),collapse = "&")
+        vec <- c(vec,type) 
+      }
+      merge2$type <- vec
+      table <- merge2
+    }
+    table$Group <- paste0(table$Group," peak")
+    if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
+    table$intersection <- name
+    df <- rbind(df, table)
+  }
+  table <- df
+  table$intersection <- gsub("-","\n",table$intersection)
+  
+  p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type))
+  if(RNAseq_mode=="Nearest") p2 <- p2 + geom_bar(position = "stack",width=0.3) else p2 <- p2 + geom_bar(position = "stack")
+  p2 <- p2 + theme_bw(base_size = 15)+facet_wrap(~intersection,scales = "free") +
+    ylab("Number of peaks") +
+    xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
+  if(RNAseq_mode != "Nearest") p2 <- p2 +  scale_x_continuous(breaks= scales::pretty_breaks())
+  if(data_type != "List"){
+    col <- c("#00BFC4","#F8766D","grey","black")
+    p2 <- p2 + scale_fill_manual(values = col,name=c(down_name,up_name,"unaffected genes","Either combination\nof the above"))
+  }
+  return(p2)
+}
+
+
 
 
 ##Docker only----------
@@ -1981,7 +2300,7 @@ read_known_results<-function (path, homer_dir = TRUE) {
                     by = c("motif_name", "motif_family", "experiment", "accession"))
 }   
 
-findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",section=NULL,
+findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",section=NULL,venn=NULL,
                       motif,size,back="random",bw_count=NULL,other_data=NULL,motif_length){
   ref <- gsub(".+\\(","",gsub(")", "", Species))
   switch(motif,
@@ -2026,7 +2345,7 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",section=N
         if(type=="Genome-wide"){
           if(back == "random"){
             bg <-'automatic'
-          }else{
+          }else if(back == "all_peaks"){
             data <- anno_data %>% dplyr::filter(! locus %in% rownames(data))
             data2 <- range_changer(data)
             bg <- data.frame(seqnames = data2$chr,start=data2$start,end=data2$end)
@@ -2046,10 +2365,17 @@ findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",section=N
         if(type=="Other"){
           if(back == "random"){
             bg <-'automatic'
-          }else{
+          }else if(back == "custom"){
             bg <- as.data.frame(other_data)
             write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
             bg <- paste0(tempdir(),"bed.bed")
+          }else{
+            if(!is.null(venn)) bg <- venn else bg <- df
+            if(length(names(bg)) > 1){
+              bg <- soGGi:::runConsensusRegions(GRangesList(bg), "none")
+              write.table(bg,paste0(tempdir(),"bed.bed"),row.names = F,col.names = F,quote = F, sep = "\t")
+              bg <- paste0(tempdir(),"bed.bed")
+            }
           }
         }
         print("background sequence")
@@ -2151,11 +2477,11 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL,group_order=NULL){
     idx <- order(df2[["Group"]], df2[["x"]], decreasing = FALSE)
     df2$motif_name <- factor(df2$motif_name,
                              levels=rev(unique(df2$motif_name[idx])))
-    d <- ggplot(df2, aes(x = Group,y= motif_name,color=p_value,size=log_odds_detection))+
+    df2$log10pval <- -log10(df2$p_value)
+    d <- ggplot(df2, aes(x = Group,y= motif_name,color=log10pval,size=log_odds_detection))+
       geom_point() +
-      scale_color_continuous(low="red", high="blue",
-                             guide=guide_colorbar(reverse=TRUE)) +
-      scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
+      scale_color_continuous(low="blue", high="red",name="-log10\n(p value)") +
+      scale_size(range=c(1, 6),name="log\nodds\nratio")+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
       scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top")+
       theme(plot.margin=margin(l=-0.75,unit="cm"))
     df2 <- df2 %>% distinct(motif_name, .keep_all = T)
@@ -2164,8 +2490,12 @@ homer_Motifplot <- function(df, showCategory=5,section=NULL,group_order=NULL){
     for(name in names(pfm)){
       pfm1[[name]] <- t(pfm[[name]])
     }
-    Seqlogo <- try(as.grob(ggseqlogo(pfm1,ncol = 1)+
-                         theme_void(base_size = 0))) 
+    Seqlogo <- try(as.grob(ggseqlogo(pfm1,ncol = 1)+ theme(axis.text.x = element_blank(),
+                                                           axis.text.y = element_blank(),
+                                                           axis.title.y = element_blank(),
+                                                           title = element_blank(),
+                                                           text = element_blank()
+                                                            ))) 
     p <- try(plot_grid(plot_grid(NULL, Seqlogo, ncol = 1, rel_heights = c(0.05:10)),as.grob(d)))
     if(length(p) == 1) if(p == "try-error") p <- d
     return(p)
@@ -2214,3 +2544,83 @@ robust.system <- function (cmd) {
   unlink(c(stdoutFile, stderrFile))
   return(retval)
 }
+
+homer_Motifplot_denovo <- function(df, name,showCategory=5,section=NULL,group_order=NULL){
+  df2 <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
+  print(file.exists(paste0(df[[name]],"/homerResults.html")))
+  
+  if(file.exists(paste0(df[[name]],"/homerResults.html")) == TRUE){
+    res <- read_denovo_html_results(path = df[[name]])
+    motif_list <- read_denovo_results(path = df[[name]]) %>% 
+      as.data.frame()
+    motif_list <- motif_list[1:showCategory,]
+    motif_list_for_pvalue <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
+    match_list <- data.frame(matrix(rep(NA, 15), nrow=1))[numeric(0), ]
+    order <- c()
+    for(i in 1:showCategory){
+      ii <- as.character(i)
+      order <- c(order, ii)
+      motif_list_for_pvalue <- rbind(motif_list_for_pvalue,res[ii][[ii]]$Motif_information)
+      match <- res[ii][[ii]]$Matches_to_known_motifs[1:5,]
+      match$Group <- ii
+      match_list <- rbind(match_list, match)
+    }
+  }
+  if(length(motif_list$motif_name) == 0){
+    return(NULL)
+  }else{
+    motif_list$motif_name <- factor(motif_list$motif_name,
+                                    levels=rev(motif_list$motif_name))
+    motif_list$log_p_value <- as.numeric(gsub("1e-","",motif_list_for_pvalue$p_value))
+    motif_list$Group <- "1"
+    d <- ggplot(motif_list, aes(x=Group,y= motif_name,color=log_p_value,size=log_odds_detection))+
+      geom_point() +
+      scale_color_continuous(low="blue", high="red",name="-log10\n(p value)") +
+      scale_size(range=c(1, 12),name="log\nodds\nratio")+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) +
+      theme(plot.margin=margin(l=-0.75,unit="cm"),
+            axis.text.x = element_blank(),
+            axis.text.y = element_blank(),
+            axis.title.y = element_blank(),
+            text = ggplot2::element_text(size = 15))
+    pfm <- motif_list$motif_pwm
+    pfm1 <- list()
+    for(name in names(pfm)){
+      pfm1[[name]] <- t(pfm[[name]])
+    }
+    Seqlogo <- try(as.grob(ggseqlogo(pfm1,ncol = 1)+ theme(axis.text.x = element_blank(),
+                                                           axis.text.y = element_blank(),
+                                                           axis.title.y = element_blank(),
+                                                           title = element_blank(),
+                                                           text = element_blank()
+    ))) 
+    p <- try(plot_grid(Seqlogo,plot_grid(NULL, as.grob(d),nrow = 1, rel_widths = c(0.1:10000))))
+    if(length(p) == 1) if(p == "try-error") p <- d
+    
+    
+    bar_list <- list()
+    for(ii in unique(match_list$Group)){
+      match_list2 <- match_list %>% dplyr::filter(Group==ii)
+      match_list2$xlab <- paste0(match_list2$rank,". ",match_list2$motif_name)
+      match_list2$xlab <- factor(match_list2$xlab,levels = match_list2$xlab)
+      match_list2$score <- as.numeric(match_list2$score)
+      bar_list[[ii]] <- ggbarplot(match_list2,x="xlab",y="score",
+                                  fill = "motif_name") + 
+        scale_x_discrete(limit=rev(match_list2$xlab))+
+        coord_flip()+ xlab(NULL) + ylab(NULL) + ylim(c(0,1))+
+        theme(legend.position="none")
+    }
+    if(length(unique(match_list$Group))==10) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],bar_list[["5"]],bar_list[["6"]],bar_list[["7"]],bar_list[["8"]],bar_list[["9"]],bar_list[["10"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==9) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],bar_list[["5"]],bar_list[["6"]],bar_list[["7"]],bar_list[["8"]],bar_list[["9"]],bar_list[["10"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==8) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],bar_list[["5"]],bar_list[["6"]],bar_list[["7"]],bar_list[["8"]],bar_list[["9"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==7) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],bar_list[["5"]],bar_list[["6"]],bar_list[["7"]],bar_list[["8"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==6) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],bar_list[["5"]],bar_list[["6"]],bar_list[["7"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==5) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],bar_list[["5"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==4) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==3) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==2) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],ncol = 1,align = "v"))
+    if(length(unique(match_list$Group))==1) bar <- try(plot_grid(bar_list[["1"]],ncol = 1,align = "v"))
+    c <- plot_grid(bar,p,nrow = 1)
+    return(c)
+  }
+}
+

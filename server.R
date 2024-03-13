@@ -13,6 +13,7 @@ shinyServer(function(input, output, session) {
   })
   
   
+  
   output$Spe <- renderText({
     if(input$Species == "not selected" && input$Genomic_region == "Promoter") print("Please select 'Species'")
   })
@@ -29,7 +30,7 @@ shinyServer(function(input, output, session) {
     if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, this function is not available. This function is for 'Genome-wide' mode. ")
   })
   output$Spe_great_promoter <- renderText({
-    if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, this function is not available. This function is for 'Genome-wide' mode. ")
+    if(input$Genomic_region == "Promoter") print("In the case of 'Promoter' mode, GREAT is not available. The enrichment analysis of the gene level was performed.")
   })
   output$Spe_motif <- renderText({
     if(input$Species == "not selected") print("Please select 'Species'")
@@ -268,10 +269,10 @@ shinyServer(function(input, output, session) {
       files<-NULL
       if(input$goButton > 0 ){
         files<-list()
-        files[["A_1"]] <- "data/bigwig/A_1.BigWig"
-        files[["A_2"]] <- "data/bigwig/A_2.BigWig"
-        files[["B_1"]] <- "data/bigwig/B_1.BigWig"
-        files[["B_2"]] <- "data/bigwig/B_2.BigWig"
+        files[["A_1"]] <- paste0(home_dir,"data/bigwig/A_1.BigWig")
+        files[["A_2"]] <- paste0(home_dir,"data/bigwig/A_2.BigWig")
+        files[["B_1"]] <- paste0(home_dir,"data/bigwig/B_1.BigWig")
+        files[["B_2"]] <- paste0(home_dir,"data/bigwig/B_2.BigWig")
       }
       if(!is.null(input$file1)){
         if(length(list.files("./Volume/")) > 0){
@@ -296,7 +297,7 @@ shinyServer(function(input, output, session) {
   })
   bws_count <- reactive({
     tmp <- input$file1_count$datapath
-    if(is.null(input$file1_count) && input$goButton > 0 )  tmp = "data/bws_count.txt"
+    if(is.null(input$file1_count) && input$goButton > 0 )  tmp = paste0(home_dir,"data/bws_count.txt")
     if(!is.null(tmp)) return(read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = ""))
   })
   observeEvent(input$goButton,({
@@ -311,10 +312,10 @@ shinyServer(function(input, output, session) {
       if(is.null(input$file_bam)){
         if(input$goButton > 0 ){
           df<-c()
-          df["A_1"] <- "data/bam/A_1.bam"
-          df["A_2"] <- "data/bam/A_2.bam"
-          df["B_1"] <- "data/bam/B_1.bam"
-          df["B_2"] <- "data/bam/B_2.bam"
+          df["A_1"] <- paste0(home_dir,"data/bam/A_1.bam")
+          df["A_2"] <- paste0(home_dir,"data/bam/A_2.bam")
+          df["B_1"] <- paste0(home_dir,"data/bam/B_1.bam")
+          df["B_2"] <- paste0(home_dir,"data/bam/B_2.bam")
           return(df)
         }
       }else{
@@ -342,10 +343,10 @@ shinyServer(function(input, output, session) {
       if(is.null(input$peak_call_file1)){
         if(input$goButton > 0 ){
           df <- list()
-          df[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-          df[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
-          df[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
-          df[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+          df[["A_1"]] <- paste0(home_dir,"data/peakcall/A_1_peaks.narrowPeak")
+          df[["A_2"]] <- paste0(home_dir,"data/peakcall/A_2_peaks.narrowPeak")
+          df[["B_1"]] <- paste0(home_dir,"data/peakcall/B_1_peaks.narrowPeak")
+          df[["B_2"]] <- paste0(home_dir,"data/peakcall/B_2_peaks.narrowPeak")
           name <- c("A_1","A_2","B_1","B_2")
           files2 <- lapply(df, GetGRanges, simple = TRUE)
           names(files2)<-name
@@ -760,9 +761,9 @@ shinyServer(function(input, output, session) {
   output$download_pair_DEG_result = downloadHandler(
     filename = function() {
       if (input$Genomic_region=='Promoter'){
-        paste0("DAR_result-promoter(", -input$upstream,"-",input$downstream,").txt")
+        paste0("DMR_result-promoter(", -input$upstream,"-",input$downstream,").txt")
       }else{
-        paste0("DAR_result-genomeWide",".txt")
+        paste0("DMR_result-genomeWide",".txt")
       }},
     content = function(file){
       if(input$Genomic_region == "Promoter"){
@@ -1270,7 +1271,15 @@ shinyServer(function(input, output, session) {
       return(data2)
     }
   })
-  
+  output$GREAT_select_pair <- renderUI({
+    collist <- collist_bw_pair()
+    if(!is.null(collist)){
+    selectInput("GREAT_select_pair","Order:",
+                c(paste0(unique(collist)[2],"_high"),paste0(unique(collist)[1],"_high")),
+                selected = c(paste0(unique(collist)[2],"_high"),paste0(unique(collist)[1],"_high")),
+                multiple = TRUE)
+    }
+  })
   enrichment_enricher <- reactive({
     data3 <- data_degcount2()
     collist <- collist_bw_pair()
@@ -1370,38 +1379,7 @@ shinyServer(function(input, output, session) {
         if (is.null(df[[paste0(unique(collist)[2],"_high")]]) && is.null(df[[paste0(unique(collist)[1],"_high")]]))  {
           p1 <- NULL
         } else{
-          data <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-          for(name in names(df)){
-            if(!is.null(df[[name]])) {
-              group1 <- as.data.frame(df[[name]])
-              group1$Group <- paste(name, "\n(",length(dplyr::filter(data3, group == name)$ENTREZID),")",sep = "")
-              if (length(group1$pvalue) > 5){
-                group1 <- group1[sort(group1$pvalue, decreasing = F, index=T)$ix,]
-                group1 <- group1[1:5,]
-              }
-            }else group1 <- NULL
-            data <- rbind(data, group1)
-          }
-          if(length(data$Description) != 0){
-            data["Description"] <- lapply(data["Description"], gsub, pattern="HALLMARK_", replacement = "")
-            data$GeneRatio <- DOSE::parse_ratio(data$GeneRatio)
-            if ((length(data$Description) == 0) || length(which(!is.na(unique(data$qvalue))))==0) {
-              p1 <- NULL
-            } else{
-              data$Description <- gsub("_", " ", data$Description)
-              data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "qvalue"))))))
-              data$x <- gsub(":","", data$x)
-              data <- dplyr::arrange(data, x)
-              idx <- order(data[["x"]], decreasing = FALSE)
-              data$Description <- factor(data$Description,
-                                         levels=rev(unique(data$Description[idx])))
-              p1 <- as.grob(ggplot(data, aes_string(x = "Group",y= "Description",color="qvalue",size="GeneRatio"))+
-                              geom_point() +
-                              scale_color_continuous(low="red", high="blue",
-                                                     guide=guide_colorbar(reverse=TRUE)) +
-                              scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
-                              scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
-            }}else p1 <- NULL
+          p1 <- enrich_genelist(data = data3,enrich_gene_list = df,group_order = input$GREAT_select_pair,type = "pairwise")
         }
       }else{
         data3 <- data_degcount2_anno()
@@ -1409,41 +1387,14 @@ shinyServer(function(input, output, session) {
           p1 <- NULL
         } else{
           data <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
-          for(name in names(df)){
-            if(length(as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))$id) != 0) {
-              group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
-              group1$Group <- paste(name, "\n(",length(dplyr::filter(data3, group == name)$group),")",sep = "")
-              if (length(group1$p_adjust_hyper) > 5){
-                group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-                group1 <- group1[1:5,]
-              }
-            }else group1 <- NULL
-            data <- rbind(data, group1)
-          }
-          colnames(data) <-  colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
-                                                 "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
-          if(length(data$Description) != 0){
-            data$Description <- gsub("_", " ", data$Description)
-            data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
-            data$x <- gsub(":","", data$x)
-            data <- dplyr::arrange(data, x)
-            idx <- order(data[["x"]], decreasing = FALSE)
-            data$Description <- factor(data$Description,
-                                       levels=rev(unique(data$Description[idx])))
-            p1 <- as.grob(ggplot(data, aes_string(x = "Group",y= "Description",color="p_adjust_hyper",size="fold_enrichment_hyper"))+
-                            geom_point() +
-                            scale_color_continuous(low="red", high="blue",
-                                                   guide=guide_colorbar(reverse=TRUE)) +
-                            scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
-                            scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
-          }else p1 <- NULL
+          p1 <- GREAT_dotplot(data=data,data3=data3,df=df,group_order = input$GREAT_select_pair,type="pair")
         }
       }
       p <- plot_grid(p1, nrow = 1)
       return(p)
     }else return(NULL)
   })
-  
+
   output$enrichment1 <- renderPlot({
     dotplot_for_output(data = bw_count(),
                        plot_genelist = pair_enrich1_H(), Gene_set = input$Gene_set, 
@@ -1628,10 +1579,10 @@ shinyServer(function(input, output, session) {
         return(Glist)
       }else{
         if(input$goButton > 0 ){
-          files[["data/peakcall/A_1_peaks.narrowPeak"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-          files[["data/peakcall/A_2_peaks.narrowPeak"]] <- "data/peakcall/A_2_peaks.narrowPeak"
-          files[["data/peakcall/B_1_peaks.narrowPeak"]] <- "data/peakcall/B_1_peaks.narrowPeak"
-          files[["data/peakcall/B_2_peaks.narrowPeak"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+          files[["data/peakcall/A_1_peaks.narrowPeak"]] <- paste0(home_dir,"data/peakcall/A_1_peaks.narrowPeak")
+          files[["data/peakcall/A_2_peaks.narrowPeak"]] <- paste0(home_dir,"data/peakcall/A_2_peaks.narrowPeak")
+          files[["data/peakcall/B_1_peaks.narrowPeak"]] <- paste0(home_dir,"data/peakcall/B_1_peaks.narrowPeak")
+          files[["data/peakcall/B_2_peaks.narrowPeak"]] <- paste0(home_dir,"data/peakcall/B_2_peaks.narrowPeak")
           Glist <- files2GRangelist(files)
           Glist[["Consensus_region"]] <- promoter_region()
           return(Glist)
@@ -1639,20 +1590,129 @@ shinyServer(function(input, output, session) {
       }
     }
   })
-  updistribution <- reactive({
-    return(ChIPpeakAnno::genomicElementDistribution(deg_peak_list()[["Up"]], 
+  pairdistribution <- reactive({
+    return(ChIPpeakAnno::genomicElementDistribution(deg_peak_list(), 
                                                     TxDb = txdb()))
   })
-  output$input_peak_distribution <- renderPlot({
-    if(input$Genomic_region == "Genome-wide"){
-      if(!is.null(deg_peak_list()) && input$Species != "not selected"){
-        withProgress(message = "Plot peak distribution of up peak",{
-          updistribution()$plot
-        })
-      }
+  output$annotation_summary_order_pari <- renderUI({
+    if(!is.null(deg_peak_list())){
+      selectInput("annotation_summary_order_pari", "Order:",
+                  c(names(deg_peak_list())),
+                  selected = c(names(deg_peak_list())),
+                  multiple = T)
     }
   })
+  output$annotation_summary_pair <- renderPlot({
+    withProgress(message = "Peak distribution",{
+      if(!is.null(deg_peak_list()) && input$Species != "not selected"){
+        pairdistribution()$plot + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$annotation_summary_order_pari))
+      }
+    })
+  })
+  table_peak_distribution_test_pair <- reactive({
+    return(chisquare_for_annotation(pairdistribution()))
+  })
+  table_peak_distribution_test_pair <- reactive({
+    return(chisquare_for_annotation(pairdistribution()))
+  })
+  output$pair_peak_distribution_test <- DT::renderDataTable({
+    if(!is.null(deg_peak_list()) && input$Species != "not selected"){
+      table_peak_distribution_test_pair()
+    }
+  })
+  output$annotation_select <- renderUI({
+    if(!is.null(deg_peak_list())){
+      selectInput("annotation_select", "Select intersect",
+                  c(names(deg_peak_list())),multiple = F)
+    }
+  })
+  output$input_peak_distribution <- renderPlot({
+    if(!is.null(deg_peak_list()) && input$Species != "not selected"){
+      withProgress(message = "Peak distribution",{
+          donut_replot(dplyr::filter(pairdistribution()$plot[[1]], source == input$annotation_select))
+      })
+    }
+  })
+  selected_annoData_table_pair <- reactive({
+    withProgress(message = "Preparing annotation",{
+      peak_list <- pairdistribution()$peaks
+      df <- list()
+      for(name in names(peak_list)){
+        peak <- peak_list[[name]] %>% as.data.frame()
+        df[[name]] <- peak
+      }
+      return(df)
+    })
+  })
+  output$distribution_table_pair <- DT::renderDT({
+    if(!is.null(selected_annoData_table_pair()) && !is.null(txdb()) && !is.null(pairdistribution()) &&
+       !is.null(input$annotation_select)){
+      selected_annoData_table_pair()[[input$annotation_select]] %>%
+        datatable(
+          selection = "single",
+          filter = "top")
+    }
+  })
+  output$download_summary_peak_distribution = downloadHandler(
+    filename = function(){
+      paste0("Peak_distribution_summary.zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download",{
+        setwd(tempdir())
+        fs <- c()
+        dir.create("annotation/",showWarnings = FALSE)
+        file_pdf <- paste0("annotation/summary.pdf")
+        fs <- c(fs, file_pdf)
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 4.5
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 6
+        }else pdf_width <- input$pair_pdf_width
+        pdf(file_pdf, height = pdf_height, width = pdf_width)
+        print(pairdistribution()$plot + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$annotation_summary_order_pari)))
+        dev.off()
+        table_name <- paste0("annotation/chi-square_test.txt")
+        fs <- c(fs, table_name)
+        write.table(table_peak_distribution_test_pair(), table_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
+        incProgress(1)
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  output$download_input_peak_distribution <- downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"all_annotation",".zip")
+    },
+    content = function(fname){
+      setwd(tempdir())
+      fs <- c()
+      dir.create("all_annotation/",showWarnings = FALSE)
+      if(input$pair_pdf_height == 0){
+        pdf_height <- 4.5
+      }else pdf_height <- input$pair_pdf_height
+      if(input$pair_pdf_width == 0){
+        pdf_width <- 6
+      }else pdf_width <- input$pair_pdf_width
+      for(name in names(selected_annoData_table_pair())){
+        file <- paste0("all_annotation/",name,".txt")
+        file_pdf <- paste0("all_annotation/",name,".pdf")
+        fs <- c(fs,file,file_pdf)
+        df <- apply(selected_annoData_table_pair()[[name]],2,as.character)
+        pdf(file_pdf, height =pdf_height, width = pdf_width)
+        print(donut_replot(dplyr::filter(pairdistribution()$plot[[1]], source == name)))
+        dev.off()
+        write.table(df,file,col.names = T,row.names = F,sep = "\t",quote = F)
+      }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  
   deg_peak_list <- reactive({
+    if(input$Genomic_region != "Genome-wide") validate("")
     if(!is.null(data_degcount_up()) && !is.null(data_degcount_down())){
       up <- range_changer(data_degcount_up())
       down <- range_changer(data_degcount_down())
@@ -1669,103 +1729,88 @@ shinyServer(function(input, output, session) {
                                   NearestGene = NearestGene,
                                   log2FoldChange = log2FoldChange,
                                   padj = padj))
-      Glist[["Up"]] <- up2
-      Glist[["Down"]] <- down2
+      Glist[[paste0(unique(collist_bw_pair())[2],"_high")]] <- up2
+      Glist[[paste0(unique(collist_bw_pair())[1],"_high")]] <- down2
+      
+      data <- range_changer(deg_result2())
+      all_peak <- with(data, GRanges(seqnames = chr,
+                                     ranges = IRanges(start=start,end=end),
+                                     NearestGene = NearestGene,
+                                     log2FoldChange = log2FoldChange,
+                                     padj = padj))
+      Glist[["all_peak"]] <- all_peak
       return(Glist)
     }
   })  
-  downdistribution <- reactive({
-    return(ChIPpeakAnno::genomicElementDistribution(deg_peak_list()[["Down"]], 
-                                                    TxDb = txdb()))
+
+  
+  
+  
+  mmAnno__distance_pair <- reactive({
+    distribution <- selected_annoData_table_pair()[[input$annotation_select]]
+    distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
+                                              geneLevel = geneLevel))
+    mmAnno_list <- mmAnno(peak=deg_peak_list()[[input$annotation_select]],
+                          genomic_region=input$Genomic_region,
+                          txdb=txdb(),
+                          peak_distance=input$peak_TSSdistance_pair,
+                          mode=input$TSSdistance_mode_pair,
+                          group_name=input$annotation_select,
+                          distribution=distribution,
+                          DAR=NULL)
+    return(mmAnno_list)
+  })
+  TSSdistance_pair <- reactive({
+    p <- plot_annoDistance(mmAnno__distance_pair(),title=input$annotation_select)
+    return(p)
+  })
+  output$pair_TSSdistance <- renderPlot({
+    if(!is.null(mmAnno__distance_pair())){
+      TSSdistance_pair()
+    }
   })
   
-  output$deg_peak_distribution <- renderPlot({
-    withProgress(message = "Plot peak distribution of down peak",{
-      if(input$Genomic_region == "Genome-wide"){
-        if(!is.null(deg_peak_list()) && input$Species != "not selected"){
-          downdistribution()$plot
+  output$download_pair_TSSdistance = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"_DistanceToTSS",".zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download, please wait",{
+        setwd(tempdir())
+        fs <- c()
+        peak_list <- deg_peak_list()
+        dir_name <- paste0("DistanceToTSS_mode-",input$TSSdistance_mode_pair,"_distance-",input$peak_TSSdistance_pair,"/")
+        dir.create(dir_name,showWarnings = FALSE)
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 3
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 6
+        }else pdf_width <- input$pair_pdf_width
+        for(name in names(peak_list)){
+          plot_name <- paste0(dir_name,name,".pdf")
+          distribution <- selected_annoData_table_pair()[[name]]
+          distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
+                                                    geneLevel = geneLevel))
+          mmAnno <- mmAnno(peak=peak_list[[name]],
+                                genomic_region=input$Genomic_region,
+                                txdb=txdb(),
+                                peak_distance=input$peak_TSSdistance_pair,
+                                mode=input$TSSdistance_mode_pair,
+                                group_name=name,
+                                distribution=distribution,
+                                DAR=NULL)
+          p <- plot_annoDistance(mmAnno,title=name)
+          fs <- c(fs, plot_name)
+          pdf(plot_name, height = pdf_height, width = pdf_width)
+          print(p)
+          dev.off()
         }
-      }
-    })
-  })
-  output$up_distribution_table <- renderDataTable({
-    if(input$Genomic_region == "Genome-wide"){
-      if(!is.null(deg_peak_list()) && input$Species != "not selected"){
-        df <- as.data.frame(updistribution()$peaks)
-        df$Group <- paste0(unique(collist_bw_pair())[2],"_high")
-        df
-      }
-    }
-  })
-  output$down_distribution_table <- renderDataTable({
-    if(input$Genomic_region == "Genome-wide"){
-      if(!is.null(deg_peak_list()) && input$Species != "not selected"){
-        df <- as.data.frame(downdistribution()$peaks)
-        df$Group <- paste0(unique(collist_bw_pair())[1],"_high")
-        df
-      }
-    }
-  })
-  output$download_input_peak_distribution_table = downloadHandler(
-    filename = function() {
-      paste0(unique(collist_bw_pair())[2],"_high_peak_distribution",".txt")
-    },
-    content = function(file) {
-      df <- as.data.frame(updistribution()$peaks)
-      df$Group <- paste0(unique(collist_bw_pair())[2],"_high")
-      write.table(df, file, row.names = F, sep = "\t", quote = F)
-    }
-  )
-  output$download_down_peak_distribution_table = downloadHandler(
-    filename = function() {
-      paste0(unique(collist_bw_pair())[1],"_high_peak_distribution",".txt")
-    },
-    content = function(file) {
-      df <- as.data.frame(downdistribution()$peaks)
-      df$Group <- paste0(unique(collist_bw_pair())[1],"_high")
-      write.table(df, file, row.names = F, sep = "\t", quote = F)
-    }
-  )
-  output$download_input_peak_distribution = downloadHandler(
-    filename = function() {
-      paste0(unique(collist_bw_pair())[2],"_high_peak_distribution",".pdf")
-    },
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        if(input$pair_pdf_height == 0){
-          pdf_height <- 6
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
-          pdf_width <- 10
-        }else pdf_width <- input$pair_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(updistribution())
-        dev.off()
-        incProgress(1)
+        zip(zipfile=fname, files=fs)
       })
-    }
-  )
-  
-  output$download_deg_peak_distribution = downloadHandler(
-    filename = function() {
-      paste0(unique(collist_bw_pair())[1],"_high_peak_distribution",".pdf")
     },
-    content = function(file) {
-      withProgress(message = "Preparing download",{
-        if(input$pair_pdf_height == 0){
-          pdf_height <- 6
-        }else pdf_height <- input$pair_pdf_height
-        if(input$pair_pdf_width == 0){
-          pdf_width <- 10
-        }else pdf_width <- input$pair_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(downdistribution())
-        dev.off()
-        incProgress(1)
-      })
-    }
+    contentType = "application/zip"
   )
-  
   ###Peak pattern comparison up--------
   output$peak_pattern_up_additional <- renderUI({
     if(!is.null(bws())){
@@ -2031,7 +2076,7 @@ shinyServer(function(input, output, session) {
     withProgress(message = "Importing RNA-seq data, please wait",{
       tmp <- input$pair_DEG_result$datapath 
       if(is.null(input$pair_DEG_result) && input$goButton > 0 )  {
-        if(input$RNAseq_data_type == "Result") tmp = "data/RNAseq.txt" else tmp = "data/RNAseq_count.txt"
+        if(input$RNAseq_data_type == "Result") tmp = paste0(home_dir,"data/RNAseq.txt") else tmp = paste0(home_dir,"data/RNAseq_count.txt")
       }
       if(is.null(tmp)) {
         return(NULL)
@@ -2197,7 +2242,7 @@ shinyServer(function(input, output, session) {
                                                                           peak_distance=input$peak_distance,
                                                                           mode=input$RNAseq_mode,
                                                                           group_name=paste0(unique(collist_bw_pair())[2],"_high"),
-                                                                          distribution=updistribution()$peaks,
+                                                                          distribution= pairdistribution()$peaks[[paste0(unique(collist_bw_pair())[2],"_high")]],
                                                                           DAR=DAR_for_withRNAseq())
     mmAnno_list[[paste0(unique(collist_bw_pair())[1],"_high")]] <- mmAnno(peak=peak_down_grange(),
                                                                           genomic_region=input$Genomic_region,
@@ -2205,7 +2250,7 @@ shinyServer(function(input, output, session) {
                                                                           peak_distance=input$peak_distance,
                                                                           mode=input$RNAseq_mode,
                                                                           group_name=paste0(unique(collist_bw_pair())[1],"_high"),
-                                                                          distribution=downdistribution()$peaks,
+                                                                          distribution=pairdistribution()$peaks[[paste0(unique(collist_bw_pair())[1],"_high")]],
                                                                           DAR=DAR_for_withRNAseq())
     return(mmAnno_list)
   })
@@ -2445,120 +2490,22 @@ shinyServer(function(input, output, session) {
             bed_list[[name]] <- up_peak3
           }
         }
-        
+        df <- list()
+        df[["plot"]] <- p
+        df[["statistical_test"]] <- stat.test
+        df[["genelist"]] <- genelist
+        df[["bedlist"]] <- bed_list
       }else{
-        
-        df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-        genelist <- list()
-        bed_list <- list()
-        for(name in names(RP())){
-          data <- merge(RNA,RP()[[name]], by="gene_id",all=T)
-          data <- dplyr::filter(data, baseMean != 0)
-          data$group <- "Others"
-          data$group[data$sumRP > 2] <- "2 < RP"
-          data$group[data$sumRP <= 2 & data$sumRP > 1] <- "1 < RP < 2"
-          data$group[data$sumRP <= 1 & data$sumRP > 0.1] <- "0.1 < RP < 1"
-          data$group[data$sumRP <= 0.1 & data$sumRP > 0.01] <- "0.01 < RP < 0.1"
-          data$group[data$sumRP <= 0.01 & data$sumRP > 0] <- "0 < RP < 0.01"
-          
-          level <- NULL
-          col <- NULL
-          if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
-            level <- c(level,"Others")
-            col <- c(col,"gray")
-          }
-          if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
-            level <- c(level,"0 < RP < 0.01")
-            col <- c(col,"blue")
-          }
-          if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
-            level <- c(level,"0.01 < RP < 0.1")
-            col <- c(col,"#00BFC4")
-          }
-          if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
-            level <- c(level,"0.1 < RP < 1")
-            col <- c(col,"lightgreen")
-          }
-          if(dim(dplyr::filter(data, group == "1 < RP < 2"))[1] != 0) {
-            level <- c(level,"1 < RP < 2")
-            col <- c(col,"#F8766D")
-          }
-          if(dim(dplyr::filter(data, group == "2 < RP"))[1] != 0) {
-            level <- c(level,"2 < RP")
-            col <- c(col,"red")
-          }
-          data$group <- factor(data$group,levels=level,ordered=TRUE)
-          data$intersection <- as.factor(name)
-          df <- rbind(df,data)
-          genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,RNAlog2FC = -1*data$log2FoldChange,
-                                         sumRP = data$sumRP, gene_id = data$gene_id)
-          bed_list1 <- list()
-          for(name2 in unique(data$group)){
-            if(name2 != "Others"){
-              table <- genelist[[name]] %>% dplyr::filter(group == name2)
-              gene <- table$gene_id
-              up_peak3 <- NULL
-              if(length(gene) != 0){
-                up_peak <- subset(mmAnno_pair()[[name]], gene_id %in% gene)
-                up_peak2 <- as.data.frame(up_peak)
-                up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-                up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-                up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-                mcols(up_peak3) <- DataFrame(Group = paste0(name,":",name2))
-                bed_list1[[name2]] <- up_peak3
-              }
-            }
-          }
-          bed_list[[name]] <- bed_list1
-        }
-        data <- df 
-        data$log10FoldChange <- log10(2^data$log2FoldChange)
-        data$log10FoldChange <- as.numeric(data$log10FoldChange)
-        for(name in names(RP())){
-          check <- data %>% dplyr::filter(intersection == name) %>% 
-            dplyr::filter(group != "Others") %>% summarise(n())
-          print(check)
-          if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
-        }
-        if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
-        
-        data$intersection <- gsub("-","-\n",data$intersection)
-        collist <- unique(data$group)
-        if (length(collist) >= 3){
-          stat.test <- data %>% dplyr::group_by(intersection) %>% 
-            tukey_hsd(log10FoldChange ~ group)
-          stat.test <- stat.test %>% add_significance("p.adj")
-          stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-        }else{
-          group1 <- dplyr::filter(data, group == collist[1])
-          group2 <- dplyr::filter(data, group == collist[2])
-          if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
-            stat.test <- data %>% dplyr::group_by(intersection) %>% 
-              t_test(log10FoldChange ~ group)
-            stat.test <- stat.test %>% add_significance()
-            stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-          }else stat.test <- NULL
-        }
-        p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
-                                   fill = "group", scales = "free", 
-                                   xlab = FALSE, ylab = paste0("RNAseq log10(",cond2,"/",cond1,")"))+theme_bw(base_size = 15)+ 
-                   xlab(NULL)+scale_fill_manual(values = col) + scale_x_discrete(labels = label_wrap_gen(8)))
-        if(input$Statistics !="not selected") p <- p + stat_pvalue_manual(stat.test,hide.ns = T, size = 5)         
-        p <- facet(p, facet.by = "intersection",
-                   panel.labs.background = list(fill = "transparent", color = "transparent"),
-                   scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
-        stat.test <- stat.test[,-2]
-        stat.test <- stat.test[,1:9]
-        colnames(stat.test)[1] <- "Peak"
+        df <- RNAseq_box(RNA=RNAseqDEG_anno(),
+                         rna_name=RNAseq_name(),
+                         select=names(RP()),
+                         data_type="not list",
+                         RP=RP(),
+                         mmAnno=mmAnno_pair(),
+                         statistics=input$Statistics)
       }
-      df <- list()
-      df[["plot"]] <- p
-      df[["statistical_test"]] <- stat.test
-      df[["genelist"]] <- genelist
-      df[["bedlist"]] <- bed_list
-      print(bed_list)
       incProgress(1)
-    })
+  })
     return(df)
   })
   output$RNAseq_boxplot_error <- renderText({
@@ -2671,49 +2618,28 @@ shinyServer(function(input, output, session) {
                                                                 Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
         table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
                                                          if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
-                                                                 if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "NS gene only", "Multiple type of genes"))))
-        table$type <- factor(table$type,levels = c(down_name,up_name,"NS gene only","Multiple type of genes"))
+                                                                 if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "unaffected genes", "Either combination\nof the above"))))
+        table$type <- factor(table$type,levels = c(down_name,up_name,"unaffected genes","Either combination\nof the above"))
         table$Group <- paste0(table$Group," peak")
         if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
         col <- c("#00BFC4","#F8766D","grey","black")
-        p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
-          theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free") +
+        
+        p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type))
+        if(input$RNAseq_mode=="Nearest") p2 <- p2 + geom_bar(position = "stack",width=0.3) else p2 <- p2 + geom_bar(position = "stack")
+        p2 <- p2 + theme_bw(base_size = 15)+facet_wrap(~Group,scales = "free") +
           scale_fill_manual(values = col) + 
           ylab("Number of peaks")+
           xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
+        if(input$RNAseq_mode != "Nearest") p2 <- p2 +  scale_x_continuous(breaks= scales::pretty_breaks())
       }else{
-        df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-        for(name in names(mmAnno_pair())){
-          mmano <- as.data.frame(mmAnno_pair()[[name]])
-          mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
-          merge <- merge(mmano,RNA, by = "gene_id")
-          up_name <- paste0(RNAseq_name()[2]," gene only")
-          down_name <- paste0(RNAseq_name()[1]," gene only")
-          merge <- merge  %>% dplyr::mutate(Up_gene = if_else(padj < input$DEG_fdr & log2FoldChange > log(input$DEG_fc,2), 1, 0),
-                                            Down_gene = if_else(padj < input$DEG_fdr & log2FoldChange < -log(input$DEG_fc,2), 1, 0),
-                                            NS_gene = if_else(padj >= input$DEG_fdr | baseMean == 0 | is.na(padj) |
-                                                                (padj <= input$DEG_fdr & abs(log2FoldChange) <= log(input$DEG_fc,2)), 1, 0))
-          merge[is.na(merge)] <- 0
-          merge2 <- merge %>% group_by(locus,Group) %>% summarise(Total_associated_gene = sum(Up_gene)+sum(Down_gene)+sum(NS_gene),Group = Group,
-                                                                  Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
-          table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
-                                                           if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
-                                                                   if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "NS gene only", "Multiple type of genes"))))
-          table$type <- factor(table$type,levels = c(down_name,up_name,"NS gene only","Multiple type of genes"))
-          table$Group <- paste0(table$Group," peak")
-          if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
-          table$RNA_group <- name
-          df <- rbind(df, table)
-        }
-        table <- df
-        table$RNA_group <- gsub("-","\n",table$RNA_group)
-        
-        p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
-          theme_bw(base_size = 15)+facet_wrap(~RNA_group,scales = "free") + ylab("Number of peaks") +
-          xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
-        col <- c("#00BFC4","#F8766D","grey","black")
-        p2 <- p2 +
-          scale_fill_manual(values = col) 
+        p2 <- peak_population(select=names(mmAnno_pair()),
+                              RNA=RNAseqDEG_anno(),
+                              mmAnno=mmAnno_pair(),
+                              rna_name=RNAseq_name(),
+                              data_type="not list",
+                              DEG_fdr=input$DEG_fdr,
+                              DEG_fc=input$DEG_fc,
+                              RNAseq_mode=input$RNAseq_mode)
       }
       return(p2)
     }
@@ -2830,13 +2756,13 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  
   output$download_pairintbox <- downloadHandler(
     filename = function() {
       paste0(format(Sys.time(), "%Y%m%d_"),"boxplot",".zip")
     },
     content = function(fname){
       withProgress(message = "Preparing download",{
+        setwd(tempdir())
         if(input$pair_pdf_height == 0){
           pdf_height <- 5
         }else pdf_height <- input$pair_pdf_height
@@ -2921,6 +2847,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname){
       withProgress(message = "Preparing download",{
+        setwd(tempdir())
         if(input$pair_pdf_height == 0){
           pdf_height <- 5
         }else pdf_height <- input$pair_pdf_height
@@ -2942,8 +2869,10 @@ shinyServer(function(input, output, session) {
           KSplot_up <- paste0("KSplot/",RNAseq_name()[2],".pdf")
           KSplot_down <- paste0("KSplot/",RNAseq_name()[1],".pdf")
           fs <- c(fs,KSplot_up,KSplot_down)
-          down <- regulatory_potential()[[RNAseq_name()[1]]] + ggtitle(RNAseq_name()[1])
-          up <- regulatory_potential()[[RNAseq_name()[2]]] + ggtitle(RNAseq_name()[2])
+          down <- try(regulatory_potential()[[paste0(unique(collist_bw_pair())[1],"_high")]] + ggtitle(RNAseq_name()[1]))
+          up <- try(regulatory_potential()[[paste0(unique(collist_bw_pair())[2],"_high")]] + ggtitle(RNAseq_name()[2]))
+          if(length(down) == 1) if(down == "try-error") down <- NULL
+          if(length(up) == 1) if(up == "try-error") up <- NULL
           pdf(KSplot_up, height = pdf_height, width = pdf_width)
           print(up)
           dev.off()
@@ -2963,6 +2892,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname){
       withProgress(message = "Preparing download",{
+        setwd(tempdir())
         fs <- c()
         dir.create("RP_table/",showWarnings = FALSE)
         dir.create("RP_table/selected_table(epigenome--RNA)/",showWarnings = FALSE)
@@ -3797,7 +3727,7 @@ shinyServer(function(input, output, session) {
       tmp <- input$pair_rnaseq_count
       upload = list()
       if(is.null(input$pair_rnaseq_count) && input$goButton > 0 )  {
-        tmp = "data/RNAseq_count.txt"
+        tmp = paste0(home_dir,"data/RNAseq_count.txt")
         upload[["rna"]]<- read_df(tmp)
         return(upload)
       }else if(is.null(tmp)) {
@@ -3812,7 +3742,7 @@ shinyServer(function(input, output, session) {
       tmp <- input$pair_rnaseq_DEGs
       upload = list()
       if(is.null(input$pair_rnaseq_DEGs) && input$goButton > 0 )  {
-        tmp = "data/RNAseq.txt"
+        tmp = paste0(home_dir,"data/RNAseq.txt")
         upload[["rna"]]<- read_df(tmp)
         return(upload)
       }else if(is.null(tmp)) {
@@ -3843,12 +3773,6 @@ shinyServer(function(input, output, session) {
     files <- rnaseq_count()
     return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species,gene_type=gene_type_rnaseq_counts(),pre_zscoring = input$pre_zscoring))
   })
-  observeEvent(input$pair_rnaseq_DEGs, ({
-    updateCollapse(session,id =  "z-score_count", open="Uploaded_DEGs")
-  }))
-  observeEvent(input$pair_rnaseq_count, ({
-    updateCollapse(session,id =  "z-score_count", open="z-score_multiple_count_panel")
-  }))
   output$rnaseq_count_output <- renderDataTable({
     if(input$Species != "not selected" && !is.null(rnaseq_count())){
       rnaseq_count2()
@@ -4082,15 +4006,17 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname){
       withProgress(message = "Preparing download, please wait for a few minutes.",{
+        setwd(tempdir())
         fs <- c()
-        dir.create("DAR_result",showWarnings = FALSE)
+        dir.create("DMR_result",showWarnings = FALSE)
         dir.create("Input",showWarnings = FALSE)
         dir.create("Clustering/",showWarnings = FALSE)
-        DEG <- "DAR_result/DAR_result.txt"
-        up <- paste0("DAR_result/",unique(collist_bw_pair())[2],"_high.bed")
-        down <- paste0("DAR_result/",unique(collist_bw_pair())[1],"_high.bed")
+        DEG <- "DMR_result/DMR_result.txt"
+        up <- paste0("DMR_result/",unique(collist_bw_pair())[2],"_high.bed")
+        down <- paste0("DMR_result/",unique(collist_bw_pair())[1],"_high.bed")
         count <- "Input/count.txt"
-        bed <- "Input/filtered_merged_peak_call.bed"
+        bed <- "Input/all_peaks (no filter).bed"
+        if(input$pair_filter_cluster == "Reproducible_peaks") bed <- "Input/all_peaks (reproducible).bed"
         PCA <- "Clustering/clustering.pdf"
         PCA_table <- "Clustering/pca.txt"
         
@@ -4107,7 +4033,7 @@ shinyServer(function(input, output, session) {
           fs <- c(fs, input_list)
           write.table(input_list_data_pair(), input_list, row.names = F, sep = "\t", quote = F)
         }
-        withProgress(message = "DAR_result",{
+        withProgress(message = "DMR_result",{
           if(input$Genomic_region == "Promoter" || input$Species == "not selected"){
             write.table(deg_result(), DEG, row.names = T, sep = "\t", quote = F)
           }else{
@@ -4160,7 +4086,7 @@ shinyServer(function(input, output, session) {
         incProgress(1/process_num)
         if(!is.null(input$xrange)){
           withProgress(message = "volcano plot",{
-            volcano <- "DAR_result/volcano_plot.pdf"
+            volcano <- "DMR_result/volcano_plot.pdf"
             fs <- c(fs, volcano)
             pdf(volcano, height = 4, width = 4)
             print(pair_volcano())
@@ -4170,30 +4096,57 @@ shinyServer(function(input, output, session) {
         incProgress(1/process_num)
         if(input$Species != "not selected"){
           if(input$Genomic_region == "Genome-wide"){
-            dir.create("peak_distribution",showWarnings = FALSE)
-            up_distribution <- paste0("peak_distribution/",unique(collist_bw_pair())[2],"_high_annotation.pdf")
-            up_distribution_table <- paste0("peak_distribution/",unique(collist_bw_pair())[2],"_high_annotation.txt")
-            down_distribution <- paste0("peak_distribution/",unique(collist_bw_pair())[1],"_high_annotation.pdf")
-            down_distribution_table <- paste0("peak_distribution/",unique(collist_bw_pair())[1],"_high_annotation.txt")
-            fs <- c(fs, up_distribution,up_distribution_table,down_distribution,down_distribution_table)
-            withProgress(message = "Peak distribution",{
+            dir.create("annotation",showWarnings = FALSE)
+            withProgress(message = "Annotation",{
               
-              df <- as.data.frame(updistribution()$peaks)
-              df$Group <- paste0(unique(collist_bw_pair())[2],"_high")
-              write.table(df, up_distribution_table, row.names = F,col.names=T, sep = "\t", quote = F)
-              df <- as.data.frame(downdistribution()$peaks)
-              df$Group <- paste0(unique(collist_bw_pair())[1],"_high")
-              write.table(df, down_distribution_table, row.names = F,col.names=T, sep = "\t", quote = F)
+              file_pdf <- paste0("annotation/summary.pdf")
+              fs <- c(fs, file_pdf)
+              pdf(file_pdf, height = 4.5, width = 6)
+              print(pairdistribution()$plot + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$annotation_summary_order_pari)))
+              dev.off()
+              table_name <- paste0("annotation/chi-square_test.txt")
+              fs <- c(fs, table_name)
+              write.table(table_peak_distribution_test_pair(), table_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
+              annotation_group <- selected_annoData_table_pair()
+              for(name in names(annotation_group)){
+                file <- paste0("annotation/",name,".txt")
+                file_pdf <- paste0("annotation/",name,".pdf")
+                fs <- c(fs,file,file_pdf)
+                df <- apply(annotation_group[[name]],2,as.character)
+                pdf(file_pdf, height = 4.5, width = 6)
+                print(donut_replot(dplyr::filter(pairdistribution()$plot[[1]], source == name)))
+                dev.off()
+                write.table(df,file,col.names = T,row.names = F,sep = "\t",quote = F)
+              }
               
-              pdf(up_distribution, height = 6, width = 10)
-              print(updistribution()$plot)
-              dev.off()
-              incProgress(1/2)
-              pdf(down_distribution, height = 6, width = 10)
-              print(downdistribution()$plot)
-              dev.off()
+              
+              dir_name_annotation <- paste0("annotation/DistanceToTSS_mode-",input$TSSdistance_mode_pair,"_distance-",input$peak_TSSdistance_pair,"/")
+              dir.create(dir_name_annotation,showWarnings = FALSE)
+              for(name in names(deg_peak_list())){
+                plot_name <- paste0(dir_name_annotation,name,".pdf")
+                distribution <- annotation_group[[name]]
+                distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
+                                                          geneLevel = geneLevel))
+                mmAnno <- mmAnno(peak=deg_peak_list()[[name]],
+                                 genomic_region=input$Genomic_region,
+                                 txdb=txdb(),
+                                 peak_distance=input$peak_TSSdistance_pair,
+                                 mode=input$TSSdistance_mode_pair,
+                                 group_name=name,
+                                 distribution=distribution,
+                                 DAR=NULL)
+                p <- plot_annoDistance(mmAnno,title=name)
+                fs <- c(fs, plot_name)
+                pdf(plot_name, height = 3, width = 6)
+                print(p)
+                dev.off()
+              }
+              
               incProgress(1/2)
             })
+          }else {
+            dir_name_annotation<- NULL
+            annotation_group <- NULL
           }
           incProgress(1/process_num)
           if(!is.null(input$Gene_set) && input$Genomic_region == "Genome-wide"){
@@ -4236,11 +4189,20 @@ shinyServer(function(input, output, session) {
                 }
               }
               motif <- paste0(base_dir,"/homer_dotplot",".pdf")
-              p1 <- homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory)
+              p1 <- homer_Motifplot(df = path_list,showCategory = input$homer_showCategory)
               fs <- c(fs, motif)
               pdf(motif, height = 6, width = 7)
               print(p1)
               dev.off()
+              for(name in names(path_list)){
+                plot_name <- paste0("denovo/",name,".pdf")
+                fs <- c(fs,plot_name)
+                pdf(plot_name, height = pdf_height, width = pdf_width)
+                print(homer_Motifplot_denovo(df = path_list,name=name,
+                                             showCategory = input$homer_showCategory,
+                                             group_order=input$homer_sample_order))
+                dev.off()
+              }
             })
           }else {
             base_dir <- NULL
@@ -4267,11 +4229,13 @@ shinyServer(function(input, output, session) {
                 print(regulatory_potential())
                 dev.off()
               }else{
-                KSplot_up <- paste0(dirname_withRNA,"KSplot/",RNAseq_name()[2],".pdf")
-                KSplot_down <- paste0(dirname_withRNA,"KSplot/",RNAseq_name()[1],".pdf")
+                KSplot_up <- paste0(dirname_withRNA,"KSplot/",unique(collist_bw_pair())[2],"_high",".pdf")
+                KSplot_down <- paste0(dirname_withRNA,"KSplot/",unique(collist_bw_pair())[1],"_high",".pdf")
                 fs <- c(fs,KSplot_up,KSplot_down)
-                down <- regulatory_potential()[[RNAseq_name()[1]]] + ggtitle(RNAseq_name()[1])
-                up <- regulatory_potential()[[RNAseq_name()[2]]] + ggtitle(RNAseq_name()[2])
+                down <- try(regulatory_potential()[[paste0(unique(collist_bw_pair())[1],"_high")]] + ggtitle(RNAseq_name()[1]))
+                up <- try(regulatory_potential()[[paste0(unique(collist_bw_pair())[2],"_high")]] + ggtitle(RNAseq_name()[2]))
+                if(length(down) == 1) if(down == "try-error") down <- NULL
+                if(length(up) == 1) if(up == "try-error") up <- NULL
                 pdf(KSplot_up, height = 5, width = 7)
                 print(up)
                 dev.off()
@@ -4416,11 +4380,19 @@ shinyServer(function(input, output, session) {
                     }
                   }
                   with_motif <- paste0(dirname_withRNA,"/homer_dotplot",".pdf")
-                  p1 <- homer_Motifplot(df = with_enrich_motif(),showCategory = input$with_homer_showCategory)
+                  p1 <- homer_Motifplot(df = with_path_list,showCategory = input$with_homer_showCategory)
                   fs <- c(fs, with_motif)
                   pdf(with_motif, height = 6, width = 7)
                   print(p1)
                   dev.off()
+                  for(name in names(with_path_list)){
+                    plot_name <- paste0("denovo/",name,".pdf")
+                    fs <- c(fs,plot_name)
+                    pdf(plot_name, height = pdf_height, width = pdf_width)
+                    print(homer_Motifplot_denovo(df = with_path_list,name=name,
+                                                 showCategory = input$with_homer_showCategory))
+                    dev.off()
+                  }
                 })
               }else {
                 with_base_dir <- NULL
@@ -4453,6 +4425,9 @@ shinyServer(function(input, output, session) {
                           params = list(input = input,
                                         collist_bw_pair = collist_bw_pair(),
                                         deg_norm_count = deg_norm_count(),
+                                        dir_name_annotation = dir_name_annotation,
+                                        annotation_test = table_peak_distribution_test_pair(),
+                                        annotation_group = annotation_group,
                                         input_list_data_pair = input_list_data_pair(),
                                         enrichment_1_1 = enrichment_1_1(),
                                         region_gene_associate = region_gene_associate(),
@@ -4484,7 +4459,7 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session,inputId = "Species_venn","Species",species_list, selected = "Homo sapiens (hg19)")
   }))
   observeEvent(pre_bws_venn(),({
-    updateSelectizeInput(session,inputId = "sample_order_venn","Sample order:",
+    updateSelectizeInput(session,inputId = "sample_order_venn","Sample order (bigwig):",
                          choices =  names(pre_bws_venn()),
                          selected = names(pre_bws_venn()))
   }))
@@ -4601,8 +4576,8 @@ shinyServer(function(input, output, session) {
     if(is.null(input$peak_call_file_venn1)){
       if(input$goButton_venn > 0 ){
         files <- list()
-        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
+        files[["A_1"]] <- paste0(home_dir,"data/peakcall/A_1_peaks.narrowPeak")
+        files[["A_2"]] <- paste0(home_dir,"data/peakcall/A_2_peaks.narrowPeak")
         files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
@@ -4632,10 +4607,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$file_venn1)){
       if(input$goButton_venn > 0 ){
         df<-list()
-        df[["A_1"]] <- "data/bigwig/A_1.BigWig"
-        df[["A_2"]] <- "data/bigwig/A_2.BigWig"
-        df[["B_1"]] <- "data/bigwig/B_1.BigWig"
-        df[["B_2"]] <- "data/bigwig/B_2.BigWig"
+        df[["A_1"]] <- paste0(home_dir,"data/bigwig/A_1.BigWig")
+        df[["A_2"]] <- paste0(home_dir,"data/bigwig/A_2.BigWig")
+        df[["B_1"]] <- paste0(home_dir,"data/bigwig/B_1.BigWig")
+        df[["B_2"]] <- paste0(home_dir,"data/bigwig/B_2.BigWig")
         return(df)
       }
       return(NULL)
@@ -4757,6 +4732,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname){
       withProgress(message = "Preparing download, please wait for >5 minutes.",{
+        setwd(tempdir())
         fs <- c()
         print(fs)
         dir.create("intersection_bed",showWarnings = FALSE)
@@ -4768,6 +4744,8 @@ shinyServer(function(input, output, session) {
         print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
         dev.off()
         print("venn plot")
+        print(input$sample_order_venn)
+        print(input_list_data_venn()[["bed"]])
         write.table(input_list_data_venn()[["bed"]], input_list, row.names = F, sep = "\t", quote = F)
         print("venn overlap")
         for(name in names(venn_overlap()$peaklist)){
@@ -4784,8 +4762,11 @@ shinyServer(function(input, output, session) {
           distribution <- paste0("annotation","/distribution.pdf")
           fs <- c(fs, distribution)
           pdf(distribution, height = 4.5, width = 6)
-          print(vendistribution())
+          print(vendistribution()$plot + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$intersect_select_summary)))
           dev.off()
+          table_name <- paste0("annotation/chi-square_test.txt")
+          fs <- c(fs, table_name)
+          write.table(table_peak_distribution_test_venn(), table_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
           for(name in names(vendistribution()$peaks)){
             annotation <- paste0("annotation/",name,".txt")
             annotation_pdf <- paste0("annotation/",name,".pdf")
@@ -4797,14 +4778,17 @@ shinyServer(function(input, output, session) {
                         annotation, row.names = F, col.names = T,sep = "\t", quote = F)
           }
         }
+        print("annotation_finish")
+        if(!is.null(input$sample_order_venn)){
         line_plot_all_bed <- paste0("lineplot_bed.pdf")
         fs <- c(fs, line_plot_all_bed)
         rowlist <- length(names(venn_overlap()$peaklist))
         pdf(line_plot_all_bed, height = pdf_h(rowlist)+3, width = pdf_w(rowlist)+3)
         print(venn_batch_lineplot()[["bed"]])
         dev.off()
+        }
         print("line plot")
-        if(!is.null(bws_venn())){
+        if(!is.null(input$sample_order_venn)){
           line_plot_all_bw <- paste0("lineplot_bigwig.pdf")
           fs <- c(fs, line_plot_all_bw)
           rowlist <- length(names(bws_venn()))
@@ -4847,6 +4831,14 @@ shinyServer(function(input, output, session) {
           pdf(homer_plot, height = 6, width = 8)
           print(venn_motif_plot())
           dev.off()
+          for(name in names(path_list)){
+            plot_name <- paste0("denovo/",name,".pdf")
+            fs <- c(fs,plot_name)
+            pdf(plot_name, height = pdf_height, width = pdf_width)
+            print(homer_Motifplot_denovo(df = path_list,name=name,
+                                         showCategory = input$homer_showCategory_venn))
+            dev.off()
+          }
         }
         print("homer plot")
         if(!is.null(input$venn_whichGroup2) && input$Species_venn != "not selected"){
@@ -4964,7 +4956,7 @@ shinyServer(function(input, output, session) {
             write.table(int_enrich_table_venn(), intenrichtable, row.names = F, sep = "\t", quote = F)
           }
         }
-        if(input$integrated_heatmapButton_venn > 0 && !is.null(bws_venn()) && 
+        if(input$integrated_heatmapButton_venn > 0 && !is.null(input$sample_order_venn) && 
            !is.null(integrated_heatlist_venn()) && !is.null(input$venn_heatmap_group)){
           dir.create("combined_heatmap",showWarnings = FALSE)
           intheatmap <- paste0("combined_heatmap/","combined_heatmap.pdf")
@@ -5003,7 +4995,7 @@ shinyServer(function(input, output, session) {
     peak_files = as.data.frame(names(Venn_peak_call_files()))
     list <- list()
     list[["bed"]] <- data.frame(input_peak_call_files = peak_files[,1])
-    if(!is.null(bws_venn())){
+    if(!is.null(input$sample_order_venn)){
       list[["bw"]] <- data.frame(input_bigwig_files = as.data.frame(names(bws_venn()))[,1])
     }
     return(list)
@@ -5031,6 +5023,7 @@ shinyServer(function(input, output, session) {
       paste0(format(Sys.time(), "%Y%m%d_"),"all_bed",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       dir.create("all_bed/",showWarnings = FALSE)
       for(name in names(venn_overlap()$peaklist)){
@@ -5043,11 +5036,12 @@ shinyServer(function(input, output, session) {
     },
     contentType = "application/zip"
   )
-  
-  output$intersect_select <- renderUI({
+  output$intersect_select_summary <- renderUI({
     if(!is.null(Venn_peak_call_files())){
-      selectInput("intersect_select", "Select intersect",
-                  c(names(venn_overlap()$peaklist)),multiple = F)
+      selectInput("intersect_select_summary", "Select intersect",
+                  c(names(venn_overlap()$peaklist)),
+                  selected = c(names(venn_overlap()$peaklist)),
+                  multiple = T)
     }
   })
   output$intersect_select <- renderUI({
@@ -5070,9 +5064,17 @@ shinyServer(function(input, output, session) {
   output$venn_peak_distribution <- renderPlot({
     withProgress(message = "Peak distribution",{
       if(!is.null(venn_overlap()) && input$Species_venn != "not selected"){
-        vendistribution()$plot
+        vendistribution()$plot + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$intersect_select_summary))
       }
     })
+  })
+  table_peak_distribution_test_venn <- reactive({
+    return(chisquare_for_annotation(vendistribution()))
+  })
+  output$venn_peak_distribution_test <- DT::renderDataTable({
+    if(!is.null(venn_overlap()) && input$Species_venn != "not selected"){
+      table_peak_distribution_test_venn()
+    }
   })
   output$selected_venn_peak_distribution <- renderPlot({
     if(!is.null(input$intersect_select) &&
@@ -5095,6 +5097,7 @@ shinyServer(function(input, output, session) {
         my.symbols <- overlaps.anno$geneId
         gene_IDs<-id_convert(my.symbols,input$Species_venn,type="ENTREZID")
         colnames(gene_IDs) <- c("geneId","NearestGene")
+        gene_IDs <- gene_IDs %>% distinct(geneId, .keep_all = T)
         data <- merge(gene_IDs,overlaps.anno,by="geneId")
         data <- data[,2:11] %>% distinct(peakNames, .keep_all = T) %>% as.data.frame() 
         df[[name]] <- data
@@ -5114,28 +5117,39 @@ shinyServer(function(input, output, session) {
   })
   output$download_venn_peak_distribution = downloadHandler(
     filename = function(){
-      paste0("Peak_distribution-",input$intersect_select,".pdf")
+      paste0("Peak_distribution_summary-venn.zip")
     },
-    content = function(file) {
+    content = function(fname){
       withProgress(message = "Preparing download",{
+        setwd(tempdir())
+      fs <- c()
+      dir.create("annotation/",showWarnings = FALSE)
+      file_pdf <- paste0("annotation/summary.pdf")
+      fs <- c(fs, file_pdf)
         if(input$venn_pdf_height == 0){
           pdf_height <- 4.5
         }else pdf_height <- input$venn_pdf_height
         if(input$venn_pdf_width == 0){
           pdf_width <- 6
         }else pdf_width <- input$venn_pdf_width
-        pdf(file, height = pdf_height, width = pdf_width)
-        print(vendistribution())
+        pdf(file_pdf, height = pdf_height, width = pdf_width)
+        print(vendistribution()$plot + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$intersect_select_summary)))
         dev.off()
+        table_name <- paste0("annotation/chi-square_test.txt")
+        fs <- c(fs, table_name)
+        write.table(table_peak_distribution_test_venn(), table_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
         incProgress(1)
       })
-    }
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
   )
   output$download_selected_intersect_annotation_table <- downloadHandler(
     filename = function() {
       paste0(format(Sys.time(), "%Y%m%d_"),"all_annotation",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       dir.create("all_annotation/",showWarnings = FALSE)
       for(name in names(selected_annoData_table())){
@@ -5149,6 +5163,71 @@ shinyServer(function(input, output, session) {
         write.table(df,file,col.names = T,row.names = F,sep = "\t",quote = F)
       }
       zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  
+  mmAnno__distance_venn <- reactive({
+    distribution <- selected_annoData_table()[[input$intersect_select]]
+    distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
+                                              geneLevel = geneLevel))
+    mmAnno_list <- mmAnno(peak=venn_overlap()$peaklist[[input$intersect_select]],
+                          genomic_region="Genome-wide",
+                          txdb=txdb_venn(),
+                          peak_distance=input$peak_TSSdistance_venn,
+                          mode=input$TSSdistance_mode_venn,
+                          group_name=input$intersect_select,
+                          distribution=distribution,
+                          DAR=NULL)
+    return(mmAnno_list)
+  })
+  TSSdistance_venn <- reactive({
+    p <- plot_annoDistance(mmAnno__distance_venn(),title=input$intersect_select)
+    return(p)
+  })
+  output$venn_TSSdistance <- renderPlot({
+    if(!is.null(mmAnno__distance_venn())){
+      TSSdistance_venn()
+    }
+  })
+  output$download_venn_TSSdistance = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"_DistanceToTSS",".zip")
+    },
+    content = function(fname){
+      withProgress(message = "Preparing download, please wait",{
+        setwd(tempdir())
+        fs <- c()
+        peak_list <- venn_overlap()$peaklist
+        dir_name <- paste0("DistanceToTSS_mode-",input$TSSdistance_mode_venn,"_distance-",input$peak_TSSdistance_venn,"/")
+        dir.create(dir_name,showWarnings = FALSE)
+        if(input$venn_pdf_height == 0){
+          pdf_height <- 3
+        }else pdf_height <- input$venn_pdf_height
+        if(input$venn_pdf_width == 0){
+          pdf_width <- 6
+        }else pdf_width <- input$venn_pdf_width
+        for(name in names(peak_list)){
+          plot_name <- paste0(dir_name,name,".pdf")
+          distribution <- selected_annoData_table()[[name]]
+          distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
+                                                    geneLevel = geneLevel))
+          mmAnno <- mmAnno(peak=venn_overlap()$peaklist[[name]],
+                           genomic_region="Genome-wide",
+                           txdb=txdb_venn(),
+                           peak_distance=input$peak_TSSdistance_venn,
+                           mode=input$TSSdistance_mode_venn,
+                           group_name=name,
+                           distribution=distribution,
+                           DAR=NULL)
+          p <- plot_annoDistance(mmAnno,title=name)
+          fs <- c(fs, plot_name)
+          pdf(plot_name, height = pdf_height, width = pdf_width)
+          print(p)
+          dev.off()
+        }
+        zip(zipfile=fname, files=fs)
+      })
     },
     contentType = "application/zip"
   )
@@ -5453,46 +5532,10 @@ shinyServer(function(input, output, session) {
   
   pair_enrich1_H_venn <- reactive({
     if(!is.null(input$Gene_set_venn) && input$Species_venn != "not selected"){
-      df <- enrichment_enricher_venn()
       data3 <- selected_grange_venn_list()
       data <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
-      for(name in names(df)){
-        if(!is.null(df[[name]])) {
-          group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
-          if(length(group1$id)==0){
-            group1 <- NULL
-          }else{
-            group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
-            if (length(group1$p_adjust_hyper) > 5){
-              group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-              group1 <- group1[1:5,]
-            }
-          }
-        }else group1 <- NULL
-        data <- rbind(data, group1)
-      }
-      colnames(data) <-  colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
-                                             "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
-      if(length(data$Description) != 0){
-        data$Group <- gsub("-", "- ", data$Group)
-        for(i in 1:length(data$Group)){
-          data$Group[i] <- paste(strwrap(data$Group[i], width = 15),collapse = "\n")
-        }
-        data$Group <- gsub(" \\(", "\n\\(", data$Group)
-        data$Description <- gsub("_", " ", data$Description)
-        data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
-        data$x <- gsub("-","", data$x)
-        data <- dplyr::arrange(data, x)
-        idx <- order(data[["x"]], decreasing = FALSE)
-        data$Description <- factor(data$Description,
-                                   levels=rev(unique(data$Description[idx])))
-        p1 <- as.grob(ggplot(data, aes_string(x = "Group",y= "Description",color="p_adjust_hyper",size="fold_enrichment_hyper"))+
-                        geom_point() +
-                        scale_color_continuous(low="red", high="blue",
-                                               guide=guide_colorbar(reverse=TRUE)) +
-                        scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
-                        scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
-      }else p1 <- NULL
+      df <- enrichment_enricher_venn()
+      p1 <- GREAT_dotplot(data=data,data3=data3,df=df,type="venn",group_order=input$venn_whichGroup2)
       p <- plot_grid(p1, nrow = 1)
       return(p)
     }else return(NULL)
@@ -5701,8 +5744,8 @@ shinyServer(function(input, output, session) {
     withProgress(message = "Importing RNA-seq data, please wait",{
       tmp <- input$venn_DEG_result$datapath 
       if(is.null(input$venn_DEG_result) && input$goButton_venn > 0 )  {
-        if(input$RNAseq_data_type_venn == "Result") tmp = "data/RNAseq.txt" else{
-          if(input$RNAseq_data_type_venn == "List") tmp = "data/genelist.txt" else tmp = "data/RNAseq_count.txt"
+        if(input$RNAseq_data_type_venn == "Result") tmp = paste0(home_dir,"data/RNAseq.txt") else{
+          if(input$RNAseq_data_type_venn == "List") tmp = paste0(home_dir,"data/genelist.txt") else tmp = paste0(home_dir,"data/RNAseq_count.txt")
         } 
       }
       if(is.null(tmp)) {
@@ -6060,128 +6103,13 @@ shinyServer(function(input, output, session) {
   })
   
   RNAseq_boxplot_venn <- reactive({
-    RNA <- RNAseqDEG_anno_venn()
-    cond1 <- gsub("\\_.+$", "", RNAseq_name_venn()[1])
-    cond2 <- gsub("\\_.+$", "", RNAseq_name_venn()[2])
-    
-    RNA <- dplyr::filter(RNA, !is.na(gene_id))
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    genelist <- list()
-    bed_list <- list()
-    for(name in venn_select_RNA_debounce()){
-      data <- merge(RNA,RP_venn()[[name]], by="gene_id",all=T)
-      if(input$RNAseq_data_type_venn != "List") data <- dplyr::filter(data, baseMean != 0)
-      data$group <- "Others"
-      data$group[data$sumRP > 2] <- "2 < RP"
-      data$group[data$sumRP <= 2 & data$sumRP > 1] <- "1 < RP < 2"
-      data$group[data$sumRP <= 1 & data$sumRP > 0.1] <- "0.1 < RP < 1"
-      data$group[data$sumRP <= 0.1 & data$sumRP > 0.01] <- "0.01 < RP < 0.1"
-      data$group[data$sumRP <= 0.01 & data$sumRP > 0] <- "0 < RP < 0.01"
-      level <- NULL
-      col <- NULL
-      if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
-        level <- c(level,"Others")
-        col <- c(col,"gray")
-      }
-      if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
-        level <- c(level,"0 < RP < 0.01")
-        col <- c(col,"blue")
-      }
-      if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
-        level <- c(level,"0.01 < RP < 0.1")
-        col <- c(col,"#00BFC4")
-      }
-      if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
-        level <- c(level,"0.1 < RP < 1")
-        col <- c(col,"lightgreen")
-      }
-      if(dim(dplyr::filter(data, group == "1 < RP < 2"))[1] != 0) {
-        level <- c(level,"1 < RP < 2")
-        col <- c(col,"#F8766D")
-      }
-      if(dim(dplyr::filter(data, group == "2 < RP"))[1] != 0) {
-        level <- c(level,"2 < RP")
-        col <- c(col,"red")
-      }
-      data$group <- factor(data$group,levels=level,ordered=TRUE)
-      data$intersection <- as.factor(name)
-      df <- rbind(df,data)
-      if(input$RNAseq_data_type_venn != "List"){
-        genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,RNAlog2FC = -1*data$log2FoldChange,
-                                       sumRP = data$sumRP, gene_id = data$gene_id)
-      }else{
-        genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,
-                                       sumRP = data$sumRP, gene_id = data$gene_id)
-      }
-      bed_list1 <- list()
-      for(name2 in unique(data$group)){
-        if(name2 != "Others"){
-          table <- genelist[[name]] %>% dplyr::filter(group == name2)
-          gene <- table$gene_id
-          if(length(gene) != 0){
-            up_peak3 <- NULL
-            up_peak <- subset(pre_mmAnno_venn()[[name]], gene_id %in% gene)
-            up_peak2 <- as.data.frame(up_peak)
-            up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-            up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-            up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-            mcols(up_peak3) <- DataFrame(Group = paste0(name,":",name2))
-            bed_list1[[name2]] <- up_peak3
-          }
-        }
-      }
-      bed_list[[name]] <- bed_list1
-    }
-    data <- df 
-    if(input$RNAseq_data_type_venn != "List"){
-      data$log10FoldChange <- log10(2^data$log2FoldChange)
-      data$log10FoldChange <- as.numeric(data$log10FoldChange)
-      for(name in venn_select_RNA_debounce()){
-        check <- data %>% dplyr::filter(intersection == name) %>% 
-          dplyr::filter(group != "Others") %>% summarise(n())
-        if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
-      }
-      if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
-      
-      data$intersection <- gsub("-","-\n",data$intersection)
-      collist <- unique(data$group)
-      col <-c("gray","blue","#00BFC4","lightgreen","#F8766D","red")
-      if (length(collist) >= 3){
-        stat.test <- data %>% dplyr::group_by(intersection) %>% 
-          tukey_hsd(log10FoldChange ~ group)
-        stat.test <- stat.test %>% add_significance("p.adj")
-        stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-      }else{
-        group1 <- dplyr::filter(data, group == collist[1])
-        group2 <- dplyr::filter(data, group == collist[2])
-        if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
-          stat.test <- data %>% dplyr::group_by(intersection) %>% 
-            t_test(log10FoldChange ~ group)
-          stat.test <- stat.test %>% add_significance()
-          stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-        }else stat.test <- NULL
-      }
-      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
-                                 fill = "group", scales = "free", 
-                                 xlab = FALSE, ylab = paste0("RNAseq log10(",cond2,"/",cond1,")"))+theme_bw(base_size = 15)+
-                 xlab(NULL)+scale_fill_manual(values = col) + scale_x_discrete(labels = label_wrap_gen(8)))
-      if(input$Statistics_venn !="not selected") p <- p + stat_pvalue_manual(stat.test,hide.ns = T, size = 5)         
-      p <- facet(p, facet.by = "intersection",
-                 panel.labs.background = list(fill = "transparent", color = "transparent"),
-                 scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
-      stat.test <- stat.test[,-2]
-      stat.test <- stat.test[,1:9]
-      colnames(stat.test)[1] <- "Peak"
-      df <- list()
-      df[["plot"]] <- p
-      df[["statistical_test"]] <- stat.test
-    }else{
-      df <- list()
-    }
-    df[["genelist"]] <- genelist
-    df[["bedlist"]] <- bed_list
-    print(bed_list)
-    
+    df <- RNAseq_box(RNA=RNAseqDEG_anno_venn(),
+                     rna_name=RNAseq_name_venn(),
+                     select=venn_select_RNA_debounce(),
+                     data_type=input$RNAseq_data_type_venn,
+                     RP=RP_venn(),
+                     mmAnno=pre_mmAnno_venn(),
+                     statistics=input$Statistics_venn)
     return(df)
   })
   
@@ -6253,60 +6181,15 @@ shinyServer(function(input, output, session) {
     }
   })
   ChIPseq_popu_venn <- reactive({
-    RNA <- RNAseqDEG_anno_venn()
-    if(!is.null(RNA) && !is.null(pre_mmAnno_venn())){
-      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-      for(name in venn_select_RNA_debounce()){
-        mmano <- as.data.frame(pre_mmAnno_venn()[[name]])
-        mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
-        up_name <- paste0(RNAseq_name_venn()[2]," gene only")
-        down_name <- paste0(RNAseq_name_venn()[1]," gene only")
-        merge <- merge(mmano,RNA, by = "gene_id")
-        if(input$RNAseq_data_type_venn != "List"){
-          merge <- merge  %>% dplyr::mutate(Up_gene = if_else(padj < input$DEG_fdr_venn & log2FoldChange > log(input$DEG_fc_venn,2), 1, 0),
-                                            Down_gene = if_else(padj < input$DEG_fdr_venn & log2FoldChange < -log(input$DEG_fc_venn,2), 1, 0),
-                                            NS_gene = if_else(padj >= input$DEG_fdr_venn | baseMean == 0 | is.na(padj) |
-                                                                (padj <= input$DEG_fdr_venn & abs(log2FoldChange) <= log(input$DEG_fc_venn,2)), 1, 0))
-          merge[is.na(merge)] <- 0
-          merge2 <- merge %>% group_by(locus,Group) %>% summarise(Total_associated_gene = sum(Up_gene)+sum(Down_gene)+sum(NS_gene),Group = Group,
-                                                                  Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
-          table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
-                                                           if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
-                                                                   if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "NS gene only", "Multiple type of genes"))))
-          table$type <- factor(table$type,levels = c(down_name,up_name,"NS gene only","Multiple type of genes"))
-        }else{
-          merge2 <- merge %>% group_by(locus, Group.y) %>% summarise(Count = n()) 
-          merge2 <- spread(merge2,Group.y,Count)
-          merge2[is.na(merge2)] <- 0
-          namelist <- unique(merge$Group.y)
-          merge2$Total_associated_gene <- rowSums(merge2[,-1],na.rm = TRUE)
-          vec <- c()
-          merge3 <- merge2[,-1]
-          merge3 <- merge3[,-length(colnames(merge3))]
-          for(i in 1:dim(merge3)[1]){
-            type <- merge3[i,]
-            type <- paste(names(type[which(type != 0)]),collapse = "&")
-            vec <- c(vec,type) 
-          }
-          merge2$type <- vec
-          table <- merge2
-        }
-        table$Group <- paste0(table$Group," peak")
-        if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
-        table$intersection <- name
-        df <- rbind(df, table)
-      }
-      table <- df
-      table$intersection <- gsub("-","\n",table$intersection)
-      
-      p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
-        theme_bw(base_size = 15)+facet_wrap(~intersection,scales = "free") +
-        ylab("Number of peaks") +
-        xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
-      if(input$RNAseq_data_type_venn != "List"){
-        col <- c("#00BFC4","#F8766D","grey","black")
-        p2 <- p2 + scale_fill_manual(values = col)
-      } 
+    if(!is.null(RNAseqDEG_anno_venn()) && !is.null(pre_mmAnno_venn())){
+      p2 <- peak_population(select=venn_select_RNA_debounce(),
+                            RNA=RNAseqDEG_anno_venn(),
+                            mmAnno=pre_mmAnno_venn(),
+                            rna_name=RNAseq_name_venn(),
+                            data_type=input$RNAseq_data_type_venn,
+                            DEG_fdr=input$DEG_fdr_venn,
+                            DEG_fc=input$DEG_fc_venn,
+                            RNAseq_mode=input$RNAseq_mode_venn)
       return(p2)
     }
   })
@@ -6400,6 +6283,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname){
       withProgress(message = "Preparing download",{
+        setwd(tempdir())
         if(input$venn_pdf_height == 0){
           pdf_height <- pdf_h(input$venn_select_RNA)
         }else pdf_height <- input$venn_pdf_height
@@ -6452,6 +6336,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname) {
       withProgress(message = "Preparing download",{
+        setwd(tempdir())
         if(input$venn_pdf_height == 0){
           pdf_height <- 5
         }else pdf_height <- input$venn_pdf_height
@@ -6481,6 +6366,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname) {
       withProgress(message = "Preparing download",{
+        setwd(tempdir())
         fs <- c()
         dir.create("RP_table/",showWarnings = FALSE)
         dir.create("RP_table/selected_table(epigenome--RNA)/",showWarnings = FALSE)
@@ -6901,7 +6787,7 @@ shinyServer(function(input, output, session) {
       tmp <- input$pair_rnaseq_count_venn
       upload = list()
       if(is.null(input$pair_rnaseq_count_venn) && input$goButton_venn > 0 )  {
-        tmp = "data/RNAseq_count.txt"
+        tmp = paste0(home_dir,"data/RNAseq_count.txt")
         upload[["rna"]]<- read_df(tmp)
         return(upload)
       }else if(is.null(tmp)) {
@@ -6916,7 +6802,7 @@ shinyServer(function(input, output, session) {
       tmp <- input$pair_rnaseq_DEGs_venn
       upload = list()
       if(is.null(input$pair_rnaseq_DEGs_venn) && input$goButton_venn > 0 )  {
-        tmp = "data/RNAseq.txt"
+        tmp = paste0(home_dir,"data/RNAseq.txt")
         upload[["rna"]]<- read_df(tmp)
         return(upload)
       }else if(is.null(tmp)) {
@@ -6947,12 +6833,6 @@ shinyServer(function(input, output, session) {
     files <- rnaseq_count_venn()
     return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_venn,gene_type = gene_type_rnaseq_counts_venn(),pre_zscoring = input$pre_zscoring_venn))
   })
-  observeEvent(input$pair_rnaseq_DEGs_venn, ({
-    updateCollapse(session,id =  "z-score_count_venn", open="Uploaded_DEGs_venn")
-  }))
-  observeEvent(input$pair_rnaseq_count_venn, ({
-    updateCollapse(session,id =  "z-score_count_venn", open="z-score_multiple_count_venn_panel")
-  }))
   output$rnaseq_count_output_venn <- renderDataTable({
     if(input$Species_venn != "not selected" && !is.null(rnaseq_count_venn())){
       rnaseq_count2_venn()
@@ -7268,10 +7148,10 @@ shinyServer(function(input, output, session) {
       if(is.null(input$file1_clustering)){
         if(input$goButton_clustering > 0 ){
           df<-list()
-          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
-          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
-          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
-          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
+          df[["A_1"]] <- paste0(home_dir,"data/bigwig/A_1.BigWig")
+          df[["A_2"]] <- paste0(home_dir,"data/bigwig/A_2.BigWig")
+          df[["B_1"]] <- paste0(home_dir,"data/bigwig/B_1.BigWig")
+          df[["B_2"]] <- paste0(home_dir,"data/bigwig/B_2.BigWig")
           return(df)
         }
         return(NULL)
@@ -7295,7 +7175,7 @@ shinyServer(function(input, output, session) {
   })
   bws_count_clustering <- reactive({
     tmp <- input$file1_count_clustering$datapath
-    if(is.null(input$file1_count_clustering) && input$goButton_clustering > 0 )  tmp = "data/bws_count.txt"
+    if(is.null(input$file1_count_clustering) && input$goButton_clustering > 0 )  tmp = paste0(home_dir,"data/bws_count.txt")
     if(!is.null(tmp)) return(read.table(tmp, header=TRUE, sep = "\t", row.names = 1,quote = ""))
   })
   bws_order_clustering<-reactive({
@@ -7308,10 +7188,10 @@ shinyServer(function(input, output, session) {
       if(is.null(input$file_bam_clustering)){
         if(input$goButton_clustering > 0 ){
           df<-list()
-          df[["A_1"]] <- "data/bigwig/A_1.BigWig"
-          df[["A_2"]] <- "data/bigwig/A_2.BigWig"
-          df[["B_1"]] <- "data/bigwig/B_1.BigWig"
-          df[["B_2"]] <- "data/bigwig/B_2.BigWig"
+          df[["A_1"]] <- paste0(home_dir,"data/bigwig/A_1.BigWig")
+          df[["A_2"]] <- paste0(home_dir,"data/bigwig/A_2.BigWig")
+          df[["B_1"]] <- paste0(home_dir,"data/bigwig/B_1.BigWig")
+          df[["B_2"]] <- paste0(home_dir,"data/bigwig/B_2.BigWig")
           return(df)
         }
         return(NULL)
@@ -7334,10 +7214,10 @@ shinyServer(function(input, output, session) {
       if(is.null(input$peak_call_file1_clustering)){
         if(input$goButton_clustering > 0 ){
           df <- list()
-          df[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-          df[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
-          df[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
-          df[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+          df[["A_1"]] <- paste0(home_dir,"data/peakcall/A_1_peaks.narrowPeak")
+          df[["A_2"]] <- paste0(home_dir,"data/peakcall/A_2_peaks.narrowPeak")
+          df[["B_1"]] <- paste0(home_dir,"data/peakcall/B_1_peaks.narrowPeak")
+          df[["B_2"]] <- paste0(home_dir,"data/peakcall/B_2_peaks.narrowPeak")
           name <- c("Ctrl_1","Ctrl_2","Sen_1","Sen_2")
           files2 <- lapply(df, GetGRanges, simple = TRUE)
           names(files2)<-name
@@ -7389,7 +7269,7 @@ shinyServer(function(input, output, session) {
   genelist_clustering <- reactive({
     withProgress(message = "Importing a gene list file, please wait",{
       tmp <- input$genelist_file1_clustering$datapath
-      if(is.null(input$genelist_file1_clustering) && input$goButton_clustering > 0 )  tmp = "data/RNAseq.txt"
+      if(is.null(input$genelist_file1_clustering) && input$goButton_clustering > 0 )  tmp = paste0(home_dir,"data/RNAseq.txt")
       if(is.null(tmp)) {
         return(NULL)
       }else{
@@ -7890,6 +7770,7 @@ shinyServer(function(input, output, session) {
         if(dim(data)[1] != 0){
           cond1 <- input$selectFC2[1]
           cond2 <- input$selectFC2[2]
+          print(head(data))
           cond1_ave <- data %>% dplyr::select(starts_with(cond1))
           cond2_ave <- data %>% dplyr::select(starts_with(cond2))
           Log2FoldChange <- log((cond1_ave + 0.01)/(cond2_ave + 0.01),2)
@@ -8102,6 +7983,7 @@ shinyServer(function(input, output, session) {
       paste0(format(Sys.time(), "%Y%m%d_"),"all_clusters_bed",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       dir.create("all_clusters_bed/",showWarnings = FALSE)
       for(name in unique(clustering_kmeans_cluster()$Cluster)){
@@ -8566,6 +8448,13 @@ shinyServer(function(input, output, session) {
                   selected = names(pre_integrated_additional4_enrich()),multiple = TRUE)
     }
   })
+  output$sample_order_enrich_comb5 <- renderUI({
+    if(!is.null(pre_integrated_additional5_enrich())){
+      selectInput(inputId = "sample_order_enrich_comb5","Sample order (yellow):",
+                  choices =  names(pre_integrated_additional5_enrich()),
+                  selected = names(pre_integrated_additional5_enrich()),multiple = TRUE)
+    }
+  })
   output$integrated_range_type_0_enrich_manual <- renderUI({
     if(input$integrated_range_type_0_enrich == "manual"){
       numericInput(inputId = "integrated_range_type_0_enrich_manual","",
@@ -8587,6 +8476,12 @@ shinyServer(function(input, output, session) {
   output$integrated_range_type_3_enrich_manual <- renderUI({
     if(input$integrated_range_type_3_enrich == "manual"){
       numericInput(inputId = "integrated_range_type_3_enrich_manual","",
+                   value = 10,min = 0,step = 1)
+    }
+  })
+  output$integrated_range_type_4_enrich_manual <- renderUI({
+    if(input$integrated_range_type_4_enrich == "manual"){
+      numericInput(inputId = "integrated_range_type_4_enrich_manual","",
                    value = 10,min = 0,step = 1)
     }
   })
@@ -8612,10 +8507,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$enrich_data_file)){
       if(input$goButton_enrich > 0 ){
         files <- list()
-        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
-        files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
-        files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+        files[["A_1"]] <- paste0(home_dir,"data/peakcall/A_1_peaks.narrowPeak")
+        files[["A_2"]] <- paste0(home_dir,"data/peakcall/A_2_peaks.narrowPeak")
+        files[["B_1"]] <- paste0(home_dir,"data/peakcall/B_1_peaks.narrowPeak")
+        files[["B_2"]] <- paste0(home_dir,"data/peakcall/B_2_peaks.narrowPeak")
         files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
@@ -8644,11 +8539,26 @@ shinyServer(function(input, output, session) {
     return(ChIPpeakAnno::genomicElementDistribution(GRangesList(Enrich_peak_call_files()), 
                                                     TxDb = txdb_enrich()))
   })
+  output$input_peak_distribution_summary_enrich <- renderUI({
+    if(!is.null(Enrich_peak_call_files())){
+      selectInput('input_peak_distribution_summary_enrich', 
+                  'Sample order:', names(Enrich_peak_call_files()),
+                  selected = names(Enrich_peak_call_files()), multiple = T)
+    }
+  })
   output$input_peak_distribution_enrich <- renderPlot({
     if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich())){
       withProgress(message = "Preparing peak distribution",{
-        enrichdistribution()$plot
+        enrichdistribution()$plot + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$input_peak_distribution_summary_enrich))
       })
+    }
+  })
+  table_peak_distribution_test_enrich <- reactive({
+    return(chisquare_for_annotation(enrichdistribution()))
+  })
+  output$peak_distribution_test_enrich <- DT::renderDataTable({
+    if(!is.null(Enrich_peak_call_files()) && !is.null(txdb_enrich())){
+    table_peak_distribution_test_enrich()
     }
   })
   output$selected_enrich_peak_distribution <- renderPlot({
@@ -8661,6 +8571,7 @@ shinyServer(function(input, output, session) {
       paste0(format(Sys.time(), "%Y%m%d_"),"all_annotation",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       dir.create("all_annotation/",showWarnings = FALSE)
       for(name in names(selected_annoData_table_enrich())){
@@ -8686,6 +8597,7 @@ shinyServer(function(input, output, session) {
         my.symbols <- peak$geneId
         gene_IDs<-id_convert(my.symbols,input$Species_enrich,type="ENTREZID")
         colnames(gene_IDs) <- c("geneId","NearestGene")
+        gene_IDs <- gene_IDs %>% distinct(geneId, .keep_all = T)
         data <- merge(gene_IDs,peak,by="geneId")
         data <- data[,2:10] %>% as.data.frame()
         df[[name]] <- data
@@ -8711,9 +8623,10 @@ shinyServer(function(input, output, session) {
   
   output$download_input_peak_distribution_enrich = downloadHandler(
     filename = function() {
-      paste0(format(Sys.time(), "%Y%m%d_"),"_annotation_from_enrichment_viewer",".zip")
+      paste0(format(Sys.time(), "%Y%m%d_"),"_annotation_from_POI",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       withProgress(message = "Preparing download, please wait",{
         fs <- c()
         peak_list <- enrichdistribution()$peaks
@@ -8724,6 +8637,9 @@ shinyServer(function(input, output, session) {
           fs <- c(fs, file_name)
           write.table(peak, file_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
         }
+        table_name <- paste0("Annotation/chi-square_test.txt")
+        fs <- c(fs, table_name)
+        write.table(table_peak_distribution_test_enrich(), table_name, row.names = F, col.names=TRUE, sep = "\t", quote = F)
         if(input$enrich_pdf_height == 0){
           pdf_height <- 6
         }else pdf_height <- input$enrich_pdf_height
@@ -8733,7 +8649,7 @@ shinyServer(function(input, output, session) {
         plot_name <- paste0("Annotation/","annotation.pdf")
         fs <- c(fs, plot_name)
         pdf(plot_name, height = pdf_height, width = pdf_width)
-        print(enrichdistribution())
+        print(enrichdistribution()$plot  + theme_bw(base_size = 15) + scale_x_discrete(limit=rev(input$input_peak_distribution_summary_enrich)))
         dev.off()
         zip(zipfile=fname, files=fs)
       })
@@ -8741,6 +8657,71 @@ shinyServer(function(input, output, session) {
     contentType = "application/zip"
   )
   
+  mmAnno__distance_enrich <- reactive({
+    distribution <- selected_annoData_table_enrich()[[input$annotation_select_enrich]]
+    distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
+                                              geneLevel = geneLevel))
+    mmAnno_list <- mmAnno(peak=Enrich_peak_call_files()[[input$annotation_select_enrich]],
+                          genomic_region="Genome-wide",
+                          txdb=txdb_enrich(),
+                          peak_distance=input$peak_TSSdistance_enrich,
+                          mode=input$TSSdistance_mode_enrich,
+                          group_name=input$annotation_select_enrich,
+                          distribution=distribution,
+                          DAR=NULL)
+    return(mmAnno_list)
+  })
+  TSSdistance_enrich <- reactive({
+    p <- plot_annoDistance(mmAnno__distance_enrich(),title=input$annotation_select_enrich)
+    return(p)
+  })
+  output$enrich_TSSdistance <- renderPlot({
+    if(!is.null(mmAnno__distance_enrich()) && !is.null(input$annotation_select_enrich) && 
+       !is.null(selected_annoData_table_enrich())){
+      TSSdistance_enrich()
+    }
+  })
+  output$download_enrich_TSSdistance = downloadHandler(
+    filename = function() {
+      paste0(format(Sys.time(), "%Y%m%d_"),"_DistanceToTSS",".zip")
+    },
+    content = function(fname){
+      setwd(tempdir())
+      withProgress(message = "Preparing download, please wait",{
+        fs <- c()
+        peak_list <- enrichdistribution()$peaks
+        dir_name <- paste0("DistanceToTSS_mode-",input$TSSdistance_mode_enrich,"_distance-",input$peak_TSSdistance_enrich,"/")
+        dir.create(dir_name,showWarnings = FALSE)
+        if(input$enrich_pdf_height == 0){
+          pdf_height <- 3
+        }else pdf_height <- input$enrich_pdf_height
+        if(input$enrich_pdf_width == 0){
+          pdf_width <- 6
+        }else pdf_width <- input$enrich_pdf_width
+        for(name in names(peak_list)){
+          plot_name <- paste0(dir_name,name,".pdf")
+          distribution <- selected_annoData_table_enrich()[[name]]
+          distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
+                                                    geneLevel = geneLevel))
+          mmAnno <- mmAnno(peak=Enrich_peak_call_files()[[name]],
+                                genomic_region="Genome-wide",
+                                txdb=txdb_enrich(),
+                                peak_distance=input$peak_TSSdistance_enrich,
+                                mode=input$TSSdistance_mode_enrich,
+                                group_name=name,
+                                distribution=distribution,
+                                DAR=NULL)
+          p <- plot_annoDistance(mmAnno,title=name)
+          fs <- c(fs, plot_name)
+          pdf(plot_name, height = pdf_height, width = pdf_width)
+          print(p)
+          dev.off()
+        }
+        zip(zipfile=fname, files=fs)
+      })
+    },
+    contentType = "application/zip"
+  )
   #Enrichment viewer functional analysis------
   output$Gene_set_enrich <- renderUI({
     selectInput('Gene_set_enrich', 'Gene Set', gene_set_list)
@@ -8791,45 +8772,17 @@ shinyServer(function(input, output, session) {
       df <- enrichment_enricher_enrich()
       data3 <- Enrich_peak_call_files()
       data <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
-      for(name in names(df)){
-        if(!is.null(df[[name]])) {
-          group1 <- as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))
-          if(length(group1$id) != 0){
-            group1$Group <- paste(name, "\n(",length(as.data.frame(data3[[name]])$start),")",sep = "")
-            if (length(group1$p_adjust_hyper) > input$enrich_showCategory){
-              group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-              group1 <- group1[1:input$enrich_showCategory,]
-            }}else group1 <- NULL
-        }else group1 <- NULL
-        data <- rbind(data, group1)
-      }
-      colnames(data) <-  colnames(data) <- c("Description", "genome_fraction", "observed_region_hits", "fold_enrichment", "p_value", "p_adjust", "mean_tss_dist", 
-                                             "observed_gene_hits", "gene_set_size","fold_enrichment_hyper","p_value_hyper","p_adjust_hyper","Group")
-      if(length(data$Description) != 0){
-        data$Group <- gsub("_", " ", data$Group)
-        for(i in 1:length(data$Group)){
-          data$Group[i] <- paste(strwrap(data$Group[i], width = 15),collapse = "\n")
-        }
-        data$Group <- gsub(" \\(", "\n\\(", data$Group)
-        data$Description <- gsub("_", " ", data$Description)
-        data <- dplyr::mutate(data, x = paste0(Group, 1/(-log10(eval(parse(text = "p_adjust_hyper"))))))
-        data$x <- gsub(":","", data$x)
-        data <- dplyr::arrange(data, x)
-        idx <- order(data[["x"]], decreasing = FALSE)
-        data$Description <- factor(data$Description,
-                                   levels=rev(unique(data$Description[idx])))
-        p1 <- as.grob(ggplot(data, aes_string(x = "Group",y= "Description",color="p_adjust_hyper",size="fold_enrichment_hyper"))+
-                        geom_point() +
-                        scale_color_continuous(low="red", high="blue",
-                                               guide=guide_colorbar(reverse=TRUE)) +
-                        scale_size(range=c(1, 6))+ DOSE::theme_dose(font.size=15)+ylab(NULL)+xlab(NULL) + 
-                        scale_y_discrete(labels = label_wrap_gen(30)) + scale_x_discrete(position = "top"))
-      }else p1 <- NULL
+      p1 <- GREAT_dotplot(data=data,data3=data3,df=df,type="enrich",group_order=input$enrichment_order_enrich)
       p <- plot_grid(p1, nrow = 1)
       return(p)
     }else return(NULL)
   })
-  
+  output$enrichment_order_enrich <- renderUI({
+    if(!is.null(Enrich_peak_call_files())){
+      selectInput('enrichment_order_enrich', 'Sample order:', 
+                  names(Enrich_peak_call_files()),selected = names(Enrich_peak_call_files()),multiple = T)
+    }
+  })
   output$enrichment_enrich <- renderPlot({
     if(input$Species_enrich != "not selected" && !is.null(Enrich_peak_call_files())){
       dotplot_for_output(data = Enrich_peak_call_files(),
@@ -8994,6 +8947,7 @@ shinyServer(function(input, output, session) {
       if(!is.null(integrated_heatmap_add2_enrich())) ht_list <- ht_list + integrated_heatmap_add2_enrich()[["heatmap"]]
       if(!is.null(integrated_heatmap_add3_enrich())) ht_list <- ht_list + integrated_heatmap_add3_enrich()[["heatmap"]]
       if(!is.null(integrated_heatmap_add4_enrich())) ht_list <- ht_list + integrated_heatmap_add4_enrich()[["heatmap"]]
+      if(!is.null(integrated_heatmap_add5_enrich())) ht_list <- ht_list + integrated_heatmap_add5_enrich()[["heatmap"]]
       if(!is.null(rnaseq_DEGs2_enrich())) ht_list <- ht_list + rnaseq_DEGs_heatmap_enrich()
       if(!is.null(rnaseq_count2_enrich())) ht_list <- ht_list + rnaseq_count_heatmap_enrich()
       return(ht_list)
@@ -9068,7 +9022,7 @@ shinyServer(function(input, output, session) {
       tmp <- input$pair_rnaseq_count_enrich
       upload = list()
       if(is.null(input$pair_rnaseq_count_enrich) && input$goButton_enrich > 0 )  {
-        tmp = "data/RNAseq_count.txt"
+        tmp = paste0(home_dir,"data/RNAseq_count.txt")
         upload[["rna"]]<- read_df(tmp)
         return(upload)
       }else if(is.null(tmp)) {
@@ -9083,7 +9037,7 @@ shinyServer(function(input, output, session) {
       tmp <- input$pair_rnaseq_DEGs_enrich
       upload = list()
       if(is.null(input$pair_rnaseq_DEGs_enrich) && input$goButton_enrich > 0 )  {
-        tmp = "data/RNAseq.txt"
+        tmp = paste0(home_dir,"data/RNAseq.txt")
         upload[["rna"]]<- read_df(tmp)
         return(upload)
       }else if(is.null(tmp)) {
@@ -9114,12 +9068,6 @@ shinyServer(function(input, output, session) {
     files <- rnaseq_count_enrich()
     return(rnaseqCounts_for_integrated_heatmap(files = files,Species=input$Species_enrich,gene_type = gene_type_rnaseq_counts_enrich(),pre_zscoring = input$pre_zscoring_enrich))
   })
-  observeEvent(input$pair_rnaseq_DEGs_enrich, ({
-    updateCollapse(session,id =  "z-score_count_enrich", open="Uploaded_DEGs_enrich")
-  }))
-  observeEvent(input$pair_rnaseq_count_enrich, ({
-    updateCollapse(session,id =  "z-score_count_enrich", open="z-score_multiple_count_enrich_panel")
-  }))
   output$rnaseq_count_output_enrich <- renderDataTable({
     if(input$Species_enrich != "not selected" && !is.null(rnaseq_count_enrich())){
       rnaseq_count2_enrich()
@@ -9231,11 +9179,11 @@ shinyServer(function(input, output, session) {
       list <- list.files("Volume",full.names = T,recursive=T)
       bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
       selectInput("integrated_bw_2_enrich",
-                  "Option: Select additional bigwig files (blue)",
+                  "blue",
                   choices = bw,multiple=T)
     }else{
       fileInput("integrated_bw_2_enrich",
-                "Option: Select additional bigwig files (blue)",
+                "blue",
                 accept = c("bw","BigWig"),
                 multiple = TRUE,
                 width = "80%")
@@ -9246,11 +9194,11 @@ shinyServer(function(input, output, session) {
       list <- list.files("Volume",full.names = T,recursive=T)
       bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
       selectInput("integrated_bw_3_enrich",
-                  "Option: Select additional bigwig files (green)",
+                  "green",
                   choices = bw,multiple=T)
     }else{
       fileInput("integrated_bw_3_enrich",
-                "Option: Select additional bigwig files (green)",
+                "green",
                 accept = c("bw","BigWig"),
                 multiple = TRUE,
                 width = "80%")
@@ -9261,11 +9209,26 @@ shinyServer(function(input, output, session) {
       list <- list.files("Volume",full.names = T,recursive=T)
       bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
       selectInput("integrated_bw_4_enrich",
-                  "Option: Select additional bigwig files (purple)",
+                  "purple",
                   choices = bw,multiple=T)
     }else{
       fileInput("integrated_bw_4_enrich",
-                "Option: Select additional bigwig files (purple)",
+                "purple",
+                accept = c("bw","BigWig"),
+                multiple = TRUE,
+                width = "80%")
+    }
+  })
+  output$integrated_bw5_enrich <- renderUI({
+    if(length(list.files("./Volume/")) > 0){
+      list <- list.files("Volume",full.names = T,recursive=T)
+      bw <- c(str_subset(list,".bw"),str_subset(list,".BigWig"))
+      selectInput("integrated_bw_5_enrich",
+                  "yellow",
+                  choices = bw,multiple=T)
+    }else{
+      fileInput("integrated_bw_5_enrich",
+                "yellow",
                 accept = c("bw","BigWig"),
                 multiple = TRUE,
                 width = "80%")
@@ -9276,8 +9239,8 @@ shinyServer(function(input, output, session) {
       return(pre_integrated_additional(input$integrated_bw_1_enrich))
     }else{
       if(input$goButton_enrich > 0 ){
-        file <- c("data/bigwig/A_1.BigWig",
-                  "data/bigwig/B_1.BigWig")
+        file <- c(paste0(home_dir,"data/bigwig/A_1.BigWig"),
+                  paste0(home_dir,"data/bigwig/B_1.BigWig"))
         names(file) <- c("A_1","B_1")
         return(file)
       }
@@ -9303,6 +9266,12 @@ shinyServer(function(input, output, session) {
   })
   integrated_additional4_enrich <- reactive({
     return(bws_ordering(bws=pre_integrated_additional4_enrich(),sample_order=input$sample_order_enrich_comb4))
+  })
+  pre_integrated_additional5_enrich <-reactive({
+    return(pre_integrated_additional(input$integrated_bw_5_enrich))
+  })
+  integrated_additional5_enrich <- reactive({
+    return(bws_ordering(bws=pre_integrated_additional5_enrich(),sample_order=input$sample_order_enrich_comb5))
   })
   integrated_heatmap_add1_enrich <- reactive({
     if(!is.null(integrated_additional1_enrich())){
@@ -9333,6 +9302,14 @@ shinyServer(function(input, output, session) {
       if(input$integrated_range_type_3_enrich == "auto") ylim <- NULL else ylim <- input$integrated_range_type_3_enrich_manual
       h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional4_enrich(),
                          color = c("white","purple"),signal = "purple",ylim=ylim)
+      return(h)
+    }
+  })
+  integrated_heatmap_add5_enrich <- reactive({
+    if(!is.null(integrated_additional5_enrich())){
+      if(input$integrated_range_type_4_enrich == "auto") ylim <- NULL else ylim <- input$integrated_range_type_4_enrich_manual
+      h <- batch_heatmap(files2 = Enrich_peak_call_files_locus(),files_bw = integrated_additional5_enrich(),
+                         color = c("white","yellow4"),signal = "yellow4",ylim=ylim)
       return(h)
     }
   })
@@ -9405,8 +9382,8 @@ shinyServer(function(input, output, session) {
     withProgress(message = "Importing RNA-seq data, please wait",{
       tmp <- input$enrich_DEG_result$datapath 
       if(is.null(input$enrich_DEG_result) && input$goButton_enrich > 0 )  {
-        if(input$RNAseq_data_type_enrich == "Result") tmp = "data/RNAseq.txt" else{
-          if(input$RNAseq_data_type_enrich == "List") tmp = "data/genelist.txt" else tmp = "data/RNAseq_count.txt"
+        if(input$RNAseq_data_type_enrich == "Result") tmp = paste0(home_dir,"data/RNAseq.txt") else{
+          if(input$RNAseq_data_type_enrich == "List") tmp = paste0(home_dir,"data/genelist.txt") else tmp = paste0(home_dir,"data/RNAseq_count.txt")
         } 
       }
       if(is.null(tmp)) {
@@ -9761,136 +9738,13 @@ shinyServer(function(input, output, session) {
   })
   
   RNAseq_boxplot_enrich <- reactive({
-    RNA <- RNAseqDEG_anno_enrich()
-    cond1 <- gsub("\\_.+$", "", RNAseq_name_enrich()[1])
-    cond2 <- gsub("\\_.+$", "", RNAseq_name_enrich()[2])
-    RNA <- dplyr::filter(RNA, !is.na(gene_id))
-    df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-    genelist <- list()
-    bed_list <- list()
-    for(name in enrich_select_RNA_debounce()){
-      data <- merge(RNA,RP_enrich()[[name]], by="gene_id",all=T)
-      if(input$RNAseq_data_type_enrich != "List") data <- dplyr::filter(data, baseMean != 0)
-      data$group <- "Others"
-      data$group[data$sumRP > 2] <- "2 < RP"
-      data$group[data$sumRP <= 2 & data$sumRP > 1] <- "1 < RP < 2"
-      data$group[data$sumRP <= 1 & data$sumRP > 0.1] <- "0.1 < RP < 1"
-      data$group[data$sumRP <= 0.1 & data$sumRP > 0.01] <- "0.01 < RP < 0.1"
-      data$group[data$sumRP <= 0.01 & data$sumRP > 0] <- "0 < RP < 0.01"
-      level <- NULL
-      col <- NULL
-      if(dim(dplyr::filter(data, group == "Others"))[1] != 0) {
-        level <- c(level,"Others")
-        col <- c(col,"gray")
-      }
-      if(dim(dplyr::filter(data, group == "0 < RP < 0.01"))[1] != 0) {
-        level <- c(level,"0 < RP < 0.01")
-        col <- c(col,"blue")
-      }
-      if(dim(dplyr::filter(data, group == "0.01 < RP < 0.1"))[1] != 0) {
-        level <- c(level,"0.01 < RP < 0.1")
-        col <- c(col,"#00BFC4")
-      }
-      if(dim(dplyr::filter(data, group == "0.1 < RP < 1"))[1] != 0) {
-        level <- c(level,"0.1 < RP < 1")
-        col <- c(col,"lightgreen")
-      }
-      if(dim(dplyr::filter(data, group == "1 < RP < 2"))[1] != 0) {
-        level <- c(level,"1 < RP < 2")
-        col <- c(col,"#F8766D")
-      }
-      if(dim(dplyr::filter(data, group == "2 < RP"))[1] != 0) {
-        level <- c(level,"2 < RP")
-        col <- c(col,"red")
-      }
-      data$group <- factor(data$group,levels=level,ordered=TRUE)
-      data$intersection <- as.factor(name)
-      df <- rbind(df,data)
-      if(input$RNAseq_data_type_enrich != "List") {
-        genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,RNAlog2FC = -1*data$log2FoldChange,
-                                       sumRP = data$sumRP, gene_id = data$gene_id)
-      }else{
-        genelist[[name]] <- data.frame(Symbol = data$Symbol, group = data$group,
-                                       sumRP = data$sumRP, gene_id = data$gene_id)
-      }
-      bed_list1 <- list()
-      for(name2 in unique(data$group)){
-        if(name2 != "Others"){
-          table <- genelist[[name]] %>% dplyr::filter(group == name2)
-          print(head(table))
-          gene <- table$gene_id
-          up_peak3 <- NULL
-          if(length(gene) != 0){
-            up_peak <- subset(pre_mmAnno_enrich()[[name]], gene_id %in% gene)
-            up_peak2 <- as.data.frame(up_peak)
-            up_peak2$Row.names <- paste0(up_peak2$seqnames,":",up_peak2$start,"-",up_peak2$end)
-            up_peak2 <- up_peak2 %>% distinct(Row.names, .keep_all = T)
-            up_peak3 <- with(up_peak2,GRanges(seqnames,IRanges(start,end)))
-            mcols(up_peak3) <- DataFrame(Group = paste0(name,":",name2))
-            print(up_peak3)
-            bed_list1[[name2]] <- up_peak3
-          }
-        }
-      }
-      bed_list[[name]] <- bed_list1
-    }
-    data <- df 
-    for(name in enrich_select_RNA_debounce()){
-      check <- data %>% dplyr::filter(intersection == name) %>% 
-        dplyr::filter(group != "Others") %>% summarise(n())
-      if(check <= 1) data <- data %>% dplyr::filter(intersection != name)
-    }
-    data$intersection <- gsub("-","-\n",data$intersection)
-    collist <- unique(data$group)
-    
-    col <-c("gray","blue","#00BFC4","lightgreen","#F8766D","red")
-    if(input$RNAseq_data_type_enrich != "List"){
-      data$log10FoldChange <- log10(2^data$log2FoldChange)
-      data$log10FoldChange <- as.numeric(data$log10FoldChange)
-      if(dim(data)[1] == 0) validate("boxplot: There are few genes with |RP| > 1")
-      if (length(collist) >= 3){
-        stat.test <- data %>% dplyr::group_by(intersection) %>% 
-          tukey_hsd(log10FoldChange ~ group)
-        stat.test <- stat.test %>% add_significance("p.adj")
-        stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-      }else{
-        group1 <- dplyr::filter(data, group == collist[1])
-        group2 <- dplyr::filter(data, group == collist[2])
-        if(length(rownames(group1)) >1 && length(rownames(group2)) >1){
-          stat.test <- data %>% dplyr::group_by(intersection) %>% 
-            t_test(log10FoldChange ~ group)
-          stat.test <- stat.test %>% add_significance()
-          stat.test <- stat.test %>% add_xy_position(scales = "free", step.increase = 0.2)
-        }else stat.test <- NULL
-      }
-      p <- try(ggpubr::ggboxplot(data, x = "group", y = "log10FoldChange",
-                                 fill = "group", scales = "free", 
-                                 xlab = FALSE, ylab = paste0("RNAseq log10(",cond2,"/",cond1,")"))+theme_bw(base_size = 15)+
-                 xlab(NULL)+scale_fill_manual(values = col) + scale_x_discrete(labels = label_wrap_gen(8)))
-      if(input$Statistics_enrich !="not selected") p <- p + stat_pvalue_manual(stat.test,hide.ns = T, size = 5)         
-      p <- facet(p, facet.by = "intersection",
-                 panel.labs.background = list(fill = "transparent", color = "transparent"),
-                 scales = "free", short.panel.labs = T, panel.labs.font = list(size=15))
-      stat.test <- stat.test[,-2]
-      stat.test <- stat.test[,1:9]
-      colnames(stat.test)[1] <- "Peak"
-      df <- list()
-      df[["plot"]] <- p
-      df[["statistical_test"]] <- stat.test
-    }else {
-      df <- list()
-      table2 <- data %>% group_by(group, intersection) %>%
-        summarise(count = n(), .groups = "drop")
-      p <- ggplot(table2,aes(x = group,y= count, fill= group)) +
-        geom_col(position=position_dodge2(preserve = "single"))+scale_fill_manual(values = col) +
-        theme_bw(base_size = 15)+facet_wrap(~intersection,scales = "free") +
-        xlab(NULL) + ylab("Gene number") + scale_x_discrete(labels = label_wrap_gen(8))
-      df[["plot"]] <- p
-    }
-    df[["genelist"]] <- genelist
-    df[["bedlist"]] <- bed_list
-    print(bed_list)
-    
+    df <- RNAseq_box(RNA=RNAseqDEG_anno_enrich(),
+                     rna_name=RNAseq_name_enrich(),
+                      select=enrich_select_RNA_debounce(),
+                      data_type=input$RNAseq_data_type_enrich,
+                      RP=RP_enrich(),
+                      mmAnno=pre_mmAnno_enrich(),
+                      statistics=input$Statistics_enrich)
     return(df)
   })
   
@@ -9962,60 +9816,15 @@ shinyServer(function(input, output, session) {
     }
   })
   ChIPseq_popu_enrich <- reactive({
-    RNA <- RNAseqDEG_anno_enrich()
-    if(!is.null(RNA) && !is.null(pre_mmAnno_enrich())){
-      df <- data.frame(matrix(rep(NA, 10), nrow=1))[numeric(0), ]
-      for(name in enrich_select_RNA_debounce()){
-        mmano <- as.data.frame(pre_mmAnno_enrich()[[name]])
-        mmano$locus <- paste0(mmano$seqnames,":",mmano$start,"-",mmano$end)
-        merge <- merge(mmano,RNA, by = "gene_id")
-        if(input$RNAseq_data_type_enrich != "List"){
-          up_name <- paste0(RNAseq_name_enrich()[2]," gene only")
-          down_name <- paste0(RNAseq_name_enrich()[1]," gene only")
-          merge <- merge  %>% dplyr::mutate(Up_gene = if_else(padj < input$DEG_fdr_enrich & log2FoldChange > log(input$DEG_fc_enrich,2), 1, 0),
-                                            Down_gene = if_else(padj < input$DEG_fdr_enrich & log2FoldChange < -log(input$DEG_fc_enrich,2), 1, 0),
-                                            NS_gene = if_else(padj >= input$DEG_fdr_enrich | baseMean == 0 | is.na(padj) |
-                                                                (padj <= input$DEG_fdr_enrich & abs(log2FoldChange) <= log(input$DEG_fc_enrich,2)), 1, 0))
-          merge[is.na(merge)] <- 0
-          merge2 <- merge %>% group_by(locus,Group) %>% summarise(Total_associated_gene = sum(Up_gene)+sum(Down_gene)+sum(NS_gene),Group = Group,
-                                                                  Up_gene = sum(Up_gene), Down_gene = sum(Down_gene), NS_gene = sum(NS_gene))
-          table <- merge2 %>% dplyr::mutate(type = if_else(Up_gene > 0 & Down_gene == 0 & NS_gene == 0, up_name,
-                                                           if_else(Up_gene == 0 & Down_gene > 0 & NS_gene == 0, down_name,
-                                                                   if_else(Up_gene == 0 & Down_gene == 0 & NS_gene > 0, "NS gene only", "Multiple type of genes"))))
-          table$type <- factor(table$type,levels = c(down_name,up_name,"NS gene only","Multiple type of genes"))
-        }else{
-          merge2 <- merge %>% group_by(locus, Group.y) %>% summarise(Count = n()) 
-          merge2 <- spread(merge2,Group.y,Count)
-          merge2[is.na(merge2)] <- 0
-          namelist <- unique(merge$Group.y)
-          merge2$Total_associated_gene <- rowSums(merge2[,-1],na.rm = TRUE)
-          vec <- c()
-          merge3 <- merge2[,-1]
-          merge3 <- merge3[,-length(colnames(merge3))]
-          for(i in 1:dim(merge3)[1]){
-            type <- merge3[i,]
-            type <- paste(names(type[which(type != 0)]),collapse = "&")
-            vec <- c(vec,type) 
-          }
-          merge2$type <- vec
-          table <- merge2
-        }
-        table$Group <- paste0(table$Group," peak")
-        if(max(table$Total_associated_gene) < 5) table$Total_associated_gene <- as.character(table$Total_associated_gene) else table$Total_associated_gene <- as.numeric(table$Total_associated_gene)
-        table$RNA_group <- name
-        df <- rbind(df, table)
-      }
-      table <- df
-      table$RNA_group <- gsub("-","\n",table$RNA_group)
-      
-      p2 <- ggplot(table,aes(x = Total_associated_gene, fill = type)) + geom_bar(position = "stack") +
-        theme_bw(base_size = 15)+facet_wrap(~RNA_group,scales = "free") + ylab("Number of peaks") +
-        xlab("Number of associated genes")+guides(fill=guide_legend(title="associated_gene_type"))
-      if(input$RNAseq_data_type_enrich != "List"){
-        col <- c("#00BFC4","#F8766D","grey","black")
-        p2 <- p2 +
-          scale_fill_manual(values = col) 
-      }
+    if(!is.null(RNAseqDEG_anno_enrich()) && !is.null(pre_mmAnno_enrich())){
+      p2 <- peak_population(select=enrich_select_RNA_debounce(),
+                            RNA=RNAseqDEG_anno_enrich(),
+                            mmAnno=pre_mmAnno_enrich(),
+                            rna_name=RNAseq_name_enrich(),
+                            data_type=input$RNAseq_data_type_enrich,
+                            DEG_fdr=input$DEG_fdr_enrich,
+                            DEG_fc=input$DEG_fc_enrich,
+                            RNAseq_mode=input$RNAseq_mode_enrich)
       return(p2)
     }
   })
@@ -10108,6 +9917,7 @@ shinyServer(function(input, output, session) {
       paste0(format(Sys.time(), "%Y%m%d_"),"boxplot",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       withProgress(message = "Preparing download",{
         if(input$enrich_pdf_height == 0){
           pdf_height <- pdf_h(input$enrich_select_RNA)
@@ -10158,6 +9968,7 @@ shinyServer(function(input, output, session) {
       paste0(format(Sys.time(), "%Y%m%d_"),"KSplot",".zip")
     },
     content = function(fname) {
+      setwd(tempdir())
       withProgress(message = "Preparing download",{
         if(input$enrich_pdf_height == 0){
           pdf_height <- 5
@@ -10187,6 +9998,7 @@ shinyServer(function(input, output, session) {
       paste0(format(Sys.time(), "%Y%m%d_"),"RP_table",".zip")
     },
     content = function(fname) {
+      setwd(tempdir())
       withProgress(message = "Preparing download",{
         fs <- c()
         dir.create("RP_table/",showWarnings = FALSE)
@@ -10245,10 +10057,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$file_enrich1)){
       if(input$goButton_enrich > 0 ){
         df<-list()
-        df[["A_1"]] <- "data/bigwig/A_1.BigWig"
-        df[["A_2"]] <- "data/bigwig/A_2.BigWig"
-        df[["B_1"]] <- "data/bigwig/B_1.BigWig"
-        df[["B_2"]] <- "data/bigwig/B_2.BigWig"
+        df[["A_1"]] <- paste0(home_dir,"data/bigwig/A_1.BigWig")
+        df[["A_2"]] <- paste0(home_dir,"data/bigwig/A_2.BigWig")
+        df[["B_1"]] <- paste0(home_dir,"data/bigwig/B_1.BigWig")
+        df[["B_2"]] <- paste0(home_dir,"data/bigwig/B_2.BigWig")
         return(df)
       }
       return(NULL)
@@ -10603,7 +10415,7 @@ shinyServer(function(input, output, session) {
     if(input$Genomic_region == "Genome-wide"){
       radioButtons('homer_bg','Background sequence',
                    c('random'="random",
-                     'peak call files'="peakcalling"
+                     'all peaks'="all_peaks"
                    ),selected = "random")
     }
   })
@@ -10692,6 +10504,7 @@ shinyServer(function(input, output, session) {
       homer_Motifplot(df = enrich_motif(),showCategory = input$homer_showCategory,group_order=input$homer_sample_order)
     }
   })
+  
   output$download_motif_plot = downloadHandler(
     filename = function() {
       paste0("motif_enrichment_plot",".pdf")
@@ -10712,11 +10525,64 @@ shinyServer(function(input, output, session) {
       })
     }
   )
+  output$motif_plot_denovo_select <- renderUI({
+    if(input$motifButton > 0 && !is.null(enrich_motif()) && 
+       !is.null(input$homer_unknown) && input$Species != "not selected"){
+      if(input$homer_unknown == "known and de novo motifs"){
+        selectInput("motif_plot_denovo_select", "Select a group", names(enrich_motif()),
+                    selected=names(enrich_motif()),multiple = F)
+      }
+    }
+  })
+  motif_plot_deno_plot <- reactive({
+    if(input$motifButton > 0 && !is.null(enrich_motif()) && 
+       !is.null(input$homer_unknown) && input$Species != "not selected"){
+      if(input$homer_unknown == "known and de novo motifs" && !is.null(input$motif_plot_denovo_select)){
+        homer_Motifplot_denovo(df = enrich_motif(),name=input$motif_plot_denovo_select,
+                               showCategory = input$homer_showCategory,group_order=input$homer_sample_order)
+      }
+    }
+  })
+  output$motif_plot_denovo <- renderPlot({
+    if(!is.null(motif_plot_deno_plot())){
+      motif_plot_deno_plot()
+    }
+  })
+  output$download_motif_plot_denovo = downloadHandler(
+    filename = function() {
+      paste0("motif_enrichment_plot_denovo",".zip")
+    },
+    content = function(fname){
+      setwd(tempdir())
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$pair_pdf_width
+        for(name in names(enrich_motif())){
+          plot_name <- paste0("denovo/",name,".pdf")
+          fs <- c(fs,plot_name)
+          pdf(plot_name, height = pdf_height, width = pdf_width)
+          print(homer_Motifplot_denovo(df = enrich_motif(),name=name,
+                                       showCategory = input$homer_showCategory,
+                                       group_order=input$homer_sample_order))
+          dev.off()
+        }
+        incProgress(1)
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
+  
   output$download_homer_report = downloadHandler(
     filename = function() {
       paste0("HOMER_report",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       path_list <- enrich_motif()
       base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
@@ -10787,8 +10653,8 @@ shinyServer(function(input, output, session) {
     if(input$Genomic_region == "Genome-wide"){
       radioButtons('with_homer_bg','Background sequence',
                    c('random'="random",
-                     'peak call files'="peakcalling"
-                   ),selected = "peakcalling")
+                     'all peaks'="all_peaks"
+                   ),selected = "all_peaks")
     }
   })
   
@@ -10928,6 +10794,56 @@ shinyServer(function(input, output, session) {
                       section = "withRNAseq",group_order = input$with_homer_sample_order)
     }
   })
+  output$motif_plot_denovo_select_with <- renderUI({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
+       !is.null(input$with_homer_unknown) && input$Species != "not selected"){
+      if(input$with_homer_unknown == "known and de novo motifs"){
+        selectInput("motif_plot_denovo_select_with", "Select a group", names(with_enrich_motif()),
+                    selected=names(with_enrich_motif()),multiple = F)
+      }
+    }
+  })
+  motif_plot_deno_plot_with <- reactive({
+    if(input$with_motifButton > 0 && !is.null(with_enrich_motif()) && 
+       !is.null(input$with_homer_unknown) && input$Species != "not selected"){
+      if(input$with_homer_unknown == "known and de novo motifs"){
+        homer_Motifplot_denovo(df = with_enrich_motif(),name=input$motif_plot_denovo_select_with,
+                               showCategory = input$with_homer_showCategory)
+      }
+    }
+  })
+  output$motif_plot_denovo_with <- renderPlot({
+    if(!is.null(motif_plot_deno_plot_with())){
+      motif_plot_deno_plot_with()
+    }
+  })
+  output$download_motif_plot_denovo_with = downloadHandler(
+    filename = function() {
+      paste0("motif_enrichment_plot_denovo",".zip")
+    },
+    content = function(fname){
+      setwd(tempdir())
+      withProgress(message = "Preparing download",{
+        if(input$pair_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$pair_pdf_height
+        if(input$pair_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$pair_pdf_width
+        for(name in names(with_enrich_motif())){
+          plot_name <- paste0("denovo/",name,".pdf")
+          fs <- c(fs,plot_name)
+          pdf(plot_name, height = pdf_height, width = pdf_width)
+          print(homer_Motifplot_denovo(df = with_enrich_motif(),name=name,
+                                       showCategory = input$with_homer_showCategory))
+          dev.off()
+        }
+        incProgress(1)
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
   output$download_with_motif_plot = downloadHandler(
     filename = function() {
       paste0("withRNAseq_motif_enrichment_plot",".pdf")
@@ -10954,6 +10870,7 @@ shinyServer(function(input, output, session) {
       paste0("withRNAseq_HOMER_report",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       path_list <- with_enrich_motif()
       base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
@@ -11030,14 +10947,18 @@ shinyServer(function(input, output, session) {
                  ),selected = "custom")
   })
   output$homer_bg_venn <- renderUI({
+    if(length(names(Venn_peak_call_files())) == 1) 
+      choices <-c('random'="random",
+                  'custom'="custom") else
+                    choices <-c('random'="random",
+                                'all peaks'="all",
+                                'custom'="custom")
     radioButtons('homer_bg_venn','Background sequence',
-                 c('random'="random",
-                   'bed files'="peakcalling"
-                 ),selected = "random")
+                 choices,selected = "random")
   })
   output$homer_bg2_venn <- renderUI({
     if(!is.null(input$homer_bg_venn)){
-      if(input$homer_bg_venn == "peakcalling"){
+      if(input$homer_bg_venn == "custom"){
         fileInput('homer_bg2_venn',
                   'Select bed files',
                   accept = c("bed","narrowPeak"),
@@ -11146,10 +11067,10 @@ shinyServer(function(input, output, session) {
        && input$Species_venn != "not selected" && !is.null(input$homer_unknown_venn)){
       if(input$homer_size_venn == "given") size <- "given"
       if(input$homer_size_venn == "custom") size <- input$homer_size2_venn
-      if(input$homer_bg_venn == "peakcalling" && is.null(input$homer_bg2_venn)){
+      if(input$homer_bg_venn == "custom" && is.null(input$homer_bg2_venn)){
         return(NULL)
       }else return(findMotif(df= preMotif_list_venn(),Species = input$Species_venn,size=size,back = input$homer_bg_venn,motif_length=input$homer_length_venn,
-                             motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other",section="venn"))
+                             motif=input$homer_unknown_venn, other_data = Venn_peak_call_files_homer(),type="Other",section="venn",venn=Venn_peak_call_files()))
     }
   })
   venn_motif_plot <- reactive({
@@ -11163,7 +11084,56 @@ shinyServer(function(input, output, session) {
       venn_motif_plot()
     }
   })
-  
+  output$motif_plot_denovo_select_venn <- renderUI({
+    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
+       !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
+      if(input$homer_unknown_venn == "known and de novo motifs"){
+        selectInput("motif_plot_denovo_select_venn", "Select a group", names(enrich_motif_venn()),
+                    selected=names(enrich_motif_venn()),multiple = F)
+      }
+    }
+  })
+  motif_plot_deno_plot_venn <- reactive({
+    if(input$motifButton_venn > 0 && !is.null(enrich_motif_venn()) && 
+       !is.null(input$homer_unknown_venn) && input$Species_venn != "not selected"){
+      if(input$homer_unknown_venn == "known and de novo motifs"){
+        homer_Motifplot_denovo(df = enrich_motif_venn(),name=input$motif_plot_denovo_select_venn,
+                               showCategory = input$homer_showCategory_venn)
+      }
+    }
+  })
+  output$motif_plot_denovo_venn <- renderPlot({
+    if(!is.null(motif_plot_deno_plot_venn())){
+      motif_plot_deno_plot_venn()
+    }
+  })
+  output$download_motif_plot_denovo_venn = downloadHandler(
+    filename = function() {
+      paste0("motif_enrichment_plot_denovo",".zip")
+    },
+    content = function(fname){
+      setwd(tempdir())
+      withProgress(message = "Preparing download",{
+        if(input$venn_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$venn_pdf_height
+        if(input$venn_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$venn_pdf_width
+        for(name in names(enrich_motif_venn())){
+          plot_name <- paste0("denovo/",name,".pdf")
+          fs <- c(fs,plot_name)
+          pdf(plot_name, height = pdf_height, width = pdf_width)
+          print(homer_Motifplot_denovo(df = enrich_motif_venn(),name=name,
+                                       showCategory = input$homer_showCategory_venn))
+          dev.off()
+        }
+        incProgress(1)
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
   output$download_motif_venn_plot = downloadHandler(
     filename = function() {
       paste0("motif_enrichment_plot",".pdf")
@@ -11227,6 +11197,7 @@ shinyServer(function(input, output, session) {
       paste0("HOMER_report",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       path_list <- enrich_motif_venn()
       base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
@@ -11287,14 +11258,19 @@ shinyServer(function(input, output, session) {
       }}
   })
   output$homer_bg_enrich <- renderUI({
+    if(length(names(Enrich_peak_call_files())) == 1) 
+      choices <-c('random'="random",
+                  'custom'="custom") else
+                    choices <-c('random'="random",
+                                'all peaks'="all",
+                                'custom'="custom")
     radioButtons('homer_bg_enrich','Background sequence',
-                 c('random'="random",
-                   'bed files'="peakcalling"
-                 ),selected = "random")
+                 choices,
+                 selected = "random")
   })
   output$homer_bg2_enrich <- renderUI({
     if(!is.null(input$homer_bg_enrich)){
-      if(input$homer_bg_enrich == "peakcalling"){
+      if(input$homer_bg_enrich == "custom"){
         fileInput('homer_bg2_enrich',
                   'Select bed files',
                   accept = c("bed","narrowPeak"),
@@ -11380,7 +11356,7 @@ shinyServer(function(input, output, session) {
        && input$Species_enrich != "not selected" && !is.null(input$homer_unknown_enrich)){
       if(input$homer_size_enrich == "given") size <- "given"
       if(input$homer_size_enrich == "custom") size <- input$homer_size2_enrich
-      if(input$homer_bg_enrich == "peakcalling" && is.null(input$homer_bg2_enrich)){
+      if(input$homer_bg_enrich == "custom" && is.null(input$homer_bg2_enrich)){
         return(NULL)
       }else return(findMotif(df= Enrich_peak_call_files(), Species = input$Species_enrich,size=size,back = input$homer_bg_enrich,motif_length=input$homer_length_enrich,
                              motif=input$homer_unknown_enrich, other_data = Enrich_peak_call_files_homer(),type="Other",section="enrich"))
@@ -11394,7 +11370,56 @@ shinyServer(function(input, output, session) {
                       group_order = input$homer_sample_order_enrich)
     }
   })
-  
+  output$motif_plot_denovo_select_enrich <- renderUI({
+    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && 
+       !is.null(input$homer_unknown_enrich) && input$Species_enrich != "not selected"){
+      if(input$homer_unknown_enrich == "known and de novo motifs"){
+        selectInput("motif_plot_denovo_select_enrich", "Select a group", names(enrich_motif_enrich()),
+                    selected=names(enrich_motif_enrich()),multiple = F)
+      }
+    }
+  })
+  motif_plot_deno_plot_enrich <- reactive({
+    if(input$motifButton_enrich > 0 && !is.null(enrich_motif_enrich()) && 
+       !is.null(input$homer_unknown_enrich) && input$Species_enrich != "not selected"){
+      if(input$homer_unknown_enrich == "known and de novo motifs"){
+        homer_Motifplot_denovo(df = enrich_motif_enrich(),name=input$motif_plot_denovo_select_enrich,
+                               showCategory = input$homer_showCategory_enrich)
+      }
+    }
+  })
+  output$motif_plot_denovo_enrich <- renderPlot({
+    if(!is.null(motif_plot_deno_plot_enrich())){
+      motif_plot_deno_plot_enrich()
+    }
+  })
+  output$download_motif_plot_denovo_enrich = downloadHandler(
+    filename = function() {
+      paste0("motif_enrichment_plot_denovo",".zip")
+    },
+    content = function(fname){
+      setwd(tempdir())
+      withProgress(message = "Preparing download",{
+        if(input$enrich_pdf_height == 0){
+          pdf_height <- 6
+        }else pdf_height <- input$enrich_pdf_height
+        if(input$enrich_pdf_width == 0){
+          pdf_width <- 7
+        }else pdf_width <- input$enrich_pdf_width
+        for(name in names(enrich_motif_enrich())){
+          plot_name <- paste0("denovo/",name,".pdf")
+          fs <- c(fs,plot_name)
+          pdf(plot_name, height = pdf_height, width = pdf_width)
+          print(homer_Motifplot_denovo(df = enrich_motif_enrich(),name=name,
+                                       showCategory = input$homer_showCategory_enrich))
+          dev.off()
+        }
+        incProgress(1)
+      })
+      zip(zipfile=fname, files=fs)
+    },
+    contentType = "application/zip"
+  )
   output$download_motif_enrich_plot = downloadHandler(
     filename = function() {
       paste0("motif_enrichment_plot",".pdf")
@@ -11462,6 +11487,7 @@ shinyServer(function(input, output, session) {
       paste0("HOMER_report",".zip")
     },
     content = function(fname){
+      setwd(tempdir())
       fs <- c()
       path_list <- enrich_motif_enrich()
       base_dir <- gsub("\\/.+$", "", path_list[[names(path_list)[1]]])
@@ -11492,10 +11518,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$bed_data_file)){
       if(input$goButton_bed > 0 ){
         files <- list()
-        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
-        files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
-        files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+        files[["A_1"]] <- paste0(home_dir,"data/peakcall/A_1_peaks.narrowPeak")
+        files[["A_2"]] <- paste0(home_dir,"data/peakcall/A_2_peaks.narrowPeak")
+        files[["B_1"]] <- paste0(home_dir,"data/peakcall/B_1_peaks.narrowPeak")
+        files[["B_2"]] <- paste0(home_dir,"data/peakcall/B_2_peaks.narrowPeak")
         files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
@@ -11517,10 +11543,10 @@ shinyServer(function(input, output, session) {
     if(is.null(input$bed_data_file2)){
       if(input$goButton_bed > 0 ){
         files <- list()
-        files[["A_1"]] <- "data/peakcall/A_1_peaks.narrowPeak"
-        files[["A_2"]] <- "data/peakcall/A_2_peaks.narrowPeak"
-        files[["B_1"]] <- "data/peakcall/B_1_peaks.narrowPeak"
-        files[["B_2"]] <- "data/peakcall/B_2_peaks.narrowPeak"
+        files[["A_1"]] <- paste0(home_dir,"data/peakcall/A_1_peaks.narrowPeak")
+        files[["A_2"]] <- paste0(home_dir,"data/peakcall/A_2_peaks.narrowPeak")
+        files[["B_1"]] <- paste0(home_dir,"data/peakcall/B_1_peaks.narrowPeak")
+        files[["B_2"]] <- paste0(home_dir,"data/peakcall/B_2_peaks.narrowPeak")
         files2 <- lapply(files, GetGRanges, simple = TRUE)
         return(files2)
       }
@@ -11607,6 +11633,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(fname) {
       withProgress(message = "Preparing download, please wait",{
+        setwd(tempdir())
         fs <- c()
         files <- interval_merge()
         for(name in names(files)){

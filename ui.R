@@ -184,7 +184,7 @@ shinyUI(
                                            strong("Barplot (with RNAseq):"), "height = 5, width = 7 <br>",
                                            strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
                                            strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>",
-                                           strong("combined heatmap:"), "height = 6, width = 10 <br>"),trigger = "click"), 
+                                           strong("EnrichedHeatmap:"), "height = 6, width = 10 <br>"),trigger = "click"), 
                    actionButton("goButton", "example data (hg19)"),
                    tags$head(tags$style("#goButton{color: black;
                                  font-size: 12px;
@@ -323,7 +323,7 @@ shinyUI(
                                          )
                               )),
                      tabPanel("Annotation",
-                              downloadButton("download_input_peak_distribution", "Download plot"),
+                              downloadButton("download_summary_peak_distribution", "Download plot"),
                               textOutput("Spe_dist_promoter"),
                                      tags$head(tags$style("#Spe_dist_promoter{color: red;
                                  font-size: 20px;
@@ -334,13 +334,47 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
-                              plotOutput("input_peak_distribution"),
-                              downloadButton("download_input_peak_distribution_table", "Download table"),
-                              dataTableOutput("up_distribution_table"),
-                              downloadButton("download_deg_peak_distribution", "Download plot"),
-                              plotOutput("deg_peak_distribution"),
-                              downloadButton("download_down_peak_distribution_table", "Download table"),
-                              dataTableOutput("down_distribution_table"),
+                              htmlOutput("annotation_summary_order_pari"),
+                              plotOutput("annotation_summary_pair"),
+                              dataTableOutput("pair_peak_distribution_test"),
+                              bsCollapse(id="annoation_pair_panel",multiple = F,
+                                         bsCollapsePanel(title="selected intersect data:",
+                                                         value="annotation_panel",
+                                                         htmlOutput("annotation_select"),
+                                                         downloadButton("download_input_peak_distribution", "Download annotations (.txt and .pdf)"),
+                                                         plotOutput("input_peak_distribution"),
+                                                         DTOutput("distribution_table_pair"),
+                                                         radioButtons("TSSdistance_mode_pair","mode",
+                                                                      choiceNames = list(
+                                                                        tagList(
+                                                                          tags$span("Nearest"),
+                                                                          tags$span(icon("info-circle"), id = "icon_mode1_pair", style = "color: black;")
+                                                                        ), 
+                                                                        tagList(
+                                                                          tags$span("Gene_scan"),
+                                                                          tags$span(icon("info-circle"), id = "icon_mode2_pair", style = "color: black;")
+                                                                        )
+                                                                      ),
+                                                                      choiceValues = c("Nearest","Gene_scan"),
+                                                                      selected = "Nearest"),
+                                                         bsPopover("icon_mode1_pair", "Nearest mode:", 
+                                                                   content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
+                                                                                 img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
+                                                         bsPopover("icon_mode2_pair", "Gene scan mode:", 
+                                                                   content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
+                                                                                 img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
+                                                         sliderInput("peak_TSSdistance_pair","Regulatory range (distance (kb) from TSS)",
+                                                                     min=0,max=1000,value=100,step = 5),
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_pair_TSSdistance", "Download"))
+                                                         ),
+                                                         plotOutput('pair_TSSdistance')
+                                         )
+                              )
+                              
+                              
+                              
+                              
                      ),
                      tabPanel("Peak pattern",
                               fluidRow(
@@ -379,6 +413,7 @@ shinyUI(
                                 column(4, htmlOutput("Gene_set")),
                                 column(4, downloadButton("download_pair_enrichment", "Download"))
                               ),
+                              htmlOutput("GREAT_select_pair"),
                               plotOutput("enrichment1"),
                               bsCollapse(id="input_collapse_pair_enrich",open="ORA_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Enrichment result:",
@@ -461,30 +496,21 @@ shinyUI(
                                                          downloadButton("download_motif_table", "Download motif enrichment result"),
                                                          DTOutput('motif_result')
                                          )
-                              )
+                              ),
+                              htmlOutput("motif_plot_denovo_select"),
+                              downloadButton("download_motif_plot_denovo", "Download de novo motif plot"),
+                              div(
+                                plotOutput('motif_plot_denovo', height = "100%"),
+                                style = "height: calc(75vh  - 75px)"
+                              ),
                      ),
                      ##pair-wise HOMER end-----
-                     tabPanel("Combined heatmap",
+                     tabPanel("EnrichedHeatmap",
                               textOutput("Spe_rnaseq2"),
                               tags$head(tags$style("#Spe_rnaseq2{color: red;
                                  font-size: 20px;
             font-style: bold;
             }")),
-                              fluidRow(
-                                column(6, htmlOutput("rnaseq_DEGs")),
-                                column(6, htmlOutput("rnaseq_count"),
-                                       htmlOutput("pre_zscoring"))
-                              ),
-                              bsCollapse(id="z-score_count",open="z-score_multiple_count_panel",multiple = TRUE,
-                                         bsCollapsePanel(title="Uploaded DEG result files",
-                                                         value="Uploaded_DEGs",
-                                                         dataTableOutput('rnaseq_DEGs_output')
-                                         ),
-                                         bsCollapsePanel(title="z-score of uploaded count files",
-                                                         value="z-score_multiple_count_panel",
-                                                         dataTableOutput('rnaseq_count_output')
-                                         )
-                              ),
                               fluidRow(
                                 column(4, htmlOutput("integrated_bw1"),
                                        htmlOutput("sample_order_pair_comb1")),
@@ -515,6 +541,20 @@ shinyUI(
                                                          'manual'="manual"
                                                        ),selected = "auto"),
                                        htmlOutput("integrated_range_type_3_pair_manual"))
+                              ),
+                              bsCollapse(id="z-score_count",open="z-score_multiple_count_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Option: RNA-seq data",
+                                                         value="Uploaded_DEGs",
+                                                         fluidRow(
+                                                           column(6, htmlOutput("rnaseq_DEGs")),
+                                                           column(6, htmlOutput("rnaseq_count"),
+                                                                  htmlOutput("pre_zscoring"))
+                                                         ),
+                                                         h4("RNA-seq DEG result"),
+                                                         dataTableOutput('rnaseq_DEGs_output'),
+                                                         h4("RNA-seq count data"),
+                                                         dataTableOutput('rnaseq_count_output')
+                                         )
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton", "Start"),
@@ -705,7 +745,7 @@ shinyUI(
                                                          ),
                                                          dataTableOutput("int_enrichment_result")
                                          ),
-                                         bsCollapsePanel(title="Combined heatmap:",
+                                         bsCollapsePanel(title="EnrichedHeatmap:",
                                                          value="heatmap_panel",
                                                          htmlOutput("Group_integrated_heatmap"),
                                                          fluidRow(
@@ -828,7 +868,13 @@ shinyUI(
                                                                                     downloadButton("download_with_motif_table", "Download motif enrichment result"),
                                                                                     DTOutput('with_motif_result')
                                                                     )
-                                                         )           
+                                                         ),
+                                                         htmlOutput("motif_plot_denovo_select_with"),
+                                                         downloadButton("download_motif_plot_denovo_with", "Download de novo motif plot"),
+                                                         div(
+                                                           plotOutput('motif_plot_denovo_with', height = "100%"),
+                                                           style = "height: calc(75vh  - 75px)"
+                                                         )
                                          ) ##pair-wise withRNAseq HOMER end
                                          
                               )
@@ -864,7 +910,7 @@ shinyUI(
                              content=paste(strong("Short names are recommended for file names.")), 
                              placement = "right",options = list(container = "body"),trigger = "click"),
                    fluidRow(
-                     column(8, selectizeInput("sample_order_venn", "Sample order:", choices = "", multiple = T)),
+                     column(8, selectizeInput("sample_order_venn", "Sample order (bigwig):", choices = "", multiple = T)),
                      column(4,  actionButton("vennButton", "Start"),
                    tags$head(tags$style("#vennButton{color: red;
                                  font-size: 20px;
@@ -900,7 +946,7 @@ shinyUI(
                                            strong("Boxplot (with RNAseq):"), "height = 5, width = 6 <br>",
                                            strong("KS-plot (with RNAseq):"), "height = 5, width = 7 <br>",
                                            strong("Dotplot (with RNAseq):"), "height = 5, width = 8 <br>",
-                                           strong("combined heatmap:"), "height = 6, width = 10 <br>"),trigger = "click"), 
+                                           strong("EnrichedHeatmap:"), "height = 6, width = 10 <br>"),trigger = "click"), 
                    
                    actionButton("goButton_venn", "example data (hg19)"),
                    tags$head(tags$style("#goButton_venn{color: black;
@@ -954,14 +1000,41 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              htmlOutput("intersect_select_summary"),
                               plotOutput("venn_peak_distribution"),
+                              dataTableOutput("venn_peak_distribution_test"),
                               bsCollapse(id="int_result_collapse_panel",open="selected_intersect_annotation_panel",multiple = TRUE,
                                          bsCollapsePanel(title="selected intersect data:",
                                                          value="selected_intersect_annotation_panel",
                                                          htmlOutput("intersect_select"),
                                                          downloadButton("download_selected_intersect_annotation_table", "Download annotations of all intersections (.txt and .pdf)"),
                                                          plotOutput("selected_venn_peak_distribution"),
-                                                         DTOutput("selected_intersect_annotation")
+                                                         DTOutput("selected_intersect_annotation"),
+                                                         radioButtons("TSSdistance_mode_venn","mode",
+                                                                      choiceNames = list(
+                                                                        tagList(
+                                                                          tags$span("Nearest"),
+                                                                          tags$span(icon("info-circle"), id = "icon_mode1_venn", style = "color: black;")
+                                                                        ), 
+                                                                        tagList(
+                                                                          tags$span("Gene_scan"),
+                                                                          tags$span(icon("info-circle"), id = "icon_mode2_venn", style = "color: black;")
+                                                                        )
+                                                                      ),
+                                                                      choiceValues = c("Nearest","Gene_scan"),
+                                                                      selected = "Nearest"),
+                                                         bsPopover("icon_mode1_venn", "Nearest mode:", 
+                                                                   content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
+                                                                                 img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
+                                                         bsPopover("icon_mode2_venn", "Gene scan mode:", 
+                                                                   content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
+                                                                                 img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
+                                                         sliderInput("peak_TSSdistance_venn","Regulatory range (distance (kb) from TSS)",
+                                                                     min=0,max=1000,value=100,step = 5),
+                                                         fluidRow(
+                                                           column(4, downloadButton("download_venn_TSSdistance", "Download"))
+                                                         ),
+                                                         plotOutput('venn_TSSdistance')
                                          ),
                                          bsCollapsePanel(title="Trackplot:",
                                                          value="Trackplot_venn_panel",
@@ -1099,9 +1172,15 @@ shinyUI(
                                                          downloadButton("download_denovo_motif_venn_table", "Download motif region"),
                                                          dataTableOutput("denovo_motif_venn_result")
                                          )
-                              )
+                              ),
+                              htmlOutput("motif_plot_denovo_select_venn"),
+                              downloadButton("download_motif_plot_denovo_venn", "Download de novo motif plot"),
+                              div(
+                                plotOutput('motif_plot_denovo_venn', height = "100%"),
+                                style = "height: calc(75vh  - 75px)"
+                              ),
                      ),##venn HOMER end
-                     tabPanel("Combined heatmap",
+                     tabPanel("EnrichedHeatmap",
                               textOutput("Spe_rnaseq2_venn"),
                               tags$head(tags$style("#Spe_rnaseq2_venn{color: red;
                                  font-size: 20px;
@@ -1113,21 +1192,6 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),)
-                              ),
-                              fluidRow(
-                                column(6, htmlOutput("rnaseq_DEGs_venn")),
-                                column(6, htmlOutput("rnaseq_count_venn"),
-                                       htmlOutput("pre_zscoring_venn"))
-                              ),
-                              bsCollapse(id="z-score_count_venn",open="z-score_multiple_count_venn_panel",multiple = TRUE,
-                                         bsCollapsePanel(title="Uploaded DEG result files",
-                                                         value="Uploaded_DEGs_venn",
-                                                         dataTableOutput('rnaseq_DEGs_output_venn')
-                                         ),
-                                         bsCollapsePanel(title="z-score of uploaded count files",
-                                                         value="z-score_multiple_count_venn_panel",
-                                                         dataTableOutput('rnaseq_count_output_venn')
-                                         )
                               ),
                               fluidRow(
                                 column(4, htmlOutput("integrated_bw2_venn"),
@@ -1159,6 +1223,20 @@ shinyUI(
                                                          'manual'="manual"
                                                        ),selected = "auto"),
                                        htmlOutput("integrated_range_type_3_venn_manual"))
+                              ),
+                              bsCollapse(id="z-score_count_venn",open="z-score_multiple_count_venn_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Option: RNA-seq data",
+                                                         value="Uploaded_DEGs_venn",
+                                                         fluidRow(
+                                                           column(6, htmlOutput("rnaseq_DEGs_venn")),
+                                                           column(6, htmlOutput("rnaseq_count_venn"),
+                                                                  htmlOutput("pre_zscoring_venn"))
+                                                         ),
+                                                         h4("RNA-seq DEG result"),
+                                                         dataTableOutput('rnaseq_DEGs_output_venn'),
+                                                         h4("RNA-seq count data"),
+                                                         dataTableOutput('rnaseq_count_output_venn')
+                                         )
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton_venn", "Start"),
@@ -1687,7 +1765,7 @@ shinyUI(
                                            "Default size: <br>",
                                            "Dotplot:", "height = 5, width = 6.5 <br>", 
                                            "cnet plot:","height = 6, width = 6 <br><br>",
-                                           "combined heatmap:", "height = 6, width = 10 <br>"), trigger = "click"), 
+                                           "EnrichedHeatmap:", "height = 6, width = 10 <br>"), trigger = "click"), 
                    actionButton("goButton_enrich", "example data (hg19)"),
                    tags$head(tags$style("#goButton_enrich{color: black;
                                  font-size: 12px;
@@ -1715,7 +1793,9 @@ shinyUI(
                                  font-size: 20px;
             font-style: bold;
             }")),
+                              htmlOutput("input_peak_distribution_summary_enrich"),
                               plotOutput("input_peak_distribution_enrich"),
+                              dataTableOutput("peak_distribution_test_enrich"),
                               bsCollapsePanel(title="Annotation:",
                                               value="annotation_enrich_panel",
                                               fluidRow(
@@ -1723,7 +1803,32 @@ shinyUI(
                                               ),
                                               downloadButton("download_selected_enrich_annotation_table", "Download annotations of all peaks (.txt and .pdf)"),
                                               plotOutput("selected_enrich_peak_distribution"),
-                                              DTOutput("enrich_annotation")
+                                              DTOutput("enrich_annotation"),
+                                              radioButtons("TSSdistance_mode_enrich","mode",
+                                                           choiceNames = list(
+                                                             tagList(
+                                                               tags$span("Nearest"),
+                                                               tags$span(icon("info-circle"), id = "icon_mode1_enrich", style = "color: black;")
+                                                             ), 
+                                                             tagList(
+                                                               tags$span("Gene_scan"),
+                                                               tags$span(icon("info-circle"), id = "icon_mode2_enrich", style = "color: black;")
+                                                             )
+                                                           ),
+                                                           choiceValues = c("Nearest","Gene_scan"),
+                                                           selected = "Nearest"),
+                                              bsPopover("icon_mode1_enrich", "Nearest mode:", 
+                                                        content=paste("In this mode, each peak is linked to the single nearest gene.<br><br>", 
+                                                                      img(src="withRNAseq_nearest_mode.png", width = 800,height = 360))), 
+                                              bsPopover("icon_mode2_enrich", "Gene scan mode:", 
+                                                        content=paste("In this mode, each peak is linked to multiple genes located within the selected distance (default 100 kb) from the peak.<br><br>", 
+                                                                      img(src="withRNAseq_Gene_scan_mode.png", width = 800,height = 360))), 
+                                              sliderInput("peak_TSSdistance_enrich","Regulatory range (distance (kb) from TSS)",
+                                                          min=0,max=1000,value=100,step = 5),
+                                              fluidRow(
+                                                column(4, downloadButton("download_enrich_TSSdistance", "Download"))
+                                              ),
+                                              plotOutput('enrich_TSSdistance')
                               )
                      ),
                      tabPanel("GREAT",
@@ -1731,6 +1836,7 @@ shinyUI(
                                 column(4, htmlOutput("Gene_set_enrich")),
                                 column(4, downloadButton("download_enrich_enrichment", "Download"))
                               ),
+                              htmlOutput("enrichment_order_enrich"),
                               plotOutput("enrichment_enrich"),
                               bsCollapse(id="input_collapse_enrich_enrich",open="ORA_enrich_panel",multiple = TRUE,
                                          bsCollapsePanel(title="Enrichment result:",
@@ -1817,9 +1923,15 @@ shinyUI(
                                                          downloadButton("download_denovo_motif_enrich_table", "Download de novo motif"),
                                                          dataTableOutput("denovo_motif_enrich_result")
                                          )
-                              )
+                              ),
+                              htmlOutput("motif_plot_denovo_select_enrich"),
+                              downloadButton("download_motif_plot_denovo_enrich", "Download de novo motif plot"),
+                              div(
+                                plotOutput('motif_plot_denovo_enrich', height = "100%"),
+                                style = "height: calc(75vh  - 75px)"
+                              ),
                      ),##enrich HOMER end
-                     tabPanel("Combined heatmap",
+                     tabPanel("EnrichedHeatmap",
                               textOutput("Spe_rnaseq2_enrich"),
                               tags$head(tags$style("#Spe_rnaseq2_enrich{color: red;
                                  font-size: 20px;
@@ -1829,51 +1941,58 @@ shinyUI(
                                 column(6, htmlOutput("integrated_bw1_enrich"),
                                        htmlOutput("sample_order_enrich_comb1"))
                               ),
+                              h4("Option: Select additional bigwig files"),
                               fluidRow(
-                                column(6, htmlOutput("rnaseq_DEGs_enrich")),
-                                column(6, htmlOutput("rnaseq_count_enrich"),
-                                       htmlOutput("pre_zscoring_enrich"))
-                              ),
-                              bsCollapse(id="z-score_count_enrich",open="z-score_multiple_count_enrich_panel",multiple = TRUE,
-                                         bsCollapsePanel(title="Uploaded DEG result files",
-                                                         value="Uploaded_DEGs_enrich",
-                                                         dataTableOutput('rnaseq_DEGs_output_enrich')
-                                         ),
-                                         bsCollapsePanel(title="z-score of uploaded count files",
-                                                         value="z-score_multiple_count_enrich_panel",
-                                                         dataTableOutput('rnaseq_count_output_enrich')
-                                         )
-                              ),
-                              fluidRow(
-                                column(4, htmlOutput("integrated_bw2_enrich"),
+                                column(3, htmlOutput("integrated_bw2_enrich"),
                                        htmlOutput("sample_order_enrich_comb2")),
-                                column(4, htmlOutput("integrated_bw3_enrich"),
+                                column(3, htmlOutput("integrated_bw3_enrich"),
                                        htmlOutput("sample_order_enrich_comb3")),
-                                column(4, htmlOutput("integrated_bw4_enrich"),
-                                       htmlOutput("sample_order_enrich_comb4"))
+                                column(3, htmlOutput("integrated_bw4_enrich"),
+                                       htmlOutput("sample_order_enrich_comb4")),
+                                column(3, htmlOutput("integrated_bw5_enrich"),
+                                       htmlOutput("sample_order_enrich_comb5"))
                               ),
                               h4("Maximum values of the y-axis on a line plot"),
                               fluidRow(
-                                column(3, radioButtons('integrated_range_type_0_enrich','red:',
+                                column(2, radioButtons('integrated_range_type_0_enrich','red:',
                                                        c('auto'="auto",
                                                          'manual'="manual"
                                                        ),selected = "auto"),
                                        htmlOutput("integrated_range_type_0_enrich_manual")),
-                                column(3, radioButtons('integrated_range_type_1_enrich','blue:',
+                                column(2, radioButtons('integrated_range_type_1_enrich','blue:',
                                                        c('auto'="auto",
                                                          'manual'="manual"
                                                        ),selected = "auto"),
                                        htmlOutput("integrated_range_type_1_enrich_manual")),
-                                column(3, radioButtons('integrated_range_type_2_enrich','green:',
+                                column(2, radioButtons('integrated_range_type_2_enrich','green:',
                                                        c('auto'="auto",
                                                          'manual'="manual"
                                                        ),selected = "auto"),
                                        htmlOutput("integrated_range_type_2_enrich_manual")),
-                                column(3, radioButtons('integrated_range_type_3_enrich','purple:',
+                                column(2, radioButtons('integrated_range_type_3_enrich','purple:',
                                                        c('auto'="auto",
                                                          'manual'="manual"
                                                        ),selected = "auto"),
-                                       htmlOutput("integrated_range_type_3_enrich_manual"))
+                                       htmlOutput("integrated_range_type_3_enrich_manual")),
+                                column(2, radioButtons('integrated_range_type_4_enrich','yellow:',
+                                                       c('auto'="auto",
+                                                         'manual'="manual"
+                                                       ),selected = "auto"),
+                                       htmlOutput("integrated_range_type_4_enrich_manual"))
+                              ),
+                              bsCollapse(id="z-score_count_enrich",open="z-score_multiple_count_enrich_panel",multiple = TRUE,
+                                         bsCollapsePanel(title="Option: RNA-seq data",
+                                                         value="Uploaded_DEGs_enrich",
+                                                         fluidRow(
+                                                           column(6, htmlOutput("rnaseq_DEGs_enrich")),
+                                                           column(6, htmlOutput("rnaseq_count_enrich"),
+                                                                  htmlOutput("pre_zscoring_enrich"))
+                                                         ),
+                                                         h4("RNA-seq DEG result"),
+                                                         dataTableOutput('rnaseq_DEGs_output_enrich'),
+                                                         h4("RNA-seq count data"),
+                                                         dataTableOutput('rnaseq_count_output_enrich')
+                                         )
                               ),
                               fluidRow(
                                 column(4, actionButton("integrated_heatmapButton_enrich", "Start"),
