@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y \
     git \
     libmagick++-dev \
     libpoppler-dev \
-    libpoppler-cpp-dev
+    libpoppler-cpp-dev \
+    libglpk-dev
 RUN cd ~ && export PHANTOM_JS="phantomjs-2.1.1-linux-x86_64" && \
     wget https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 && \
     tar xvjf $PHANTOM_JS.tar.bz2 && \
