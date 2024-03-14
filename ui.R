@@ -814,14 +814,6 @@ shinyUI(
                                                            )
                                                          ),
                                                          verbatimTextOutput("with_reference_download"),
-                                                         fluidRow(
-                                                           column(3, downloadButton("download_with_motif_plot", "Download motif plot")),
-                                                           column(3, downloadButton("download_with_homer_report", "Download homer report"),
-                                                                  tags$head(tags$style("#download_with_homer_report{color: red;
-                                 font-size: 20px;
-            font-style: bold;
-            }")),)
-                                                         ),
                                                          textOutput("with_Spe_motif"),
                                                          tags$head(tags$style("#with_Spe_motif{color: red;
                                  font-size: 20px;
@@ -858,6 +850,14 @@ shinyUI(
                                                          ),
                                                          sliderInput("with_homer_showCategory","Most significant motifs", value=5, min=1,max=20),
                                                          htmlOutput("with_homer_sample_order"),
+                                                         fluidRow(
+                                                           column(3, downloadButton("download_with_motif_plot", "Download motif plot")),
+                                                           column(3, downloadButton("download_with_homer_report", "Download homer report"),
+                                                                  tags$head(tags$style("#download_with_homer_report{color: red;
+                                 font-size: 20px;
+            font-style: bold;
+            }")),)
+                                                         ),
                                                          div(
                                                            plotOutput('with_motif_plot', height = "100%"),
                                                            style = "height: calc(75vh  - 75px)"

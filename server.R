@@ -4194,14 +4194,16 @@ shinyServer(function(input, output, session) {
               pdf(motif, height = 6, width = 7)
               print(p1)
               dev.off()
+              if(input$homer_unknown == "known and de novo motifs"){
               for(name in names(path_list)){
                 plot_name <- paste0("denovo/",name,".pdf")
                 fs <- c(fs,plot_name)
-                pdf(plot_name, height = pdf_height, width = pdf_width)
+                pdf(plot_name, height = 6, width = 7)
                 print(homer_Motifplot_denovo(df = path_list,name=name,
                                              showCategory = input$homer_showCategory,
                                              group_order=input$homer_sample_order))
                 dev.off()
+              }
               }
             })
           }else {
@@ -4385,13 +4387,15 @@ shinyServer(function(input, output, session) {
                   pdf(with_motif, height = 6, width = 7)
                   print(p1)
                   dev.off()
+                  if(input$with_homer_unknown == "known and de novo motifs"){
                   for(name in names(with_path_list)){
                     plot_name <- paste0("denovo/",name,".pdf")
                     fs <- c(fs,plot_name)
-                    pdf(plot_name, height = pdf_height, width = pdf_width)
+                    pdf(plot_name, height = 6, width = 7)
                     print(homer_Motifplot_denovo(df = with_path_list,name=name,
                                                  showCategory = input$with_homer_showCategory))
                     dev.off()
+                  }
                   }
                 })
               }else {
@@ -4831,13 +4835,15 @@ shinyServer(function(input, output, session) {
           pdf(homer_plot, height = 6, width = 8)
           print(venn_motif_plot())
           dev.off()
+          if(input$homer_unknown_venn == "known and de novo motifs"){
           for(name in names(path_list)){
             plot_name <- paste0("denovo/",name,".pdf")
             fs <- c(fs,plot_name)
-            pdf(plot_name, height = pdf_height, width = pdf_width)
+            pdf(plot_name, height = 6, width = 7)
             print(homer_Motifplot_denovo(df = path_list,name=name,
                                          showCategory = input$homer_showCategory_venn))
             dev.off()
+          }
           }
         }
         print("homer plot")
@@ -7599,7 +7605,7 @@ shinyServer(function(input, output, session) {
   #Clustering correlation plot-----
   corrplot <-reactive({
     data <- bw_count_clustering()
-    mcor <- cor(data)
+    mcor <- cor(data,method="spearman")
     p <- ggcorrplot(corr = mcor, hc.order = TRUE, method = "square",
                     colors = c("#4b61ba", "white", "red"), lab = TRUE)
     p <- p + scale_fill_gradient2(limit = c(0,1), low = "#4b61ba", high =  "red", mid = "white", midpoint = 0.5)

@@ -1,5 +1,3 @@
-##Annotation 重複が生まれる
-
 ##with RNAseq homer startボタン
 ##Motif plot order反映されない
 ##rmdの修正
@@ -2303,6 +2301,7 @@ read_known_results<-function (path, homer_dir = TRUE) {
 findMotif <- function(df,anno_data = NULL,Species,type = "Genome-wide",section=NULL,venn=NULL,
                       motif,size,back="random",bw_count=NULL,other_data=NULL,motif_length){
   ref <- gsub(".+\\(","",gsub(")", "", Species))
+  setwd(tempdir())
   switch(motif,
          "known motif" = time <- "10 ~ 20",
          "known and de novo motifs" = time <- "20 ~ 30")
