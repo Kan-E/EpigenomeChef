@@ -1,4 +1,4 @@
-FROM rocker/shiny-verse:4.2.3
+FROM rocker/shiny-verse:latest
 MAINTAINER Kan Etoh
 RUN apt-get update && apt-get install -y \
     build-essential \
