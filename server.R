@@ -1639,6 +1639,7 @@ shinyServer(function(input, output, session) {
       df <- list()
       for(name in names(peak_list)){
         peak <- peak_list[[name]] %>% as.data.frame()
+        if(dim(peak)[1] == 0) peak <- NULL
         df[[name]] <- peak
       }
       return(df)
@@ -1748,6 +1749,7 @@ shinyServer(function(input, output, session) {
   
   mmAnno__distance_pair <- reactive({
     distribution <- selected_annoData_table_pair()[[input$annotation_select]]
+    if(dim(as.data.frame(distribution))[1] > 0){
     distribution <- with(distribution,GRanges(seqnames,IRanges(start,end),
                                               geneLevel = geneLevel))
     mmAnno_list <- mmAnno(peak=deg_peak_list()[[input$annotation_select]],
@@ -1759,6 +1761,7 @@ shinyServer(function(input, output, session) {
                           distribution=distribution,
                           DAR=NULL)
     return(mmAnno_list)
+    }
   })
   TSSdistance_pair <- reactive({
     p <- plot_annoDistance(mmAnno__distance_pair(),title=input$annotation_select)

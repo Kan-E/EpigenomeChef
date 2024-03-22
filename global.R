@@ -1720,6 +1720,7 @@ if(!is.null(integrated_bw)){
 
 
 donut_replot <- function(dat){
+  if(dim(dat)[1]>1){
   labs <- list(geneLevel=c(promoter="Promoter",
                            geneDownstream="Downstream",
                            geneBody="Gene body",
@@ -1761,14 +1762,17 @@ donut_replot <- function(dat){
     scale_fill_manual(values = labelCols, labels=l1, name=NULL,
                       guide = guide_legend(reverse=TRUE))
   return(p)
+  }else return(NULL)
 }
 chisquare_for_annotation <- function(annotation){
   if(length(names(annotation$peaks))!=1){
   df <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
   for(name in names(annotation$peaks)){
     df2 <- data.frame(annotation$peaks[[name]])
+    if(dim(df2)[1] >0){
     df2$Group <- name
     df <- rbind(df, df2)
+    }
   }
   res <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
   for(level in c("geneLevel","ExonIntron","Exons")){
@@ -1810,6 +1814,7 @@ annotation_barplot <- function(annotation){
 }
 
 plot_annoDistance <- function (mmAnno, title=NULL){
+  if(!is.null(mmAnno)){
   mmAnno$abs_dist <- abs(mmAnno$distanceToTSS) + 1
   summary_value <- summary(mmAnno$abs_dist) - 1
   df <- data.frame(row.names = names(summary_value),summary=round(as.numeric(summary_value),digits = 2))
@@ -1819,6 +1824,7 @@ plot_annoDistance <- function (mmAnno, title=NULL){
     ggplot2::ylab("Number of peaks") + ggtitle(title)
   p <- plot_grid(p1,tableGrob(unname(df),theme = ttheme_minimal()),nrow = 1,rel_widths = c(3,1))
   return(p)
+  }
 }
 
 GREAT_dotplot <- function(data,data3,df,type,group_order=NULL){
