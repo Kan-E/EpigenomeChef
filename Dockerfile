@@ -83,7 +83,6 @@ RUN R -e "install.packages('BiocManager',repos='http://cran.rstudio.com/')" && \
     R -e "BiocManager::install('Rsubread', update = F)" && \
     R -e "devtools::install_github('ColeWunderlich/soGGi')" && \
     R -e "devtools::install_github('robertamezquita/marge',ref = 'master')" && \
-    R -e "devtools::install_github('amitjavilaventura/plotmics')" && \
     R -e "BiocManager::install('colorspace', update = F)" && \
     R -e "BiocManager::install('ggcorrplot', update = F)" && \
     R -e "BiocManager::install('RColorBrewer', update = F)" && \
