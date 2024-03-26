@@ -4652,19 +4652,15 @@ shinyServer(function(input, output, session) {
     }
   })
   make_venn <-reactive({
-    df<-list()
-    for(name in names(Venn_peak_call_files())){
-      data <- as.data.frame(Venn_peak_call_files()[[name]])
-      data$strand <- as.character(data$strand)
-      df[[name]] <- data
-    }
-    return(df)
+    p <- ChIPpeakAnno::makeVennDiagram(venn_overlap(),cat.cex=1.2,
+                                       col=rainbow_hcl(length(names(Venn_peak_call_files())),c=100))
+    return(p)
   })
   
   output$venn <- renderPlot({
     withProgress(message = "Venn diagram",{
       if(!is.null(Venn_peak_call_files()) && updateCounter_vennStart$i > 0){
-        ggVennPeaks(make_venn(),label_size = 5, alpha = .2)
+        make_venn()
       }
     })
   })
@@ -4682,7 +4678,8 @@ shinyServer(function(input, output, session) {
           pdf_width <- 6
         }else pdf_width <- input$venn_pdf_width
         pdf(file, height = pdf_height, width = pdf_width)
-        print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
+        print(ChIPpeakAnno::makeVennDiagram(venn_overlap(),cat.cex=1.2,
+                                            col=rainbow_hcl(length(names(Venn_peak_call_files())),c=100)))
         dev.off()
         incProgress(1)
       })
@@ -4748,7 +4745,8 @@ shinyServer(function(input, output, session) {
         input_list <- "Input/input_bed_list.txt"
         fs <- c(venn,input_list)
         pdf(venn, height = 6, width = 6)
-        print(ggVennPeaks(make_venn(),label_size = 5, alpha = .2))
+        print(ChIPpeakAnno::makeVennDiagram(venn_overlap(),cat.cex=1.2,
+                                            col=rainbow_hcl(length(names(Venn_peak_call_files())),c=100)))
         dev.off()
         print("venn plot")
         print(input$sample_order_venn)
