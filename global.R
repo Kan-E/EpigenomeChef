@@ -1699,7 +1699,7 @@ plot_annoDistance <- function (mmAnno, title=NULL){
   }
 }
 
-GREAT_dotplot <- function(data,data3,df,type,group_order=NULL){
+GREAT_dotplot <- function(data,data3,df,type,group_order=NULL,showCategory=5){
   cluster_list <- c()
   for(name in names(df)){
     if(length(as.data.frame(rGREAT::getEnrichmentTable(df[[name]]))$id) != 0) {
@@ -1717,9 +1717,9 @@ GREAT_dotplot <- function(data,data3,df,type,group_order=NULL){
         group1$Group <- paste(name, "\n(",sum,")",sep = "")
         if(!is.null(group_order)) group_order[which(group_order == name)] <- paste(name, "\n","(",sum, ")",sep = "")
         cluster_list <- c(cluster_list, paste(name, "\n","(",sum, ")",sep = ""))
-        if (length(group1$p_adjust_hyper) > 5){
+        if (length(group1$p_adjust_hyper) > showCategory){
           group1 <- group1[sort(group1$p_adjust_hyper, decreasing = F, index=T)$ix,]
-          group1 <- group1[1:5,]
+          group1 <- group1[1:showCategory,]
         }
       }
     }else group1 <- NULL

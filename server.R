@@ -1627,7 +1627,8 @@ shinyServer(function(input, output, session) {
     }
   })
   output$input_peak_distribution <- renderPlot({
-    if(!is.null(deg_peak_list()) && input$Species != "not selected"){
+    if(!is.null(deg_peak_list()) && input$Species != "not selected" &&
+       !is.null(input$annotation_select)){
       withProgress(message = "Peak distribution",{
           donut_replot(dplyr::filter(pairdistribution()$plot[[1]], source == input$annotation_select))
       })
@@ -1768,8 +1769,10 @@ shinyServer(function(input, output, session) {
     return(p)
   })
   output$pair_TSSdistance <- renderPlot({
-    if(!is.null(mmAnno__distance_pair())){
+    if(!is.null(input$annotation_select)){
+      if(!is.null(mmAnno__distance_pair())){
       TSSdistance_pair()
+    }
     }
   })
   
@@ -8779,7 +8782,8 @@ shinyServer(function(input, output, session) {
       df <- enrichment_enricher_enrich()
       data3 <- Enrich_peak_call_files()
       data <- data.frame(matrix(rep(NA, 13), nrow=1))[numeric(0), ]
-      p1 <- GREAT_dotplot(data=data,data3=data3,df=df,type="enrich",group_order=input$enrichment_order_enrich)
+      p1 <- GREAT_dotplot(data=data,data3=data3,df=df,type="enrich",
+                          group_order=input$enrichment_order_enrich,showCategory=input$enrich_showCategory)
       p <- plot_grid(p1, nrow = 1)
       return(p)
     }else return(NULL)
