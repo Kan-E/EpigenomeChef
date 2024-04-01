@@ -2440,7 +2440,9 @@ homer_Motifplot_denovo <- function(df, name,showCategory=5,section=NULL,group_or
       motif_list_for_pvalue <- rbind(motif_list_for_pvalue,res[ii][[ii]]$Motif_information)
       match <- res[ii][[ii]]$Matches_to_known_motifs[1:5,]
       match$Group <- ii
+      if(!is.null(dim(match)[1])){
       match_list <- rbind(match_list, match)
+      }
     }
   }
   if(length(motif_list$motif_name) == 0){

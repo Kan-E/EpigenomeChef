@@ -4201,8 +4201,9 @@ shinyServer(function(input, output, session) {
               print(p1)
               dev.off()
               if(input$homer_unknown == "known and de novo motifs"){
+                dir.create(paste0(base_dir,"/denovo/"),showWarnings = FALSE)
               for(name in names(path_list)){
-                plot_name <- paste0("denovo/",name,".pdf")
+                plot_name <- paste0(base_dir,"/denovo/",name,".pdf")
                 fs <- c(fs,plot_name)
                 pdf(plot_name, height = 6, width = 7)
                 print(homer_Motifplot_denovo(df = path_list,name=name,
@@ -4394,8 +4395,9 @@ shinyServer(function(input, output, session) {
                   print(p1)
                   dev.off()
                   if(input$with_homer_unknown == "known and de novo motifs"){
+                    dir.create(paste0(dirname_withRNA,"/denovo/"),showWarnings = FALSE)
                   for(name in names(with_path_list)){
-                    plot_name <- paste0("denovo/",name,".pdf")
+                    plot_name <- paste0(dirname_withRNA,"/denovo/",name,".pdf")
                     fs <- c(fs,plot_name)
                     pdf(plot_name, height = 6, width = 7)
                     print(homer_Motifplot_denovo(df = with_path_list,name=name,
@@ -4840,8 +4842,9 @@ shinyServer(function(input, output, session) {
           print(venn_motif_plot())
           dev.off()
           if(input$homer_unknown_venn == "known and de novo motifs"){
+            dir.create(paste0(base_dir,"/denovo/"),showWarnings = FALSE)
           for(name in names(path_list)){
-            plot_name <- paste0("denovo/",name,".pdf")
+            plot_name <- paste0(base_dir,"/denovo/",name,".pdf")
             fs <- c(fs,plot_name)
             pdf(plot_name, height = 6, width = 7)
             print(homer_Motifplot_denovo(df = path_list,name=name,
@@ -10572,6 +10575,7 @@ shinyServer(function(input, output, session) {
         if(input$pair_pdf_width == 0){
           pdf_width <- 7
         }else pdf_width <- input$pair_pdf_width
+        dir.create("denovo/",showWarnings = FALSE)
         for(name in names(enrich_motif())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
@@ -10841,6 +10845,7 @@ shinyServer(function(input, output, session) {
         if(input$pair_pdf_width == 0){
           pdf_width <- 7
         }else pdf_width <- input$pair_pdf_width
+        dir.create("denovo/",showWarnings = FALSE)
         for(name in names(with_enrich_motif())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
@@ -11131,6 +11136,7 @@ shinyServer(function(input, output, session) {
         if(input$venn_pdf_width == 0){
           pdf_width <- 7
         }else pdf_width <- input$venn_pdf_width
+        dir.create("denovo/",showWarnings = FALSE)
         for(name in names(enrich_motif_venn())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
@@ -11417,6 +11423,7 @@ shinyServer(function(input, output, session) {
         if(input$enrich_pdf_width == 0){
           pdf_width <- 7
         }else pdf_width <- input$enrich_pdf_width
+        dir.create("denovo/",showWarnings = FALSE)
         for(name in names(enrich_motif_enrich())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
