@@ -4022,7 +4022,7 @@ shinyServer(function(input, output, session) {
         down <- paste0("DMR_result/",unique(collist_bw_pair())[1],"_high.bed")
         count <- "Input/count.txt"
         bed <- "Input/all_peaks (no filter).bed"
-        if(input$pair_filter_cluster == "Reproducible_peaks") bed <- "Input/all_peaks (reproducible).bed"
+        if(input$pair_filter == "Reproducible_peaks") bed <- "Input/all_peaks (reproducible).bed"
         PCA <- "Clustering/clustering.pdf"
         PCA_table <- "Clustering/pca.txt"
         
