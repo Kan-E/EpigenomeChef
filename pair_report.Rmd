@@ -69,6 +69,7 @@ try(magick::image_read_pdf("./DMR_result/volcano_plot.pdf"))
  - Result table (DMR_result/DMR_result.txt)
  - Up DMR (DMR_result/`r unique(params$collist_bw_pair)[2]`_high.bed)
  - Down DMR (DMR_result/`r unique(params$collist_bw_pair)[1]`_high.bed)
+ 
 \newpage
 
 ## Peak annotation
