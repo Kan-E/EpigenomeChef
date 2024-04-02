@@ -91,7 +91,7 @@ if(params$input$Species != "not selected"){
             try(magick::image_read_pdf(paste0("./annotation/all_peak.pdf")))
           }}else print("No plot")
 ```
-- `r unique(params$collist_bw_pair[2])`_high peaks
+- `r unique(params$collist_bw_pair)[2]`_high peaks
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
@@ -99,7 +99,7 @@ if(params$input$Species != "not selected"){
                                               unique(params$collist_bw_pair)[2],"_high.pdf")))
           }}else print("No plot")
 ```
-- `r unique(params$collist_bw_pair[1])`_high peaks
+- `r unique(params$collist_bw_pair)[1]`_high peaks
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
@@ -116,7 +116,7 @@ if(params$input$Species != "not selected"){
               try(magick::image_read_pdf(paste0("./",params$dir_name_annotation,"all_peak.pdf")))
           }}else print("No plot")
 ```
-- `r unique(params$collist_bw_pair[2])`_high peaks
+- `r unique(params$collist_bw_pair)[2]`_high peaks
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
@@ -124,7 +124,7 @@ if(params$input$Species != "not selected"){
                                                 unique(params$collist_bw_pair)[2],"_high.pdf")))
           }}else print("No plot")
 ```
-- `r unique(params$collist_bw_pair[1])`_high peaks
+- `r unique(params$collist_bw_pair)[1]`_high peaks
 ```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", echo=FALSE}
 if(params$input$Species != "not selected"){
           if(params$input$Genomic_region == "Genome-wide"){
@@ -165,7 +165,7 @@ information), including single exon transcripts such as "short noncoding."
 
 ## Peak pattern
 
- - Peak pattern of `r params$collist_bw_pair[2]`_high peaks (line plot: peak_pattern/`r params$collist_bw_pair[2]`_high_lineplot.pdf, heatmap: peak_pattern/`r params$collist_bw_pair[2]`_high_heatmap.pdf)
+ - Peak pattern of `r unique(params$collist_bw_pair)[2]`_high peaks (line plot: peak_pattern/`r unique(params$collist_bw_pair)[2]`_high_lineplot.pdf, heatmap: peak_pattern/`r unique(params$collist_bw_pair)[2]`_high_heatmap.pdf)
  
 ```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_up_range)){
@@ -180,7 +180,7 @@ if(!is.null(params$input$peak_up_range)){
           }else print("No plot")
 ```
  
- - Peak pattern of `r params$collist_bw_pair[1]`_high peaks (line plot: peak_pattern/`r params$collist_bw_pair[1]`_high_lineplot.pdf, heatmap: peak_pattern/`r params$collist_bw_pair[1]`_high_heatmap.pdf)
+ - Peak pattern of `r unique(params$collist_bw_pair)[1]`_high peaks (line plot: peak_pattern/`r unique(params$collist_bw_pair)[1]`_high_lineplot.pdf, heatmap: peak_pattern/`r unique(params$collist_bw_pair)[1]`_high_heatmap.pdf)
  
 ```{r, out.height=255.68181, out.width=255.68181, include=TRUE, fig.align="center", echo=FALSE}
 if(!is.null(params$input$peak_down_range)){
@@ -251,7 +251,7 @@ magick::image_read_pdf(paste0(params$base_dir,"/homer_dotplot",".pdf"))
           }else print("No plot")
 ```
 
-- known motif of `r params$collist_bw_pair[2]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[1]`_high/knownResults.html)
+- known motif of `r unique(params$collist_bw_pair)[2]`_high peak (`r params$base_dir`/`r unique(params$collist_bw_pair)[2]`_high/knownResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
@@ -261,7 +261,7 @@ try(webshot(paste0("./",params$enrich_motif[[1]],"/knownResults.html"),file="img
           }else print("Not performed")
 ```
 
-- known motif of `r params$collist_bw_pair[1]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[1]`_high/knownResults.html)
+- known motif of `r unique(params$collist_bw_pair)[1]`_high peak (`r params$base_dir`/`r unique(params$collist_bw_pair)[1]`_high/knownResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
@@ -270,7 +270,7 @@ try(webshot(paste0("./",params$enrich_motif[[2]],"/knownResults.html"),file="img
           }else print("Not performed")
 ```
 
-- unknown motif of `r params$collist_bw_pair[2]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[2]`_high/homerResults.html)
+- unknown motif of `r unique(params$collist_bw_pair)[2]`_high peak (`r params$base_dir`/`r unique(params$collist_bw_pair)[2]`_high/homerResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 
@@ -279,7 +279,7 @@ try(webshot(paste0("./",params$enrich_motif[[1]],"/homerResults.html"),file="img
           }else print("Not performed")
 ```
 
-- unknown motif of `r params$collist_bw_pair[1]`_high peak (`r params$base_dir`/`r params$collist_bw_pair[1]`_high/homerResults.html)
+- unknown motif of `r unique(params$collist_bw_pair)[1]`_high peak (`r params$base_dir`/`r unique(params$collist_bw_pair)[1]`_high/homerResults.html)
 
 ```{r echo=FALSE}
 if(params$input$motifButton > 0 && !is.null(params$enrich_motif) && 

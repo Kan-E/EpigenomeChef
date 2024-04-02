@@ -2438,11 +2438,10 @@ homer_Motifplot_denovo <- function(df, name,showCategory=5,section=NULL,group_or
       ii <- as.character(i)
       order <- c(order, ii)
       motif_list_for_pvalue <- rbind(motif_list_for_pvalue,res[ii][[ii]]$Motif_information)
-      match <- res[ii][[ii]]$Matches_to_known_motifs[1:5,]
+      match <- res[ii][[ii]]$Matches_to_known_motifs[1:5,] %>%
+        dplyr::select(motif_name, ID,database,rank,score,offset,orientation,original_alignment,matched_alignment)
       match$Group <- ii
-      if(!is.null(dim(match)[1])){
       match_list <- rbind(match_list, match)
-      }
     }
   }
   if(length(motif_list$motif_name) == 0){
@@ -2485,7 +2484,7 @@ homer_Motifplot_denovo <- function(df, name,showCategory=5,section=NULL,group_or
       bar_list[[ii]] <- ggbarplot(match_list2,x="xlab",y="score",
                                   fill = "motif_name") + 
         scale_x_discrete(limit=rev(match_list2$xlab))+
-        coord_flip()+ xlab(NULL) + ylab(NULL) + ylim(c(0,1))+
+        coord_flip()+ xlab(NULL) + ylab(NULL) + ylim(c(0,1.0))+
         theme(legend.position="none")
     }
     if(length(unique(match_list$Group))==10) bar <- try(plot_grid(bar_list[["1"]],bar_list[["2"]],bar_list[["3"]],bar_list[["4"]],bar_list[["5"]],bar_list[["6"]],bar_list[["7"]],bar_list[["8"]],bar_list[["9"]],bar_list[["10"]],ncol = 1,align = "v"))

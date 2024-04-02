@@ -4205,7 +4205,7 @@ shinyServer(function(input, output, session) {
               for(name in names(path_list)){
                 plot_name <- paste0(base_dir,"/denovo/",name,".pdf")
                 fs <- c(fs,plot_name)
-                pdf(plot_name, height = 6, width = 7)
+                pdf(plot_name, height = 6, width = 10,onefile=F)
                 print(homer_Motifplot_denovo(df = path_list,name=name,
                                              showCategory = input$homer_showCategory,
                                              group_order=input$homer_sample_order))
@@ -4399,7 +4399,7 @@ shinyServer(function(input, output, session) {
                   for(name in names(with_path_list)){
                     plot_name <- paste0(dirname_withRNA,"/denovo/",name,".pdf")
                     fs <- c(fs,plot_name)
-                    pdf(plot_name, height = 6, width = 7)
+                    pdf(plot_name, height = 6, width = 10,onefile=F)
                     print(homer_Motifplot_denovo(df = with_path_list,name=name,
                                                  showCategory = input$with_homer_showCategory))
                     dev.off()
@@ -4431,8 +4431,6 @@ shinyServer(function(input, output, session) {
         }
         report_name <- paste0(format(Sys.time(), "%Y%m%d_"),"pairwise_report",".docx")
         fs <- c(fs, report_name)
-        tempReport <- file.path(tempdir(),"pair_report.Rmd")
-        file.copy("pair_report.Rmd", tempReport, overwrite = TRUE)
         rmarkdown::render("pair_report.Rmd", output_format = "word_document", output_file = report_name,
                           params = list(input = input,
                                         collist_bw_pair = collist_bw_pair(),
@@ -4846,7 +4844,7 @@ shinyServer(function(input, output, session) {
           for(name in names(path_list)){
             plot_name <- paste0(base_dir,"/denovo/",name,".pdf")
             fs <- c(fs,plot_name)
-            pdf(plot_name, height = 6, width = 7)
+            pdf(plot_name, height = 6, width = 10,onefile=F)
             print(homer_Motifplot_denovo(df = path_list,name=name,
                                          showCategory = input$homer_showCategory_venn))
             dev.off()
@@ -10573,13 +10571,14 @@ shinyServer(function(input, output, session) {
           pdf_height <- 6
         }else pdf_height <- input$pair_pdf_height
         if(input$pair_pdf_width == 0){
-          pdf_width <- 7
+          pdf_width <- 10
         }else pdf_width <- input$pair_pdf_width
         dir.create("denovo/",showWarnings = FALSE)
+        fs <- c()
         for(name in names(enrich_motif())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
-          pdf(plot_name, height = pdf_height, width = pdf_width)
+          pdf(plot_name, height = pdf_height, width = pdf_width,onefile=F)
           print(homer_Motifplot_denovo(df = enrich_motif(),name=name,
                                        showCategory = input$homer_showCategory,
                                        group_order=input$homer_sample_order))
@@ -10843,13 +10842,14 @@ shinyServer(function(input, output, session) {
           pdf_height <- 6
         }else pdf_height <- input$pair_pdf_height
         if(input$pair_pdf_width == 0){
-          pdf_width <- 7
+          pdf_width <- 10
         }else pdf_width <- input$pair_pdf_width
         dir.create("denovo/",showWarnings = FALSE)
+        fs <- c()
         for(name in names(with_enrich_motif())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
-          pdf(plot_name, height = pdf_height, width = pdf_width)
+          pdf(plot_name, height = pdf_height, width = pdf_width,onefile=F)
           print(homer_Motifplot_denovo(df = with_enrich_motif(),name=name,
                                        showCategory = input$with_homer_showCategory))
           dev.off()
@@ -11134,13 +11134,14 @@ shinyServer(function(input, output, session) {
           pdf_height <- 6
         }else pdf_height <- input$venn_pdf_height
         if(input$venn_pdf_width == 0){
-          pdf_width <- 7
+          pdf_width <- 10
         }else pdf_width <- input$venn_pdf_width
         dir.create("denovo/",showWarnings = FALSE)
+        fs <- c()
         for(name in names(enrich_motif_venn())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
-          pdf(plot_name, height = pdf_height, width = pdf_width)
+          pdf(plot_name, height = pdf_height, width = pdf_width,onefile=F)
           print(homer_Motifplot_denovo(df = enrich_motif_venn(),name=name,
                                        showCategory = input$homer_showCategory_venn))
           dev.off()
@@ -11421,13 +11422,14 @@ shinyServer(function(input, output, session) {
           pdf_height <- 6
         }else pdf_height <- input$enrich_pdf_height
         if(input$enrich_pdf_width == 0){
-          pdf_width <- 7
+          pdf_width <- 10
         }else pdf_width <- input$enrich_pdf_width
         dir.create("denovo/",showWarnings = FALSE)
+        fs <- c()
         for(name in names(enrich_motif_enrich())){
           plot_name <- paste0("denovo/",name,".pdf")
           fs <- c(fs,plot_name)
-          pdf(plot_name, height = pdf_height, width = pdf_width)
+          pdf(plot_name, height = pdf_height, width = pdf_width,onefile=F)
           print(homer_Motifplot_denovo(df = enrich_motif_enrich(),name=name,
                                        showCategory = input$homer_showCategory_enrich))
           dev.off()
