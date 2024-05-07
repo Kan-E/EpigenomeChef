@@ -4,77 +4,39 @@ EpigenomeChef is a platform of systematic epigenome data analysis which can auto
 Data downloaded from ChIP-atlas, a database of ChIP-seq, ATAC-seq, and Bisulfite-seq, can be used as input.<br>
 In addition, it can easily perform the integrative analysis with transcriptome data by uploading the results file of differentially expressed gene (DEG) analysis obtained from RNA-seq data.
 
-# Local installation
+## Installation of Docker version
 EpigenomeChef can be used by installing the Docker image.<br>
 
-0. (If you do not have a Docker environment) Install Docker <br>
-1. Run the following command (Once you run it, you won't need it again) <br> 
-```
-#AMD64 architecture (Windows, Linux, MacOS(Intel))
-##HOMER human (hg19) 
-docker pull kanetoh1030/shiny-epigenomechef:hg19v0.0.1-amd64
-##HOMER mouse (mm10) 
-docker pull kanetoh1030/shiny-epigenomechef:mm10v0.0.1-amd64
+### 0. (If you do not have a Docker environment) Install Docker <br>
 
-#ARM64 architecture (MacOS (M1/M2))
-##HOMER human (hg19) 
-docker pull kanetoh1030/shiny-epigenomechef:hg19v0.0.1-arm64
-##HOMER mouse (mm10) 
-docker pull kanetoh1030/shiny-epigenomechef:mm10v0.0.1-arm64
+### 1. Run the following command (Once you run it, you won't need it again) <br> 
 
 ```
-2. Run the following command for the launch EpigenomeChef on the browser
-```
-#AMD64 architecture (Windows, Linux, MacOS(Intel))
-##HOMER human (hg19)
-docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:hg19v0.0.1-amd64
-##HOMER mouse (mm10) 
-docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:mm10v0.0.1-amd64
-
-#ARM64 architecture (MacOS (M1/M2))
-##HOMER human (hg19) 
-docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:hg19v0.0.1-arm64
-##HOMER mouse (mm10) 
-docker run --rm -p 3838:3838 kanetoh1030/shiny-epigenomechef:mm10v0.0.1-arm64
+docker pull omicschef/epigenomechef:v1.1.5
 
 ```
-Access [http://localhost:3838](http://localhost:3838).
+
+### 2. Launch EpigenomeChef on the browser
+
+#### Method 1: command line 
+
+```
+docker run --rm -p 3838:3838 omicschef/epigenomechef:v1.1.5
+
+## Option: run using bind mount
+## you can bind folder containing bigwig files to the container.
+## docker run --rm -p 3838:3838  -v ${path/to/directory}:/srv/shiny-server/EpigenomeChef/Volume omicschef/epigenomechef:v1.1.5
+## e.g. When you want to select current directory, you can use the following command:
+docker run --rm -p 3838:3838  -v ${PWD}:/srv/shiny-server/EpigenomeChef/Volume omicschef/epigenomechef:v1.1.5
+```
+
+**Access [http://localhost:3838](http://localhost:3838).**<br><br>
+
+#### Method 2: Docker Desktop
+<img src="https://github.com/Kan-E/EpigenomeChef/blob/main/main%20figures/docker.png" width="800"><br><br>
+
 
 If you need help, please create an issue on [Github](https://github.com/Kan-E/EpigenomeChef/issues) or [contact us](mailto:kaneto@kumamoto-u.ac.jp). <br>
-
-## Method 2 (R environment setup is required)
-- Download R and RStudio (In the case of macOS, additionally install XQuartz and Xcode)
-- Run the following commands once<br>
-
-```
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-    
-install.packages("https://cran.r-project.org/src/contrib/Archive/lasso2/lasso2_1.2-22.tar.gz",repos = NULL, type = "source")
-
-pkgs <- c("shiny","DT","gdata","rstatix","multcomp","tidyverse","ggpubr","venn","ggrepel",
-"ggdendro","ggplotify","gridExtra","cowplot","DESeq2","ggnewscale","AnnotationDbi","clusterProfiler","enrichplot","DOSE","msigdbr","genefilter","ComplexHeatmap","shinyBS","plotly","shinyjs","devtools","dorothea","biomaRt","GenomicRanges","rtracklayer","Rsubread","Rsamtools",
-"ChIPseeker","ChIPpeakAnno","rGREAT","FindIT2","limma","ggseqlogo",
-"colorspace","ggcorrplot","RColorBrewer","bedtorch","venn","reshape2","ggsci",
-"TxDb.Hsapiens.UCSC.hg19.knownGene","TxDb.Hsapiens.UCSC.hg38.knownGene","TxDb.Mmusculus.UCSC.mm10.knownGene",
-"TxDb.Dmelanogaster.UCSC.dm6.ensGene","TxDb.Rnorvegicus.UCSC.rn6.refGene",
-"TxDb.Celegans.UCSC.ce11.refGene","TxDb.Btaurus.UCSC.bosTau8.refGene",
-"TxDb.Cfamiliaris.UCSC.canFam3.refGene","TxDb.Drerio.UCSC.danRer10.refGene",
-"TxDb.Ggallus.UCSC.galGal4.refGene","TxDb.Mmulatta.UCSC.rheMac8.refGene",
-"TxDb.Ptroglodytes.UCSC.panTro4.refGene","org.Hs.eg.db","org.Mm.eg.db","org.Rn.eg.db","org.Xl.eg.db","org.Dm.eg.db","org.Ce.eg.db","org.Bt.eg.db","org.Dr.eg.db","org.Cf.eg.db","org.Gg.eg.db","org.Mmu.eg.db","org.Pt.eg.db")
-options(repos = BiocManager::repositories())
-for(pkg in pkgs) if (!require(pkg, character.only = T)){
-    BiocManager::install(pkg, update = F)
-}
-devtools::install_github("ColeWunderlich/soGGi")
-devtools::install_github('robertamezquita/marge', ref = 'master')
-devtools::install_github("haizi-zh/bedtorch")
-```
-
-You may now run EpigenomeChef with just one command in R:<br>
-```
-shiny::runGitHub("EpigenomeChef", "Kan-E")
-```
 
 
 # Reference
