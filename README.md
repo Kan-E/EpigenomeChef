@@ -1,3 +1,6 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11124975.svg)](https://doi.org/10.5281/zenodo.11124975)
+
+
 # EpigenomeChef
 <img src="https://github.com/Kan-E/EpigenomeChef/blob/main/main%20figures/graphical_abstract2.png" width="800"><br><br>
 EpigenomeChef is a platform of systematic epigenome data analysis which can automatically detect, integrate, and visualize the epigenetic information and its interaction with transcriptome without bioinformatics skills.<br>
